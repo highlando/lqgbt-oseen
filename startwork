@@ -1,0 +1,7 @@
+#!/bin/bash
+
+git pull
+git status
+FILETOEDIT=lqg_drivcav.py
+echo $FILETOEDIT
+gvim --remote-silent $FILETOEDIT 
