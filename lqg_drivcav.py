@@ -3,7 +3,6 @@ import numpy as np
 import scipy.sparse as sps
 # import matplotlib.pyplot as plt
 import os
-import glob
 
 import dolfin_navier_scipy.dolfin_to_sparrays as dts
 import dolfin_navier_scipy.data_output_utils as dou
@@ -29,6 +28,8 @@ def time_int_params(Nts):
                pfile=None,
                Residuals=[],
                ParaviewOutput=True,
+               proutdir='results',
+               prfprfx='',
                nu=1e-2,
                nnewtsteps=4,  # n nwtn stps for vel comp
                vel_nwtn_tol=1e-14,
@@ -53,11 +54,6 @@ def time_int_params(Nts):
     return tip
 
 
-def set_vpfiles(tip, fstring='not specified'):
-    tip['pfile'] = dolfin.File(fstring+'_p.pvd')
-    tip['vfile'] = dolfin.File(fstring+'_vel.pvd')
-
-
 class IOParams():
     """define the parameters of the input output problem
 
@@ -80,16 +76,6 @@ class IOParams():
                           ymax=0.3)
 
 
-def get_datastr(nwtn=None, time=None, meshp=None, timps=dict(nu=None,
-                                                             Nts=None,
-                                                             dt=None)):
-
-    return ('Nwtnit{0}_time{1}_nu{2}_mesh{3}_Nts{4}_dt{5}').format(
-        nwtn, time, timps['nu'], meshp,
-        timps['Nts'], timps['dt']
-    )
-
-
 def drivcav_lqgbt(N=10, Nts=10):
 
     tip = time_int_params(Nts)
@@ -103,12 +89,6 @@ def drivcav_lqgbt(N=10, Nts=10):
     except OSError:
         raise Warning('need "' + ddir + '" subdir for storing the data')
     os.chdir('..')
-
-    if tip['ParaviewOutput']:
-        os.chdir('results/')
-        for fname in glob.glob('NewtonIt' + '*'):
-            os.remove(fname)
-        os.chdir('..')
 
     stokesmats = dts.get_stokessysmats(femp['V'], femp['Q'],
                                        tip['nu'])
@@ -129,12 +109,8 @@ def drivcav_lqgbt(N=10, Nts=10):
      bcvals) = dts.condense_sysmatsbybcs(stokesmats,
                                          femp['diribcs'])
 
-    rhsd_vfrc = dict(fp=rhsd_vf['fp'][:-1, :], fv=rhsd_vf['fv'][invinds, ])
-
-    # we will need transposes, and explicit is better than implicit
-    # here, the coefficient matrices are symmetric
-    stokesmatsc.update(dict(MT=stokesmatsc['M'],
-                            AT=stokesmatsc['A']))
+    # pressure freedom and dirichlet reduced rhs
+    rhsd_vfrc = dict(fpr=rhsd_vf['fp'][:-1, :], fvc=rhsd_vf['fv'][invinds, ])
 
     # add the info on boundary and inner nodes
     bcdata = {'bcinds': bcinds,
@@ -145,7 +121,16 @@ def drivcav_lqgbt(N=10, Nts=10):
     # casting some parameters
     NV, DT, INVINDS = len(femp['invinds']), tip['dt'], femp['invinds']
     NP = stokesmatsc['J'].shape[0]
-    # and setting current values
+
+    soldict = stokesmatsc  # containing A, J, JT
+    soldict.update(femp)  # adding V, Q, invinds, diribcs
+    soldict.update(rhsd_vfrc)  # adding fvc, fpr
+    soldict.update(fv_stbc=rhsd_stbc['fv'], fp_stbc=rhsd_stbc['fp'],
+                   N=N, nu=tip['nu'],
+                   nnewtsteps=tip['nnewtsteps'],
+                   vel_nwtn_tol=tip['vel_nwtn_tol'],
+                   ddir=ddir, get_datastring=None,
+                   paraviewoutput=False, prfdir=tip['proutdir'])
 
 #
 # compute the uncontrolled steady state Stokes solution
@@ -330,6 +315,11 @@ def drivcav_lqgbt(N=10, Nts=10):
 
     dou.save_npa(Zc, fstring=ddir + cdatstr + cntpstr + '__Z')
     dou.save_npa(wc, fstring=ddir + cdatstr + cntpstr + '__w')
+
+    # we will need transposes, and explicit is better than implicit
+    # here, the coefficient matrices are symmetric
+    stokesmatsc.update(dict(MT=stokesmatsc['M'],
+                            AT=stokesmatsc['A']))
 
     # we gonna use this quite often
     MT, AT = stokesmatsc['MT'], stokesmatsc['AT']
