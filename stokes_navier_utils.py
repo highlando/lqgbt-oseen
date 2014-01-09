@@ -19,31 +19,35 @@ def get_v_conv_conts(prev_v, femp=dict(V=None,
 
     return convc_mat, rhs_con, rhsv_conbc
 
+
 def solve_steadystate_nse(stokesmatsc=dict(A=None,
                                            J=None,
-                                           JT=None),
-                          rhsd_vf=dict(fv=None, fp=None),
+                                           JT=None
+                                           ),
+                          rhsd_vfrc=dict(fv=None, fp=None),
                           rhsd_stbc=dict(fv=None, fp=None),
-                          get_datastring=None,
+                          femp=dict(V=None,
+                                    invinds=None,
+                                    diribcs=None
+                                    ),
+                          tip=dict(nu=None,
+                                   Nts=None,
+                                   dt=None,
+                                   nnewtsteps=None),
+                          get_datastring=None):
 
-
-        ):
-    
     if get_datastring is None:
         def get_datastr(nwtn=None, time=None,
-                        meshp=None, timps=dict(nu=None,
-                                               Nts=None,
-                                               dt=None)):
+                        meshp=None, tip=dict(nu=None, Nts=None, dt=None)):
 
             return ('Nwtnit{0}_time{1}_nu{2}_mesh{3}_Nts{4}_dt{5}').format(
-                nwtn, time, timps['nu'], meshp,
-                timps['Nts'], timps['dt'])
+                nwtn, time, tip['nu'], meshp,
+                tip['Nts'], tip['dt'])
 
     newtk = 0
     vp_stokes = lau.solve_sadpnt_smw(amat=stokesmatsc['A'],
                                      jmat=stokesmatsc['J'],
                                      jmatT=stokesmatsc['JT'],
-                                     rhsv=(rhsd_stbc['fv'] +
-                                           rhsd_vf['fv'][INVINDS, ]),
-                                     rhsp=rhsd_stbc['fp'] + rhsd_vf['fp']
+                                     rhsv=rhsd_stbc['fv'] + rhsd_vfrc['fv'],
+                                     rhsp=rhsd_stbc['fp'] + rhsd_vfrc['fp']
                                      )

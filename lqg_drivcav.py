@@ -129,6 +129,8 @@ def drivcav_lqgbt(N=10, Nts=10):
      bcvals) = dts.condense_sysmatsbybcs(stokesmats,
                                          femp['diribcs'])
 
+    rhsd_vfrc = dict(fp=rhsd_vf['fp'][:-1, :], fv=rhsd_vf['fv'][invinds, ])
+
     # we will need transposes, and explicit is better than implicit
     # here, the coefficient matrices are symmetric
     stokesmatsc.update(dict(MT=stokesmatsc['M'],
@@ -153,9 +155,8 @@ def drivcav_lqgbt(N=10, Nts=10):
     vp_stokes = lau.solve_sadpnt_smw(amat=stokesmatsc['A'],
                                      jmat=stokesmatsc['J'],
                                      jmatT=stokesmatsc['JT'],
-                                     rhsv=(rhsd_stbc['fv'] +
-                                           rhsd_vf['fv'][INVINDS, ]),
-                                     rhsp=rhsd_stbc['fp'] + rhsd_vf['fp']
+                                     rhsv=(rhsd_stbc['fv'] + rhsd_vfrc['fv']),
+                                     rhsp=rhsd_stbc['fp'] + rhsd_vfrc['fp']
                                      )
 
     # save the data
