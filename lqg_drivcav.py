@@ -5,11 +5,13 @@ import scipy.sparse as sps
 import os
 import glob
 
-import dolfin_to_nparrays as dtn
-import lin_alg_utils as lau
-import data_output_utils as dou
+import dolfin_navier_scipy.dolfin_to_sparrays as dts
+import dolfin_navier_scipy.data_output_utils as dou
+
 import cont_obs_utils as cou
-import proj_ric_utils as pru
+
+import sadptprj_riclyap_adi.proj_ric_utils as pru
+import sadptprj_riclyap_adi.lin_alg_utils as lau
 
 dolfin.parameters.linear_algebra_backend = 'uBLAS'
 
