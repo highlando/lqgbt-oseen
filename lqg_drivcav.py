@@ -80,26 +80,14 @@ class IOParams():
                           ymax=0.3)
 
 
-def get_datastr(nwtn=None, time=None, meshp=None, timps=None):
+def get_datastr(nwtn=None, time=None, meshp=None, timps=dict(nu=None,
+                                                             Nts=None,
+                                                             dt=None)):
 
     return ('Nwtnit{0}_time{1}_nu{2}_mesh{3}_Nts{4}_dt{5}').format(
         nwtn, time, timps['nu'], meshp,
         timps['Nts'], timps['dt']
     )
-
-
-def get_v_conv_conts(prev_v, femp, tip):
-
-    # get and condense the linearized convection
-    # rhsv_con += (u_0*D_x)u_0 from the Newton scheme
-    N1, N2, rhs_con = dts.get_convmats(u0_vec=prev_v,
-                                       V=femp['V'],
-                                       invinds=femp['invinds'],
-                                       diribcs=femp['diribcs'])
-    convc_mat, rhsv_conbc = \
-        dts.condense_velmatsbybcs(N1 + N2, femp['diribcs'])
-
-    return convc_mat, rhs_con, rhsv_conbc
 
 
 def drivcav_lqgbt(N=10, Nts=10):
@@ -156,48 +144,42 @@ def drivcav_lqgbt(N=10, Nts=10):
     NV, DT, INVINDS = len(femp['invinds']), tip['dt'], femp['invinds']
     NP = stokesmatsc['J'].shape[0]
     # and setting current values
-    newtk, t = 0, None
 
 #
 # compute the uncontrolled steady state Stokes solution
 #
 
+    newtk = 0
     vp_stokes = lau.solve_sadpnt_smw(amat=stokesmatsc['A'],
                                      jmat=stokesmatsc['J'],
                                      jmatT=stokesmatsc['JT'],
-                                     rhsv=rhsd_stbc['fv'] +
-                                     rhsd_vf['fv'][INVINDS, ],
-                                     rhsp=None)
-
-    # compute the steady state stokes solution
-    rhsd_vfstbc = dict(fv=rhsd_stbc['fv'] + rhsd_vf['fv'][INVINDS, ],
-                       fp=rhsd_stbc['fp'] + rhsd_vf['fp'])
-
-    vp_stokes = lau.stokes_steadystate(matdict=stokesmatsc,
-                                       rhsdict=rhsd_vfstbc)
+                                     rhsv=(rhsd_stbc['fv'] +
+                                           rhsd_vf['fv'][INVINDS, ]),
+                                     rhsp=rhsd_stbc['fp'] + rhsd_vf['fp']
+                                     )
 
     # save the data
-    cdatstr = get_datastr(nwtn=newtk, time=t,
+    cdatstr = get_datastr(nwtn=newtk, time=None,
                           meshp=N, timps=tip)
     dou.save_npa(vp_stokes[:NV, ], fstring=ddir + cdatstr + '__vel')
 
 #
-# Compute the time-dependent flow
+# Compute the uncontrolled steady state Navier-Stokes solution
 #
 
-    # Stokes solution as initial value
-    inivalvec = vp_stokes[:NV, ]
+    # Stokes solution as starting value
+    vel_k = vp_stokes[:NV, ]
 
     norm_nwtnupd = 1
     while newtk < tip['nnewtsteps']:
         newtk += 1
         # check for previously computed velocities
         try:
-            cdatstr = get_datastr(nwtn=newtk, time=tip['tE'],
+            cdatstr = get_datastr(nwtn=newtk, time=None,
                                   meshp=N, timps=tip)
 
             norm_nwtnupd = dou.load_npa(ddir + cdatstr + '__norm_nwtnupd')
-            prev_v = dou.load_npa(ddir + cdatstr + '__vel')
+            vel_k = dou.load_npa(ddir + cdatstr + '__vel')
 
             tip['norm_nwtnupd_list'].append(norm_nwtnupd)
             print 'found vel files of Newton iteration {0}'.format(newtk)
@@ -211,20 +193,18 @@ def drivcav_lqgbt(N=10, Nts=10):
            norm_nwtnupd > tip['vel_nwtn_tol']):
         newtk += 1
 
-        cdatstr = get_datastr(nwtn=newtk, time=tip['t0'],
+        cdatstr = get_datastr(nwtn=newtk, time=None,
                               meshp=N, timps=tip)
-
-        # save the inival value
-        dou.save_npa(inivalvec, fstring=ddir + cdatstr + '__vel')
 
         set_vpfiles(tip, fstring=('results/' +
                                   'NewtonIt{0}').format(newtk))
+
         dou.output_paraview(tip, femp, vp=vp_stokes, t=0)
 
         norm_nwtnupd = 0
         v_old = inivalvec  # start vector in every Newtonit
-        print 'Computing Newton Iteration {0} -- ({1} timesteps)'.\
-            format(newtk, Nts)
+        print 'Computing Newton Iteration {0} -- steady state'.\
+            format(newtk)
 
         for t in np.linspace(tip['t0']+DT, tip['tE'], Nts):
             cdatstr = get_datastr(nwtn=newtk, time=t,
