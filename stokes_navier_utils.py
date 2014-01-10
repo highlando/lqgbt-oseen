@@ -1,3 +1,4 @@
+import numpy as np
 import os
 import glob
 
@@ -19,19 +20,36 @@ def get_v_conv_conts(prev_v=None, V=None, invinds=None, diribcs=None):
     convc_mat, rhsv_conbc = \
         dts.condense_velmatsbybcs(N1 + N2, diribcs)
 
-    return convc_mat, rhs_con, rhsv_conbc
+    return convc_mat, rhs_con[invinds, ], rhsv_conbc
 
 
-def solve_steadystate_nse(A=None, J=None, JT=None,
+def m_innerproduct(M, v1, v2=None):
+    """ inner product with a spd matrix
+
+    """
+    if v2 is None:
+        v2 = v1  # in most cases, we want to compute the norm
+
+    return np.dot(v1.T, M*v2)
+
+
+def solve_steadystate_nse(A=None, J=None, JT=None, M=None,
                           fvc=None, fpr=None,
                           fv_stbc=None, fp_stbc=None,
                           V=None, Q=None, invinds=None, diribcs=None,
                           N=None, nu=None,
                           nnewtsteps=None, vel_nwtn_tol=None,
+                          vel_start_nwtn=None,
                           ddir=None, get_datastring=None,
-                          paraviewoutput=False, prfdir='', prfprfx=''
-                          ):
+                          paraviewoutput=False, prfdir='', prfprfx='',
+                          **kw):
+
     """
+    Solution of the steady state nonlinear NSE Problem
+
+    using Newton's scheme. If no starting value is provide, the iteration
+    is started with the steady state Stokes solution.
+
     :param fvc, fpr:
         right hand sides restricted via removing the boundary nodes in the
         momentum and the pressure freedom in the continuity equation
@@ -80,29 +98,33 @@ def solve_steadystate_nse(A=None, J=None, JT=None,
     NV = A.shape[0]
 
     newtk = 0
-    vp_stokes = lau.solve_sadpnt_smw(amat=A, jmat=J, jmatT=JT,
-                                     rhsv=fv_stbc + fvc,
-                                     rhsp=fp_stbc + fpr
-                                     )
+    if vel_start_nwtn is None:
+        vp_stokes = lau.solve_sadpnt_smw(amat=A, jmat=J, jmatT=JT,
+                                         rhsv=fv_stbc + fvc,
+                                         rhsp=fp_stbc + fpr
+                                         )
 
-    # a dict to be passed to the get_datastring function
-    datastrdict = dict(nwtn=newtk, time=None,
-                       meshp=N, nu=nu, Nts=None, dt=None)
+        # a dict to be passed to the get_datastring function
+        datastrdict = dict(nwtn=newtk, time=None,
+                           meshp=N, nu=nu, Nts=None, dt=None)
 
-    # save the data
-    cdatstr = get_datastr(**datastrdict)
+        # save the data
+        cdatstr = get_datastr(**datastrdict)
 
-    dou.save_npa(vp_stokes[:NV, ], fstring=ddir + cdatstr + '__vel')
+        dou.save_npa(vp_stokes[:NV, ], fstring=ddir + cdatstr + '__vel')
 
-    prvoutdict.update(dict(vp=vp_stokes, fstring=prfdir+prfprfx+cdatstr))
-    dou.output_paraview(**prvoutdict)
+        prvoutdict.update(dict(vp=vp_stokes, fstring=prfdir+prfprfx+cdatstr))
+        dou.output_paraview(**prvoutdict)
 
-#
-# Compute the uncontrolled steady state Navier-Stokes solution
-#
+        # Stokes solution as starting value
+        vel_k = vp_stokes[:NV, ]
 
-    # Stokes solution as starting value
-    vel_k = vp_stokes[:NV, ]
+    else:
+        vel_k = vel_start_nwtn
+
+    #
+    # Compute the uncontrolled steady state Navier-Stokes solution
+    #
 
     norm_nwtnupd = 1
     while newtk < nnewtsteps:
@@ -140,7 +162,8 @@ def solve_steadystate_nse(A=None, J=None, JT=None,
                                     rhsv=fv_stbc+fvc+rhs_con+rhsv_conbc,
                                     rhsp=fp_stbc + fpr)
 
-        vel_k = vp_k[:invinds, ]
+        norm_nwtnupd = np.sqrt(m_innerproduct(M, vel_k - vp_k[:NV, :]))[0]
+        vel_k = vp_k[:NV, ]
 
         dou.save_npa(vel_k, fstring=ddir + cdatstr + '__vel')
 
@@ -153,3 +176,108 @@ def solve_steadystate_nse(A=None, J=None, JT=None,
         print 'norm of current Newton update: {}'.format(norm_nwtnupd)
 
     return vp_k, norm_nwtnupd_list
+
+
+#def solve_nse(A=None, J=None, JT=None,
+#                          fvc=None, fpr=None,
+#                          fv_stbc=None, fp_stbc=None,
+#                          V=None, Q=None, invinds=None, diribcs=None,
+#                          N=None, nu=None,
+#                          nnewtsteps=None, vel_nwtn_tol=None,
+#                          ddir=None, get_datastring=None,
+#                          paraviewoutput=False, prfdir='', prfprfx='',
+#                          **kw):
+#    """
+#    solution of the time-dependent nonlinear Navier-Stokes equation
+#
+#    using a Newton scheme in function space
+#
+#    """
+#
+#    # Stokes solution as starting value
+#    vel_k = vp_stokes[:NV, ]
+#
+#    norm_nwtnupd = 1
+#    while newtk < tip['nnewtsteps']:
+#        newtk += 1
+#        # check for previously computed velocities
+#        try:
+#            cdatstr = get_datastr(nwtn=newtk, time=None,
+#                                  meshp=N, timps=tip)
+#
+#            norm_nwtnupd = dou.load_npa(ddir + cdatstr + '__norm_nwtnupd')
+#            vel_k = dou.load_npa(ddir + cdatstr + '__vel')
+#
+#            tip['norm_nwtnupd_list'].append(norm_nwtnupd)
+#            print 'found vel files of Newton iteration {0}'.format(newtk)
+#            print 'norm of current Nwtn update: {0}'.format(norm_nwtnupd[0])
+#
+#        except IOError:
+#            newtk -= 1
+#            break
+#
+#    while (newtk < tip['nnewtsteps'] and
+#           norm_nwtnupd > tip['vel_nwtn_tol']):
+#        newtk += 1
+#
+#        cdatstr = get_datastr(nwtn=newtk, time=None,
+#                              meshp=N, timps=tip)
+#
+#        set_vpfiles(tip, fstring=('results/' +
+#                                  'NewtonIt{0}').format(newtk))
+#
+#        dou.output_paraview(tip, femp, vp=vp_stokes, t=0)
+#
+#        norm_nwtnupd = 0
+#        v_old = inivalvec  # start vector in every Newtonit
+#        print 'Computing Newton Iteration {0} -- steady state'.\
+#            format(newtk)
+#
+#        for t in np.linspace(tip['t0']+DT, tip['tE'], Nts):
+#            cdatstr = get_datastr(nwtn=newtk, time=t,
+#                                  meshp=N, timps=tip)
+#
+#            # t for implicit scheme
+#            pdatstr = get_datastr(nwtn=newtk-1, time=t,
+#                                  meshp=N, timps=tip)
+#
+#            # try - except for linearizations about stationary sols
+#            # for which t=None
+#            try:
+#                prev_v = dou.load_npa(ddir + pdatstr + '__vel')
+#            except IOError:
+#                pdatstr = get_datastr(nwtn=newtk - 1, time=None,
+#                                      meshp=N, timps=tip)
+#                prev_v = dou.load_npa(ddir + pdatstr + '__vel')
+#
+#            convc_mat, rhs_con, rhsv_conbc = get_v_conv_conts(prev_v,
+#                                                              femp, tip)
+#
+#            rhsd_cur = dict(fv=stokesmatsc['M'] * v_old +
+#                            DT * (rhs_con[INVINDS, :] +
+#                                  rhsv_conbc + rhsd_vfstbc['fv']),
+#                            fp=rhsd_vfstbc['fp'])
+#
+#            matd_cur = dict(A=stokesmatsc['M'] +
+#                            DT * (stokesmatsc['A'] + convc_mat),
+#                            JT=stokesmatsc['JT'],
+#                            J=stokesmatsc['J'])
+#
+#            vp = lau.stokes_steadystate(matdict=matd_cur,
+#                                        rhsdict=rhsd_cur)
+#
+#            v_old = vp[:NV, ]
+#
+#            dou.save_npa(v_old, fstring=ddir + cdatstr + '__vel')
+#
+#            dou.output_paraview(tip, femp, vp=vp, t=t),
+#
+#            # integrate the Newton error
+#            norm_nwtnupd += DT * np.dot((v_old - prev_v).T,
+#                                        stokesmatsc['M'] *
+#                                        (v_old - prev_v))
+#
+#        dou.save_npa(norm_nwtnupd, ddir + cdatstr + '__norm_nwtnupd')
+#        tip['norm_nwtnupd_list'].append(norm_nwtnupd[0])
+#
+#        print 'norm of current Newton update: {}'.format(norm_nwtnupd)
