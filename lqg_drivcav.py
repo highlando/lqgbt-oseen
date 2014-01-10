@@ -29,13 +29,13 @@ def time_int_params(Nts):
                pfile=None,
                Residuals=[],
                ParaviewOutput=True,
-               proutdir='results',
+               proutdir='results/',
                prfprfx='',
                nu=1e-2,
                nnewtsteps=9,  # n nwtn stps for vel comp
                vel_nwtn_tol=1e-14,
                norm_nwtnupd_list=[],
-                # parameters for newton adi iteration
+               # parameters for newton adi iteration
                nwtn_adi_dict=dict(
                    adi_max_steps=100,
                    adi_newZ_reltol=1e-5,
@@ -131,7 +131,7 @@ def drivcav_lqgbt(N=10, Nts=10):
                    nnewtsteps=tip['nnewtsteps'],
                    vel_nwtn_tol=tip['vel_nwtn_tol'],
                    ddir=ddir, get_datastring=None,
-                   paraviewoutput=False, prfdir=tip['proutdir'])
+                   paraviewoutput=True, prfdir=tip['proutdir'])
 
 #
 # compute the uncontrolled steady state Stokes solution
@@ -336,4 +336,4 @@ def drivcav_lqgbt(N=10, Nts=10):
 #    print 'dim of v :', femp['V'].dim()
 
 if __name__ == '__main__':
-    drivcav_lqgbt(N=50, Nts=2)
+    drivcav_lqgbt(N=20, Nts=2)

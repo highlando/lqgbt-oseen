@@ -85,7 +85,7 @@ def solve_steadystate_nse(A=None, J=None, JT=None, M=None,
             os.chdir(curwd)
             prvoutdict = dict(V=V, Q=Q, fstring=prfdir+prfprfx,
                               invinds=invinds, diribcs=diribcs,
-                              vp=None, t=None)
+                              vp=None, t=None, writeoutput=True)
         except OSError:
             raise Warning('the ' + prfdir + 'subdir for storing the' +
                           ' output does not exist. Make it yourself' +
@@ -175,7 +175,7 @@ def solve_steadystate_nse(A=None, J=None, JT=None, M=None,
 
         print 'norm of current Newton update: {}'.format(norm_nwtnupd)
 
-    return vp_k, norm_nwtnupd_list
+    return vel_k, norm_nwtnupd_list
 
 
 #def solve_nse(A=None, J=None, JT=None,
