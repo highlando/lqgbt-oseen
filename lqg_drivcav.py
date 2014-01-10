@@ -8,7 +8,7 @@ import dolfin_navier_scipy.dolfin_to_sparrays as dts
 import dolfin_navier_scipy.data_output_utils as dou
 from dolfin_navier_scipy.problem_setups import drivcav_fems
 
-import sadptprj_riclyap_adi.lin_alg_utils as lau
+#import sadptprj_riclyap_adi.lin_alg_utils as lau
 #import sadptprj_riclyap_adi.proj_ric_utils as pru
 
 import cont_obs_utils as cou
@@ -135,7 +135,7 @@ def drivcav_lqgbt(N=10, Nts=10):
 #
 # compute the uncontrolled steady state Stokes solution
 #
-    vp_ss_nse, list_norm_nwtnupd = snu.solve_steadystate_nse(**soldict)
+    v_ss_nse, list_norm_nwtnupd = snu.solve_steadystate_nse(**soldict)
 
 #
 # Prepare for control
@@ -172,20 +172,13 @@ def drivcav_lqgbt(N=10, Nts=10):
     mc_mat = mc_mat[:, invinds][:, :]
     b_mat = b_mat[invinds, :][:, :]
 
-    mct_mat_reg = lau.app_prj_via_sadpnt(amat=stokesmatsc['M'],
-                                         jmat=stokesmatsc['J'],
-                                         rhsv=mc_mat.T,
-                                         transposedprj=True)
-
-#    # set the weighing matrices
-#    # if iotp.R is None:
-#    iotp.R = iotp.alphau * u_masmat
-#    # TODO: by now we tacitly assume that V, W = MyC.T My^-1 MyC
-#    # if iotp.V is None:
-#    #     iotp.V = My
-#    # if iotp.W is None:
-#    #     iotp.W = My
 #
+# setup the system for the correction
+#
+    (convc_mat, rhs_con,
+     rhsv_conbc) = snu.get_v_conv_conts(v_ss_nse, invinds=invinds,
+                                        V=femp['V'], diribcs=femp['diribcs'])
+
 ##
 ## solve the differential-alg. Riccati eqn for the feedback gain X
 ## via computing factors Z, such that X = -Z*Z.T
@@ -254,7 +247,7 @@ def drivcav_lqgbt(N=10, Nts=10):
 #                # monitor the compression
 #                vec = np.random.randn(Zp.shape[0], 1)
 #                print 'dims of Z and Z_red: ', Zp.shape, Zc.shape
-#                print '||(ZZ_red - ZZ )*testvec|| / ||ZZ_red*testvec|| = {0}'.\
+#                print '||(ZZ_red - ZZ )*testv|| / ||ZZ_red*testv|| = {0}'.\
 #                    format(np.linalg.norm(np.dot(Zp, np.dot(Zp.T, vec)) -
 #                           np.dot(Zc, np.dot(Zc.T, vec))) /
 #                           np.linalg.norm(np.dot(Zp, np.dot(Zp.T, vec))))
@@ -335,4 +328,4 @@ def drivcav_lqgbt(N=10, Nts=10):
 #    print 'dim of v :', femp['V'].dim()
 
 if __name__ == '__main__':
-    drivcav_lqgbt(N=20, Nts=2)
+    drivcav_lqgbt(N=15, Nts=2)
