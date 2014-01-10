@@ -8,8 +8,8 @@ import dolfin_navier_scipy.dolfin_to_sparrays as dts
 import dolfin_navier_scipy.data_output_utils as dou
 from dolfin_navier_scipy.problem_setups import drivcav_fems
 
-#import sadptprj_riclyap_adi.lin_alg_utils as lau
-#import sadptprj_riclyap_adi.proj_ric_utils as pru
+import sadptprj_riclyap_adi.lin_alg_utils as lau
+import sadptprj_riclyap_adi.proj_ric_utils as pru
 
 import cont_obs_utils as cou
 import stokes_navier_utils as snu
@@ -172,12 +172,31 @@ def drivcav_lqgbt(N=10, Nts=10):
     mc_mat = mc_mat[:, invinds][:, :]
     b_mat = b_mat[invinds, :][:, :]
 
+    # TODO: right choice of norms for y
+    #       and necessity of regularization here
+    #       by now, we go on number save
+    c_mat = lau.apply_massinv(y_masmat, mc_mat, output='sparse')
+    c_mat_reg = lau.app_prj_via_sadpnt(amat=stokesmatsc['M'],
+                                       jmat=stokesmatsc['J'],
+                                       rhsv=c_mat.T,
+                                       transposedprj=True).T
+
 #
 # setup the system for the correction
 #
     (convc_mat, rhs_con,
      rhsv_conbc) = snu.get_v_conv_conts(v_ss_nse, invinds=invinds,
                                         V=femp['V'], diribcs=femp['diribcs'])
+
+    f_mat = - stokesmatsc['A'] - convc_mat
+
+    zfac_wc = pru.proj_alg_ric_newtonadi(mmat=stokesmatsc['M'],
+                                         fmat=f_mat,
+                                         jmat=stokesmatsc['J'],
+                                         bmat=b_mat,
+                                         wmat=c_mat_reg)
+#                                            nwtn_adi_dict=tip['nwtn_adi_dict']
+#                                            )['zfac']
 
 ##
 ## solve the differential-alg. Riccati eqn for the feedback gain X
