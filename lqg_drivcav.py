@@ -5,13 +5,13 @@ import dolfin
 import os
 
 import dolfin_navier_scipy.dolfin_to_sparrays as dts
-#import dolfin_navier_scipy.data_output_utils as dou
+import dolfin_navier_scipy.data_output_utils as dou
 from dolfin_navier_scipy.problem_setups import drivcav_fems
 
-#import sadptprj_riclyap_adi.lin_alg_utils as lau
+import sadptprj_riclyap_adi.lin_alg_utils as lau
 #import sadptprj_riclyap_adi.proj_ric_utils as pru
 
-#import cont_obs_utils as cou
+import cont_obs_utils as cou
 import stokes_navier_utils as snu
 
 dolfin.parameters.linear_algebra_backend = 'uBLAS'
@@ -121,7 +121,6 @@ def drivcav_lqgbt(N=10, Nts=10):
 
     # casting some parameters
     NV, DT, INVINDS = len(femp['invinds']), tip['dt'], femp['invinds']
-    NP = stokesmatsc['J'].shape[0]
 
     soldict = stokesmatsc  # containing A, J, JT
     soldict.update(femp)  # adding V, Q, invinds, diribcs
@@ -142,42 +141,42 @@ def drivcav_lqgbt(N=10, Nts=10):
 # Prepare for control
 #
 
-#    # casting some parameters
-#    NY, NU = iotp.NY, iotp.NU
-#
-#    contsetupstr = 'NV{0}NU{1}NY{2}'.format(NV, NU, NY)
-#
-#    # get the control and observation operators
-#    try:
-#        b_mat = dou.load_spa(ddir + contsetupstr + '__b_mat')
-#        u_masmat = dou.load_spa(ddir + contsetupstr + '__u_masmat')
-#        print 'loaded `b_mat`'
-#    except IOError:
-#        print 'computing `b_mat`...'
-#        b_mat, u_masmat = cou.get_inp_opa(cdcoo=iotp.cdcoo,
-#                                          V=femp['V'], NU=iotp.NU)
-#        dou.save_spa(b_mat, ddir + contsetupstr + '__b_mat')
-#        dou.save_spa(u_masmat, ddir + contsetupstr + '__u_masmat')
-#    try:
-#        mc_mat = dou.load_spa(ddir + contsetupstr + '__mc_mat')
-#        y_masmat = dou.load_spa(ddir + contsetupstr + '__y_masmat')
-#        print 'loaded `c_mat`'
-#    except IOError:
-#        print 'computing `c_mat`...'
-#        mc_mat, y_masmat = cou.get_mout_opa(odcoo=iotp.odcoo,
-#                                            V=femp['V'], NY=iotp.NY)
-#        dou.save_spa(mc_mat, ddir + contsetupstr + '__mc_mat')
-#        dou.save_spa(y_masmat, ddir + contsetupstr + '__y_masmat')
-#
-#    # restrict the operators to the inner nodes
-#    mc_mat = mc_mat[:, invinds][:, :]
-#    b_mat = b_mat[invinds, :][:, :]
-#
-#    mct_mat_reg = lau.app_prj_via_sadpnt(amat=stokesmatsc['M'],
-#                                         jmat=stokesmatsc['J'],
-#                                         rhsv=mc_mat.T,
-#                                         transposedprj=True)
-#
+    # casting some parameters
+    NY, NU = iotp.NY, iotp.NU
+
+    contsetupstr = 'NV{0}NU{1}NY{2}'.format(NV, NU, NY)
+
+    # get the control and observation operators
+    try:
+        b_mat = dou.load_spa(ddir + contsetupstr + '__b_mat')
+        u_masmat = dou.load_spa(ddir + contsetupstr + '__u_masmat')
+        print 'loaded `b_mat`'
+    except IOError:
+        print 'computing `b_mat`...'
+        b_mat, u_masmat = cou.get_inp_opa(cdcoo=iotp.cdcoo,
+                                          V=femp['V'], NU=iotp.NU)
+        dou.save_spa(b_mat, ddir + contsetupstr + '__b_mat')
+        dou.save_spa(u_masmat, ddir + contsetupstr + '__u_masmat')
+    try:
+        mc_mat = dou.load_spa(ddir + contsetupstr + '__mc_mat')
+        y_masmat = dou.load_spa(ddir + contsetupstr + '__y_masmat')
+        print 'loaded `c_mat`'
+    except IOError:
+        print 'computing `c_mat`...'
+        mc_mat, y_masmat = cou.get_mout_opa(odcoo=iotp.odcoo,
+                                            V=femp['V'], NY=iotp.NY)
+        dou.save_spa(mc_mat, ddir + contsetupstr + '__mc_mat')
+        dou.save_spa(y_masmat, ddir + contsetupstr + '__y_masmat')
+
+    # restrict the operators to the inner nodes
+    mc_mat = mc_mat[:, invinds][:, :]
+    b_mat = b_mat[invinds, :][:, :]
+
+    mct_mat_reg = lau.app_prj_via_sadpnt(amat=stokesmatsc['M'],
+                                         jmat=stokesmatsc['J'],
+                                         rhsv=mc_mat.T,
+                                         transposedprj=True)
+
 #    # set the weighing matrices
 #    # if iotp.R is None:
 #    iotp.R = iotp.alphau * u_masmat
