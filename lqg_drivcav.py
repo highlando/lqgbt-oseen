@@ -35,7 +35,7 @@ def time_int_params(Nts):
                nnewtsteps=9,  # n nwtn stps for vel comp
                vel_nwtn_tol=1e-14,
                norm_nwtnupd_list=[],
-               # parameters for newton adi iteration
+                # parameters for newton adi iteration
                nwtn_adi_dict=dict(
                    adi_max_steps=100,
                    adi_newZ_reltol=1e-5,
@@ -336,4 +336,4 @@ def drivcav_lqgbt(N=10, Nts=10):
 #    print 'dim of v :', femp['V'].dim()
 
 if __name__ == '__main__':
-    drivcav_lqgbt(N=15, Nts=2)
+    drivcav_lqgbt(N=50, Nts=2)
