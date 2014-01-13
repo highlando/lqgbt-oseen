@@ -141,7 +141,7 @@ def solve_steadystate_nse(A=None, J=None, JT=None, M=None,
             vel_k = dou.load_npa(ddir + cdatstr + '__vel')
 
             norm_nwtnupd_list.append(norm_nwtnupd)
-            print 'found vel files of Newton iteration {0}'.format(newtk)
+            print 'loaded vel files of Newton iteration {0}'.format(newtk)
             print 'norm of current Nwtn update: {0}'.format(norm_nwtnupd[0])
 
         except IOError:
@@ -182,14 +182,17 @@ def solve_steadystate_nse(A=None, J=None, JT=None, M=None,
 
 
 #def solve_nse(A=None, J=None, JT=None,
-#                          fvc=None, fpr=None,
-#                          fv_stbc=None, fp_stbc=None,
-#                          V=None, Q=None, invinds=None, diribcs=None,
-#                          N=None, nu=None,
-#                          nnewtsteps=None, vel_nwtn_tol=None,
-#                          ddir=None, get_datastring=None,
-#                          paraviewoutput=False, prfdir='', prfprfx='',
-#                          **kw):
+#              fvc=None, fpr=None,
+#              fv_stbc=None, fp_stbc=None,
+#              iniv=None, lin_vel_point=None,
+#              V=None, Q=None, invinds=None, diribcs=None,
+#              N=None, nu=None,
+#              z_ssfeedb=None,
+#              tb_mat=None, c_mat=None,
+#              nnewtsteps=None, vel_nwtn_tol=None,
+#              ddir=None, get_datastring=None,
+#              paraviewoutput=False, prfdir='', prfprfx='',
+#              **kw):
 #    """
 #    solution of the time-dependent nonlinear Navier-Stokes equation
 #
@@ -197,8 +200,18 @@ def solve_steadystate_nse(A=None, J=None, JT=None, M=None,
 #
 #    """
 #
-#    # Stokes solution as starting value
-#    vel_k = vp_stokes[:NV, ]
+#    NV = A.shape[0]
+#    if iniv is None:
+#        # Stokes solution as starting value
+#        vp_stokes = lau.solve_sadpnt_smw(amat=A, jmat=J, jmatT=JT,
+#                                         rhsv=fv_stbc + fvc,
+#                                         rhsp=fp_stbc + fpr)
+#        iniv = vp_stokes[:NV]
+#
+#    if lin_vel_point is None:
+#        # linearize about Stokes solution
+#        lin_vel_point = vp_stokes[:NV]
+#
 #
 #    norm_nwtnupd = 1
 #    while newtk < tip['nnewtsteps']:

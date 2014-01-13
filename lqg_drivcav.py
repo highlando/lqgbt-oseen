@@ -1,5 +1,5 @@
 import dolfin
-#import numpy as np
+import numpy as np
 #import scipy.sparse as sps
 # import matplotlib.pyplot as plt
 import os
@@ -10,6 +10,7 @@ from dolfin_navier_scipy.problem_setups import drivcav_fems
 
 import sadptprj_riclyap_adi.lin_alg_utils as lau
 import sadptprj_riclyap_adi.proj_ric_utils as pru
+import sadptprj_riclyap_adi.bal_trunc_utils as btu
 
 import cont_obs_utils as cou
 import stokes_navier_utils as snu
@@ -31,13 +32,13 @@ def time_int_params(Nts):
                ParaviewOutput=True,
                proutdir='results/',
                prfprfx='',
-               nu=1e-2,
+               nu=5e-2,
                nnewtsteps=9,  # n nwtn stps for vel comp
                vel_nwtn_tol=1e-14,
                norm_nwtnupd_list=[],
                # parameters for newton adi iteration
                nwtn_adi_dict=dict(
-                   adi_max_steps=100,
+                   adi_max_steps=200,
                    adi_newZ_reltol=1e-5,
                    nwtn_max_steps=6,
                    nwtn_upd_reltol=4e-8,
@@ -194,10 +195,14 @@ def drivcav_lqgbt(N=10, Nts=10):
                                   meshp=N, nu=tip['nu'], Nts=None, dt=None)
 
     try:
-        zwc = dou.load_npa(ddir + contsetupstr + '__zwc')
-        zwo = dou.load_npa(ddir + contsetupstr + '__zwo')
+        zwc = dou.load_npa(ddir + cdatstr + contsetupstr + '__zwc')
+        zwo = dou.load_npa(ddir + cdatstr + contsetupstr + '__zwo')
+        print 'loaded the factors of ' + \
+              'observability and controllability Gramians'
     except IOError:
         # solve for the contr gramian: A*Wc*M.T + M*Wc*A.T - ... = -B*B.T
+        print 'computing the factors of the' + \
+              'observability and controllability Gramians'
         zwc = pru.proj_alg_ric_newtonadi(mmat=stokesmatsc['M'].T,
                                          fmat=f_mat.T,
                                          jmat=stokesmatsc['J'],
@@ -218,6 +223,21 @@ def drivcav_lqgbt(N=10, Nts=10):
         # save the data
         dou.save_npa(zwc, fstring=ddir + cdatstr + contsetupstr + '__zwc')
         dou.save_npa(zwo, fstring=ddir + cdatstr + contsetupstr + '__zwo')
+
+    try:
+        tl = dou.load_npa(ddir + cdatstr + contsetupstr + '__tl')
+        tr = dou.load_npa(ddir + cdatstr + contsetupstr + '__tr')
+        print 'loaded the left and right transformations ' + \
+              'for the (LQG) balanced truncation'
+    except IOError:
+        print 'computing the left and right transformations ' + \
+              'for the (LQG) balanced truncation'
+        tl, tr = btu.compute_lrbt_transfos(zfc=zwc, zfo=zwo,
+                                           mmat=stokesmatsc['M'], trunck=None)
+        dou.save_npa(tl, ddir + cdatstr + contsetupstr + '__tl')
+        dou.save_npa(tr, ddir + cdatstr + contsetupstr + '__tr')
+
+    print np.dot(tl.T, stokesmatsc['M']*tr)
 
 #    # solve the closed loop system
 #    set_vpfiles(tip, fstring=('results/' + 'closedloop' + cntpstr +
