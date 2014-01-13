@@ -190,111 +190,35 @@ def drivcav_lqgbt(N=10, Nts=10):
 
     f_mat = - stokesmatsc['A'] - convc_mat
 
-    zfac_wc = pru.proj_alg_ric_newtonadi(mmat=stokesmatsc['M'],
+    cdatstr = snu.get_datastr_snu(nwtn=None, time=None,
+                                  meshp=N, nu=tip['nu'], Nts=None, dt=None)
+
+    try:
+        zwc = dou.load_npa(ddir + contsetupstr + '__zwc')
+        zwo = dou.load_npa(ddir + contsetupstr + '__zwo')
+    except IOError:
+        # solve for the contr gramian: A*Wc*M.T + M*Wc*A.T - ... = -B*B.T
+        zwc = pru.proj_alg_ric_newtonadi(mmat=stokesmatsc['M'].T,
+                                         fmat=f_mat.T,
+                                         jmat=stokesmatsc['J'],
+                                         bmat=c_mat_reg.T,
+                                         wmat=b_mat,
+                                         nwtn_adi_dict=tip['nwtn_adi_dict']
+                                         )['zfac']
+
+        # solve for the obs gramian: A.T*Wo*M + M.T*Wo*A - ... = -C*C.T
+        zwo = pru.proj_alg_ric_newtonadi(mmat=stokesmatsc['M'],
                                          fmat=f_mat,
                                          jmat=stokesmatsc['J'],
                                          bmat=b_mat,
-                                         wmat=c_mat_reg)
-#                                            nwtn_adi_dict=tip['nwtn_adi_dict']
-#                                            )['zfac']
+                                         wmat=c_mat_reg.T,
+                                         nwtn_adi_dict=tip['nwtn_adi_dict']
+                                         )['zfac']
 
-##
-## solve the differential-alg. Riccati eqn for the feedback gain X
-## via computing factors Z, such that X = -Z*Z.T
-##
-## at the same time we solve for the affine-linear correction w
-##
-#
-#    # tilde B = BR^{-1/2}
-#    tb_mat = lau.apply_invsqrt_fromleft(iotp.R, b_mat,
-#                                        output='sparse')
-#
-#    trct_mat = lau.apply_invsqrt_fromleft(iotp.endpy*y_masmat,
-#                                          mct_mat_reg, output='dense')
-#
-#    cntpstr = 'NY{0}NU{1}alphau{2}'.format(iotp.NU, iotp.NY, iotp.alphau)
-#
-#    # set/compute the terminal values aka starting point
-#    Zc = lau.apply_massinv(stokesmatsc['M'], trct_mat)
-#    wc = -lau.apply_massinv(stokesmatsc['MT'],
-#                            np.dot(mct_mat_reg, iotp.ystarvec(tip['tE'])))
-#
-#    cdatstr = get_datastr(nwtn=newtk, time=tip['tE'], meshp=N, timps=tip)
-#
-#    dou.save_npa(Zc, fstring=ddir + cdatstr + cntpstr + '__Z')
-#    dou.save_npa(wc, fstring=ddir + cdatstr + cntpstr + '__w')
-#
-#    # we will need transposes, and explicit is better than implicit
-#    # here, the coefficient matrices are symmetric
-#    stokesmatsc.update(dict(MT=stokesmatsc['M'],
-#                            AT=stokesmatsc['A']))
-#
-#    # we gonna use this quite often
-#    MT, AT = stokesmatsc['MT'], stokesmatsc['AT']
-#    M, A = stokesmatsc['M'], stokesmatsc['A']
-#
-#    for t in np.linspace(tip['tE'] - DT, tip['t0'], Nts):
-#        print 'Time is {0}'.format(t)
-#
-#        # get the previous time convection matrices
-#        pdatstr = get_datastr(nwtn=newtk, time=t, meshp=N, timps=tip)
-#        prev_v = dou.load_npa(ddir + pdatstr + '__vel')
-#        convc_mat, rhs_con, rhsv_conbc = get_v_conv_conts(prev_v,
-#                                                          femp, tip)
-#
-#        try:
-#            Zc = dou.load_npa(ddir + pdatstr + cntpstr + '__Z')
-#        except IOError:
-#
-#            # coeffmat for nwtn adi
-#            ft_mat = -(0.5*stokesmatsc['MT'] + DT*(stokesmatsc['AT'] +
-#                                                   convc_mat.T))
-#            # rhs for nwtn adi
-#            w_mat = np.hstack([stokesmatsc['MT']*Zc, np.sqrt(DT)*trct_mat])
-#
-#            Zp = pru.proj_alg_ric_newtonadi(mmat=stokesmatsc['MT'],
-#                                            fmat=ft_mat, transposed=True,
-#                                            jmat=stokesmatsc['J'],
-#                                            bmat=np.sqrt(DT)*tb_mat,
-#                                            wmat=w_mat, z0=Zc,
-#                                            nwtn_adi_dict=tip['nwtn_adi_dict']
-#                                            )['zfac']
-#
-#            if tip['compress_z']:
-#                # Zc = pru.compress_ZQR(Zp, kmax=tip['comprz_maxc'])
-#                Zc = pru.compress_Zsvd(Zp, thresh=tip['comprz_thresh'])
-#                # monitor the compression
-#                vec = np.random.randn(Zp.shape[0], 1)
-#                print 'dims of Z and Z_red: ', Zp.shape, Zc.shape
-#                print '||(ZZ_red - ZZ )*testv|| / ||ZZ_red*testv|| = {0}'.\
-#                    format(np.linalg.norm(np.dot(Zp, np.dot(Zp.T, vec)) -
-#                           np.dot(Zc, np.dot(Zc.T, vec))) /
-#                           np.linalg.norm(np.dot(Zp, np.dot(Zp.T, vec))))
-#            else:
-#                Zc = Zp
-#
-#            if tip['save_full_z']:
-#                dou.save_npa(Zp, fstring=ddir + pdatstr + cntpstr + '__Z')
-#            else:
-#                dou.save_npa(Zc, fstring=ddir + pdatstr + cntpstr + '__Z')
-#
-#        ### and the affine correction
-#        ftilde = rhs_con[INVINDS, :] + rhsv_conbc + rhsd_vfstbc['fv']
-#        at_mat = MT + DT*(AT + convc_mat.T)
-#        rhswc = MT*wc + DT*(mc_mat.T*iotp.ystarvec(t) -
-#                            MT*np.dot(Zc, np.dot(Zc.T, ftilde)))
-#
-#        amat, currhs = dts.sadpnt_matsrhs(at_mat, stokesmatsc['J'], rhswc)
-#
-#        umat = DT*MT*np.dot(Zc, Zc.T*tb_mat)
-#        vmat = tb_mat.T
-#
-#        vmate = sps.hstack([vmat, sps.csc_matrix((vmat.shape[0], NP))])
-#        umate = np.vstack([umat, np.zeros((NP, umat.shape[1]))])
-#
-#        wc = lau.app_smw_inv(amat, umat=-umate, vmat=vmate, rhsa=currhs)[:NV]
-#        dou.save_npa(wc, fstring=ddir + pdatstr + cntpstr + '__w')
-#
+        # save the data
+        dou.save_npa(zwc, fstring=ddir + cdatstr + contsetupstr + '__zwc')
+        dou.save_npa(zwo, fstring=ddir + cdatstr + contsetupstr + '__zwo')
+
 #    # solve the closed loop system
 #    set_vpfiles(tip, fstring=('results/' + 'closedloop' + cntpstr +
 #                              'NewtonIt{0}').format(newtk))

@@ -8,6 +8,13 @@ import dolfin_navier_scipy.data_output_utils as dou
 import sadptprj_riclyap_adi.lin_alg_utils as lau
 
 
+def get_datastr_snu(nwtn=None, time=None,
+                    meshp=None, nu=None, Nts=None, dt=None):
+
+    return ('Nwtnit{0}_time{1}_nu{2}_mesh{3}_Nts{4}_dt{5}').format(
+        nwtn, time, nu, meshp, Nts, dt)
+
+
 def get_v_conv_conts(prev_v=None, V=None, invinds=None, diribcs=None):
     """ get and condense the linearized convection
 
@@ -70,11 +77,7 @@ def solve_steadystate_nse(A=None, J=None, JT=None, M=None,
     """
 
     if get_datastring is None:
-        def get_datastr(nwtn=None, time=None,
-                        meshp=None, nu=None, Nts=None, dt=None):
-
-            return ('Nwtnit{0}_time{1}_nu{2}_mesh{3}_Nts{4}_dt{5}').format(
-                nwtn, time, nu, meshp, Nts, dt)
+        get_datastring = get_datastr_snu
 
     if paraviewoutput:
         curwd = os.getcwd()
@@ -109,7 +112,7 @@ def solve_steadystate_nse(A=None, J=None, JT=None, M=None,
                            meshp=N, nu=nu, Nts=None, dt=None)
 
         # save the data
-        cdatstr = get_datastr(**datastrdict)
+        cdatstr = get_datastr_snu(**datastrdict)
 
         dou.save_npa(vp_stokes[:NV, ], fstring=ddir + cdatstr + '__vel')
 
@@ -132,7 +135,7 @@ def solve_steadystate_nse(A=None, J=None, JT=None, M=None,
         datastrdict.update(dict(nwtn=newtk))
         # check for previously computed velocities
         try:
-            cdatstr = get_datastr(**datastrdict)
+            cdatstr = get_datastr_snu(**datastrdict)
 
             norm_nwtnupd = dou.load_npa(ddir + cdatstr + '__norm_nwtnupd')
             vel_k = dou.load_npa(ddir + cdatstr + '__vel')
@@ -149,7 +152,7 @@ def solve_steadystate_nse(A=None, J=None, JT=None, M=None,
         newtk += 1
 
         datastrdict.update(dict(nwtn=newtk))
-        cdatstr = get_datastr(**datastrdict)
+        cdatstr = get_datastr_snu(**datastrdict)
 
         print 'Computing Newton Iteration {0} -- steady state'.\
             format(newtk)
