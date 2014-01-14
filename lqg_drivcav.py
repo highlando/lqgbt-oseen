@@ -195,8 +195,8 @@ def drivcav_lqgbt(N=10, Nts=10):
                                   meshp=N, nu=tip['nu'], Nts=None, dt=None)
 
     try:
-        zwc = dou.load_npa(ddir + cdatstr + contsetupstr + '__zwc')
-        zwo = dou.load_npa(ddir + cdatstr + contsetupstr + '__zwo')
+        zwc = dou.load_npa(ddir + cdatstr + contsetupstr + '__lqgbt_zwc')
+        zwo = dou.load_npa(ddir + cdatstr + contsetupstr + '__lqgbt_zwo')
         print 'loaded the factors of ' + \
               'observability and controllability Gramians'
     except IOError:
@@ -221,8 +221,10 @@ def drivcav_lqgbt(N=10, Nts=10):
                                          )['zfac']
 
         # save the data
-        dou.save_npa(zwc, fstring=ddir + cdatstr + contsetupstr + '__zwc')
-        dou.save_npa(zwo, fstring=ddir + cdatstr + contsetupstr + '__zwo')
+        dou.save_npa(zwc,
+                     fstring=ddir + cdatstr + contsetupstr + '__lqgbt_zwc')
+        dou.save_npa(zwo,
+                     fstring=ddir + cdatstr + contsetupstr + '__lqgbt_zwo')
 
     try:
         tl = dou.load_npa(ddir + cdatstr + contsetupstr + '__tl')
@@ -237,7 +239,10 @@ def drivcav_lqgbt(N=10, Nts=10):
         dou.save_npa(tl, ddir + cdatstr + contsetupstr + '__tl')
         dou.save_npa(tr, ddir + cdatstr + contsetupstr + '__tr')
 
-    print np.dot(tl.T, stokesmatsc['M']*tr)
+    btu.compare_freqresp(mmat=stokesmatsc['M'], amat=f_mat,
+                         jmat=stokesmatsc['J'], bmat=b_mat,
+                         cmat=c_mat, tr=tr, tl=tl,
+                         plot=False)
 
 #    # solve the closed loop system
 #    set_vpfiles(tip, fstring=('results/' + 'closedloop' + cntpstr +
