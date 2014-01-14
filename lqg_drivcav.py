@@ -1,6 +1,6 @@
 import dolfin
-import numpy as np
-#import scipy.sparse as sps
+# import numpy as np
+# import scipy.sparse as sps
 # import matplotlib.pyplot as plt
 import os
 
@@ -32,7 +32,7 @@ def time_int_params(Nts):
                ParaviewOutput=True,
                proutdir='results/',
                prfprfx='',
-               nu=5e-2,
+               nu=3e-3,
                nnewtsteps=9,  # n nwtn stps for vel comp
                vel_nwtn_tol=1e-14,
                norm_nwtnupd_list=[],
@@ -78,7 +78,7 @@ class IOParams():
                           ymax=0.3)
 
 
-def drivcav_lqgbt(N=10, Nts=10):
+def drivcav_lqgbt(N=10, Nts=10, plain_bt=True):
 
     tip = time_int_params(Nts)
     femp = drivcav_fems(N)
@@ -194,55 +194,61 @@ def drivcav_lqgbt(N=10, Nts=10):
     cdatstr = snu.get_datastr_snu(nwtn=None, time=None,
                                   meshp=N, nu=tip['nu'], Nts=None, dt=None)
 
+    if plain_bt:
+        data_zwc = ddir + cdatstr + contsetupstr + '__bt_zwc'
+        data_zwo = ddir + cdatstr + contsetupstr + '__bt_zwo'
+        get_gramians = pru.solve_proj_lyap_stein
+        data_tl = ddir + cdatstr + contsetupstr + '__bt_tl'
+        data_tr = ddir + cdatstr + contsetupstr + '__bt_tr'
+    else:
+        data_zwc = ddir + cdatstr + contsetupstr + '__lqgbt_zwc'
+        data_zwo = ddir + cdatstr + contsetupstr + '__lqgbt_zwo'
+        get_gramians = pru.proj_alg_ric_newtonadi
+        data_tl = ddir + cdatstr + contsetupstr + '__lqgbt_tl'
+        data_tr = ddir + cdatstr + contsetupstr + '__lqgbt_tr'
+
     try:
-        zwc = dou.load_npa(ddir + cdatstr + contsetupstr + '__lqgbt_zwc')
-        zwo = dou.load_npa(ddir + cdatstr + contsetupstr + '__lqgbt_zwo')
+        zwc = dou.load_npa(data_zwc)
+        zwo = dou.load_npa(data_zwo)
         print 'loaded the factors of ' + \
               'observability and controllability Gramians'
     except IOError:
         # solve for the contr gramian: A*Wc*M.T + M*Wc*A.T - ... = -B*B.T
         print 'computing the factors of the' + \
               'observability and controllability Gramians'
-        zwc = pru.proj_alg_ric_newtonadi(mmat=stokesmatsc['M'].T,
-                                         fmat=f_mat.T,
-                                         jmat=stokesmatsc['J'],
-                                         bmat=c_mat_reg.T,
-                                         wmat=b_mat,
-                                         nwtn_adi_dict=tip['nwtn_adi_dict']
-                                         )['zfac']
+        zwc = get_gramians(mmat=stokesmatsc['M'].T, amat=f_mat.T,
+                           jmat=stokesmatsc['J'],
+                           bmat=c_mat_reg.T,
+                           wmat=b_mat,
+                           nwtn_adi_dict=tip['nwtn_adi_dict'])['zfac']
 
         # solve for the obs gramian: A.T*Wo*M + M.T*Wo*A - ... = -C*C.T
-        zwo = pru.proj_alg_ric_newtonadi(mmat=stokesmatsc['M'],
-                                         fmat=f_mat,
-                                         jmat=stokesmatsc['J'],
-                                         bmat=b_mat,
-                                         wmat=c_mat_reg.T,
-                                         nwtn_adi_dict=tip['nwtn_adi_dict']
-                                         )['zfac']
+        zwo = get_gramians(mmat=stokesmatsc['M'], amat=f_mat,
+                           jmat=stokesmatsc['J'], bmat=b_mat,
+                           wmat=c_mat_reg.T,
+                           nwtn_adi_dict=tip['nwtn_adi_dict'])['zfac']
 
         # save the data
-        dou.save_npa(zwc,
-                     fstring=ddir + cdatstr + contsetupstr + '__lqgbt_zwc')
-        dou.save_npa(zwo,
-                     fstring=ddir + cdatstr + contsetupstr + '__lqgbt_zwo')
+        dou.save_npa(zwc, fstring=data_zwc)
+        dou.save_npa(zwo, fstring=data_zwo)
 
     try:
-        tl = dou.load_npa(ddir + cdatstr + contsetupstr + '__tl')
-        tr = dou.load_npa(ddir + cdatstr + contsetupstr + '__tr')
-        print 'loaded the left and right transformations ' + \
-              'for the (LQG) balanced truncation'
+        tl = dou.load_npa(data_tl)
+        tr = dou.load_npa(data_tr)
+        print 'loaded the left and right transformations: ' + \
+            data_tr
     except IOError:
-        print 'computing the left and right transformations ' + \
-              'for the (LQG) balanced truncation'
+        print 'computing the left and right transformations and saving to:' + \
+            data_tr
         tl, tr = btu.compute_lrbt_transfos(zfc=zwc, zfo=zwo,
                                            mmat=stokesmatsc['M'], trunck=None)
-        dou.save_npa(tl, ddir + cdatstr + contsetupstr + '__tl')
-        dou.save_npa(tr, ddir + cdatstr + contsetupstr + '__tr')
+        dou.save_npa(tl, data_tl)
+        dou.save_npa(tr, data_tr)
 
     btu.compare_freqresp(mmat=stokesmatsc['M'], amat=f_mat,
                          jmat=stokesmatsc['J'], bmat=b_mat,
                          cmat=c_mat, tr=tr, tl=tl,
-                         plot=False)
+                         plot=True)
 
 #    # solve the closed loop system
 #    set_vpfiles(tip, fstring=('results/' + 'closedloop' + cntpstr +
@@ -296,4 +302,4 @@ def drivcav_lqgbt(N=10, Nts=10):
 #    print 'dim of v :', femp['V'].dim()
 
 if __name__ == '__main__':
-    drivcav_lqgbt(N=15, Nts=2)
+    drivcav_lqgbt(N=15, Nts=2, plain_bt=False)
