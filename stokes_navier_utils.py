@@ -15,19 +15,39 @@ def get_datastr_snu(nwtn=None, time=None,
         nwtn, time, nu, meshp, Nts, dt)
 
 
-def get_v_conv_conts(prev_v=None, V=None, invinds=None, diribcs=None):
+def get_v_conv_conts(prev_v=None, V=None, invinds=None, diribcs=None,
+                     Picard=False):
     """ get and condense the linearized convection
 
-    rhsv_con += (u_0*D_x)u_0 from the Newton scheme"""
+    to be used in a Newton scheme
+    .. math::
+        (u \\cdot \\nabla) u \\to (u_0 \\cdot \\nabla) u + \
+            (u \\cdot \\nabla) u_0 - (u_0 \\cdot \\nabla) u_0
+
+    or in a Picard scheme
+    .. math::
+        (u \\cdot \\nabla) u \\to (u_0 \\cdot \\nabla) u
+
+    :return:
+    ``N1`` matrix representing :math:`(u_0 \\cdot \\nabla )u`
+    ``N2`` matrix representing :math:`(u \\cdot \\nabla )u_0`
+    ``fv`` vector representing :math:`(u_0 \\cdot \\nabla )u_0`
+
+    """
 
     N1, N2, rhs_con = dts.get_convmats(u0_vec=prev_v,
                                        V=V,
                                        invinds=invinds,
                                        diribcs=diribcs)
-    convc_mat, rhsv_conbc = \
-        dts.condense_velmatsbybcs(N1 + N2, diribcs)
+    if Picard:
+        convc_mat, rhsv_conbc = \
+            dts.condense_velmatsbybcs(N1, diribcs)
+        return convc_mat, 0*rhs_con[invinds, ], rhsv_conbc
 
-    return convc_mat, rhs_con[invinds, ], rhsv_conbc
+    else:
+        convc_mat, rhsv_conbc = \
+            dts.condense_velmatsbybcs(N1 + N2, diribcs)
+        return convc_mat, rhs_con[invinds, ], rhsv_conbc
 
 
 def m_innerproduct(M, v1, v2=None):
@@ -45,6 +65,7 @@ def solve_steadystate_nse(A=None, J=None, JT=None, M=None,
                           fv_stbc=None, fp_stbc=None,
                           V=None, Q=None, invinds=None, diribcs=None,
                           N=None, nu=None,
+                          picardsteps=0,
                           nnewtsteps=None, vel_nwtn_tol=None,
                           vel_start_nwtn=None,
                           ddir=None, get_datastring=None,

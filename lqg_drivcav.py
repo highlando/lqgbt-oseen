@@ -18,7 +18,7 @@ import stokes_navier_utils as snu
 dolfin.parameters.linear_algebra_backend = 'uBLAS'
 
 
-def time_int_params(Nts):
+def time_int_params(Nts, nu):
     t0 = 0.0
     tE = 1.0
     dt = (tE - t0) / Nts
@@ -32,7 +32,7 @@ def time_int_params(Nts):
                ParaviewOutput=True,
                proutdir='results/',
                prfprfx='',
-               nu=3e-3,
+               nu=nu,
                nnewtsteps=9,  # n nwtn stps for vel comp
                vel_nwtn_tol=1e-14,
                norm_nwtnupd_list=[],
@@ -78,9 +78,9 @@ class IOParams():
                           ymax=0.3)
 
 
-def drivcav_lqgbt(N=10, Nts=10, plain_bt=True):
+def drivcav_lqgbt(N=10, Nts=10, nu=1e-2, plain_bt=True):
 
-    tip = time_int_params(Nts)
+    tip = time_int_params(Nts, nu)
     femp = drivcav_fems(N)
     iotp = IOParams()
 
@@ -214,7 +214,7 @@ def drivcav_lqgbt(N=10, Nts=10, plain_bt=True):
               'observability and controllability Gramians'
     except IOError:
         # solve for the contr gramian: A*Wc*M.T + M*Wc*A.T - ... = -B*B.T
-        print 'computing the factors of the' + \
+        print 'computing the factors of the ' + \
               'observability and controllability Gramians'
         zwc = get_gramians(mmat=stokesmatsc['M'].T, amat=f_mat.T,
                            jmat=stokesmatsc['J'],
@@ -235,13 +235,13 @@ def drivcav_lqgbt(N=10, Nts=10, plain_bt=True):
     try:
         tl = dou.load_npa(data_tl)
         tr = dou.load_npa(data_tr)
-        print 'loaded the left and right transformations: ' + \
+        print 'loaded the left and right transformations: \n' + \
             data_tr
     except IOError:
-        print 'computing the left and right transformations and saving to:' + \
-            data_tr
+        print 'computing the left and right transformations' + \
+            'and saving to:\n' + data_tr
         tl, tr = btu.compute_lrbt_transfos(zfc=zwc, zfo=zwo,
-                                           mmat=stokesmatsc['M'], trunck=None)
+                                           mmat=stokesmatsc['M'])
         dou.save_npa(tl, data_tl)
         dou.save_npa(tr, data_tr)
 
@@ -302,4 +302,4 @@ def drivcav_lqgbt(N=10, Nts=10, plain_bt=True):
 #    print 'dim of v :', femp['V'].dim()
 
 if __name__ == '__main__':
-    drivcav_lqgbt(N=15, Nts=2, plain_bt=False)
+    drivcav_lqgbt(N=20, Nts=2, nu=2e-3, plain_bt=True)
