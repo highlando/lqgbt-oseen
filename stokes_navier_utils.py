@@ -67,7 +67,7 @@ def solve_steadystate_nse(A=None, J=None, JT=None, M=None,
                           N=None, nu=None,
                           picardsteps=4,
                           nnewtsteps=None, vel_nwtn_tol=None,
-                          clearprvdata=True,
+                          clearprvdata=False,
                           vel_start_nwtn=None,
                           ddir=None, get_datastring=None,
                           paraviewoutput=False, prfdir='', prfprfx='',
@@ -76,8 +76,9 @@ def solve_steadystate_nse(A=None, J=None, JT=None, M=None,
     """
     Solution of the steady state nonlinear NSE Problem
 
-    using Newton's scheme. If no starting value is provide, the iteration
-    is started with the steady state Stokes solution.
+    using Newton's scheme. If no starting value is provided, the iteration
+    is started with the steady state Stokes solution improved by a number of
+    Picard iteration steps.
 
     :param fvc, fpr:
         right hand sides restricted via removing the boundary nodes in the
@@ -223,11 +224,6 @@ def solve_steadystate_nse(A=None, J=None, JT=None, M=None,
         norm_nwtnupd_list.append(norm_nwtnupd[0])
 
         print 'norm of current Newton update: {}'.format(norm_nwtnupd)
-
-    savetomatlab = True
-    if savetomatlab:
-        export_mats_to_matlab(E=None, A=None, matfname='matexport')
-
 
     return vel_k, norm_nwtnupd_list
 

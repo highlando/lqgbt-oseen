@@ -66,7 +66,7 @@ class IOParams():
 
     def __init__(self):
 
-        self.NU, self.NY = 4, 4
+        self.NU, self.NY = 3, 4
 
         self.odcoo = dict(xmin=0.45,
                           xmax=0.55,
@@ -250,6 +250,20 @@ def drivcav_lqgbt(N=10, Nts=10, nu=1e-2, plain_bt=True):
                          cmat=c_mat, tr=tr, tl=tl,
                          plot=True)
 
+    savetomatfiles = True
+    if savetomatfiles:
+        import scipy.io
+        infostr = 'These are the coefficient matrices of the linearized ' +\
+            'Navier-Stokes Equations for the driven cavity to be used as' +\
+            ' $M \\dot v = Av + J^Tp + Bu$   and  $Jv = 0$ ' +\
+            ' note that this is the reduced system for the velocity update' +\
+            ' caused by the control, i.e. there are no boundary conditions' +\
+            ' or inhomogeneities here. Created in `lqg_drivcav`'
+        scipy.io.savemat('drivcavmats_N{0}_Re{1}'.format(NV, 1./nu),
+                         dict(A=f_mat, M=stokesmatsc['M'], Reynoldsnr=nu,
+                              J=stokesmatsc['J'], B=b_mat, info=infostr,
+                              contsetupstr=contsetupstr, datastr=cdatstr))
+
 #    # solve the closed loop system
 #    set_vpfiles(tip, fstring=('results/' + 'closedloop' + cntpstr +
 #                              'NewtonIt{0}').format(newtk))
@@ -302,4 +316,4 @@ def drivcav_lqgbt(N=10, Nts=10, nu=1e-2, plain_bt=True):
 #    print 'dim of v :', femp['V'].dim()
 
 if __name__ == '__main__':
-    drivcav_lqgbt(N=25, Nts=2, nu=2e-4, plain_bt=True)
+    drivcav_lqgbt(N=10, nu=1e-1, plain_bt=True)
