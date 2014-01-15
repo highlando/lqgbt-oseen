@@ -38,9 +38,9 @@ def time_int_params(Nts, nu):
                norm_nwtnupd_list=[],
                # parameters for newton adi iteration
                nwtn_adi_dict=dict(
-                   adi_max_steps=200,
+                   adi_max_steps=250,
                    adi_newZ_reltol=1e-5,
-                   nwtn_max_steps=6,
+                   nwtn_max_steps=9,
                    nwtn_upd_reltol=4e-8,
                    nwtn_upd_abstol=1e-7,
                    verbose=True,
@@ -186,7 +186,7 @@ def drivcav_lqgbt(N=10, Nts=10, nu=1e-2, plain_bt=True):
 # setup the system for the correction
 #
     (convc_mat, rhs_con,
-     rhsv_conbc) = snu.get_v_conv_conts(v_ss_nse, invinds=invinds,
+     rhsv_conbc) = snu.get_v_conv_conts(prev_v=v_ss_nse, invinds=invinds,
                                         V=femp['V'], diribcs=femp['diribcs'])
 
     f_mat = - stokesmatsc['A'] - convc_mat
@@ -239,7 +239,7 @@ def drivcav_lqgbt(N=10, Nts=10, nu=1e-2, plain_bt=True):
             data_tr
     except IOError:
         print 'computing the left and right transformations' + \
-            'and saving to:\n' + data_tr
+            ' and saving to:\n' + data_tr
         tl, tr = btu.compute_lrbt_transfos(zfc=zwc, zfo=zwo,
                                            mmat=stokesmatsc['M'])
         dou.save_npa(tl, data_tl)
@@ -302,4 +302,4 @@ def drivcav_lqgbt(N=10, Nts=10, nu=1e-2, plain_bt=True):
 #    print 'dim of v :', femp['V'].dim()
 
 if __name__ == '__main__':
-    drivcav_lqgbt(N=20, Nts=2, nu=2e-3, plain_bt=True)
+    drivcav_lqgbt(N=25, Nts=2, nu=2e-4, plain_bt=True)
