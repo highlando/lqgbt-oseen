@@ -56,33 +56,13 @@ def time_int_params(Nts, nu):
     return tip
 
 
-class IOParams():
-    """define the parameters of the input output problem
-
-    as there are
-    - dimensions of in and output space
-    - extensions of the subdomains of control and observation
-    """
-
-    def __init__(self):
-
-        self.NU, self.NY = 3, 4
-
-        self.odcoo = dict(xmin=0.45,
-                          xmax=0.55,
-                          ymin=0.5,
-                          ymax=0.7)
-        self.cdcoo = dict(xmin=0.4,
-                          xmax=0.6,
-                          ymin=0.2,
-                          ymax=0.3)
-
 
 def drivcav_lqgbt(N=10, Nts=10, nu=1e-2, plain_bt=True):
 
     tip = time_int_params(Nts, nu)
     femp = drivcav_fems(N)
-    iotp = IOParams()
+
+    NU, NY = 3, 4
 
     # output
     ddir = 'data/'
@@ -142,9 +122,6 @@ def drivcav_lqgbt(N=10, Nts=10, nu=1e-2, plain_bt=True):
 # Prepare for control
 #
 
-    # casting some parameters
-    NY, NU = iotp.NY, iotp.NU
-
     contsetupstr = 'NV{0}NU{1}NY{2}'.format(NV, NU, NY)
 
     # get the control and observation operators
@@ -154,8 +131,8 @@ def drivcav_lqgbt(N=10, Nts=10, nu=1e-2, plain_bt=True):
         print 'loaded `b_mat`'
     except IOError:
         print 'computing `b_mat`...'
-        b_mat, u_masmat = cou.get_inp_opa(cdcoo=iotp.cdcoo,
-                                          V=femp['V'], NU=iotp.NU)
+        b_mat, u_masmat = cou.get_inp_opa(cdcoo=femp['cdcoo'],
+                                          V=femp['V'], NU=NU)
         dou.save_spa(b_mat, ddir + contsetupstr + '__b_mat')
         dou.save_spa(u_masmat, ddir + contsetupstr + '__u_masmat')
     try:
@@ -164,8 +141,8 @@ def drivcav_lqgbt(N=10, Nts=10, nu=1e-2, plain_bt=True):
         print 'loaded `c_mat`'
     except IOError:
         print 'computing `c_mat`...'
-        mc_mat, y_masmat = cou.get_mout_opa(odcoo=iotp.odcoo,
-                                            V=femp['V'], NY=iotp.NY)
+        mc_mat, y_masmat = cou.get_mout_opa(odcoo=femp['odcoo'],
+                                            V=femp['V'], NY=NY)
         dou.save_spa(mc_mat, ddir + contsetupstr + '__mc_mat')
         dou.save_spa(y_masmat, ddir + contsetupstr + '__y_masmat')
 

@@ -10,11 +10,20 @@ from dolfin import dx, inner
 dolfin.parameters.linear_algebra_backend = "uBLAS"
 
 
-def get_inp_opa(cdcoo=None, NU=8, V=None):
+def get_inp_opa(cdcoo=None, NU=8, V=None, xcomp=0):
     """dolfin.assemble the 'B' matrix
 
     the findim array representation
-    of the input operator """
+    of the input operator
+
+    Parameters:
+    -----------
+    cdcoo : dictionary with xmin, xmax, ymin, ymax of the control domain
+    NU : dimension of the input space
+    V : FEM space of the velocity
+    xcomp : spatial component that is preserved, the other is averaged out
+
+    """
 
     cdom = ContDomain(cdcoo)
 
@@ -26,8 +35,8 @@ def get_inp_opa(cdcoo=None, NU=8, V=None):
 
     for nbf in range(NU):
         ubf = L2abLinBas(nbf, NU)
-        bux = Cast1Dto2D(ubf, cdom, vcomp=0, xcomp=0)
-        buy = Cast1Dto2D(ubf, cdom, vcomp=1, xcomp=0)
+        bux = Cast1Dto2D(ubf, cdom, vcomp=0, xcomp=xcomp)
+        buy = Cast1Dto2D(ubf, cdom, vcomp=1, xcomp=xcomp)
         bx = inner(v, bux) * dx
         by = inner(v, buy) * dx
         Bx = dolfin.assemble(bx)
