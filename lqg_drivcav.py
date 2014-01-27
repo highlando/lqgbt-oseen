@@ -6,6 +6,7 @@ import os
 
 import dolfin_navier_scipy.dolfin_to_sparrays as dts
 import dolfin_navier_scipy.data_output_utils as dou
+import dolfin_navier_scipy.stokes_navier_utils as snu
 from dolfin_navier_scipy.problem_setups import drivcav_fems
 
 import sadptprj_riclyap_adi.lin_alg_utils as lau
@@ -13,7 +14,6 @@ import sadptprj_riclyap_adi.proj_ric_utils as pru
 import sadptprj_riclyap_adi.bal_trunc_utils as btu
 
 import cont_obs_utils as cou
-import stokes_navier_utils as snu
 
 dolfin.parameters.linear_algebra_backend = 'uBLAS'
 
