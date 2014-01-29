@@ -13,7 +13,7 @@ import sadptprj_riclyap_adi.lin_alg_utils as lau
 import sadptprj_riclyap_adi.proj_ric_utils as pru
 import sadptprj_riclyap_adi.bal_trunc_utils as btu
 
-import cont_obs_utils as cou
+import distr_control_fenics.cont_obs_utils as cou
 
 dolfin.parameters.linear_algebra_backend = 'uBLAS'
 
@@ -54,7 +54,6 @@ def time_int_params(Nts, nu):
                )
 
     return tip
-
 
 
 def drivcav_lqgbt(N=10, Nts=10, nu=1e-2, plain_bt=True):
