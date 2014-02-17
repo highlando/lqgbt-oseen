@@ -190,7 +190,8 @@ def lqgbt(problemname='drivencavity',
             'Navier-Stokes Equations \n for the ' +\
             problemname + ' to be used as \n\n' +\
             ' $M \\dot v = Av + J^Tp + Bu$   and  $Jv = 0$ \n\n' +\
-            'Note that this is the reduced system for the velocity update\n' +\
+            ' the Reynoldsnumber is computed as L/nu \n' +\
+            ' Note that this is the reduced system for the velocity update\n' +\
             ' caused by the control, i.e., no boundary conditions\n' +\
             ' or inhomogeneities here. To get the actual flow, superpose \n' +\
             ' the steadystate velocity solution `v_ss_nse` \n\n' +\
@@ -204,9 +205,17 @@ def lqgbt(problemname='drivencavity',
             datetime.datetime.now().strftime("%I:%M%p on %B %d, %Y")
 
         mddir = '/afs/mpi-magdeburg.mpg.de/data/csc/projects/qbdae-nse/data/'
+        if problemname == 'cylinderwake':
+            charlen = 0.15  # diameter of the cylinder
+            Re = charlen/nu
+        elif problemname == 'drivencavity':
+            Re = nu
+        else:
+            Re = nu
+        
         scipy.io.savemat(mddir + problemname +
-                         '__mats_N{0}_Re{1}'.format(NV, 1./nu),
-                         dict(A=f_mat, M=stokesmatsc['M'], nu=nu,
+                         '__mats_N{0}_Re{1}'.format(NV, Re),
+                         dict(A=f_mat, M=stokesmatsc['M'], nu=nu, Re=Re,
                               J=stokesmatsc['J'], B=b_mat,
                               v_ss_nse=v_ss_nse, info=infostr,
                               contsetupstr=contsetupstr, datastr=cdatstr,
@@ -332,4 +341,4 @@ def lqgbt(problemname='drivencavity',
 if __name__ == '__main__':
     # drivcav_lqgbt(N=10, nu=1e-1, plain_bt=True)
     lqgbt(problemname='cylinderwake', N=2, nu=2e-2, plain_bt=True,
-          savetomatfiles=False)
+          savetomatfiles=True)
