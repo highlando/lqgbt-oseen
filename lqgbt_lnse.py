@@ -178,8 +178,8 @@ def lqgbt(problemname='drivencavity',
 
     f_mat = - stokesmatsc['A'] - convc_mat
 
-    cdatstr = snu.get_datastr_snu(nwtn=None, time=None,
-                                  meshp=N, nu=tip['nu'], Nts=None, dt=None)
+    cdatstr = snu.get_datastr_snu(time=None, meshp=N, nu=tip['nu'],
+                                  Nts=None, dt=None)
 
     if savetomatfiles:
         import datetime
