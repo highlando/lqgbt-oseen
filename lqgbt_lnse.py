@@ -202,6 +202,11 @@ def lqgbt(problemname='drivencavity',
             ' the same order as v \n' +\
             ' `xinds`, `yinds` -- indices of x and y components' +\
             ' of v = [vx, vy] \n\n' +\
+            ' the control setup is as follows \n' +\
+            ' B maps into the domain of control - the first half of the ' +\
+            'actuate in x-direction, the second in y direction \n' +\
+            ' C measures averaged velocities in the domain of observation' +\
+            ' the first components are in x, the last in y-direction \n\n' +\
             'Created in `lqgbt_lnse` ' +\
             '(see https://github.com/highlando/lqgbt-oseen) at\n' +\
             datetime.datetime.now().strftime("%I:%M%p on %B %d, %Y")
