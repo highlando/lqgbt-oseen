@@ -166,6 +166,8 @@ def lqgbt(problemname='drivencavity',
     mc_mat = mc_mat[:, invinds][:, :]
     b_mat = b_mat[invinds, :][:, :]
 
+    c_mat = lau.apply_massinv(y_masmat, mc_mat, output='sparse')
+
     # TODO: right choice of norms for y
     #       and necessity of regularization here
     #       by now, we go on number save
@@ -216,7 +218,7 @@ def lqgbt(problemname='drivencavity',
         scipy.io.savemat(mddir + problemname +
                          '__mats_N{0}_Re{1}'.format(NV, Re),
                          dict(A=f_mat, M=stokesmatsc['M'], nu=nu, Re=Re,
-                              J=stokesmatsc['J'], B=b_mat,
+                              J=stokesmatsc['J'], B=b_mat, C=c_mat,
                               v_ss_nse=v_ss_nse, info=infostr,
                               contsetupstr=contsetupstr, datastr=cdatstr,
                               coors=coors, xinds=xinds, yinds=yinds))
