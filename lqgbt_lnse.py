@@ -1,7 +1,4 @@
 import dolfin
-# import numpy as np
-# import scipy.sparse as sps
-# import matplotlib.pyplot as plt
 import os
 
 import dolfin_navier_scipy.dolfin_to_sparrays as dts
@@ -43,7 +40,7 @@ def time_int_params(Nts, nu):
                    nwtn_max_steps=9,
                    nwtn_upd_reltol=4e-8,
                    nwtn_upd_abstol=1e-7,
-                   verbose=True,
+                   verbose=False,
                    full_upd_norm_check=False,
                    check_lyap_res=False
                ),
@@ -58,6 +55,7 @@ def time_int_params(Nts, nu):
 
 def lqgbt(problemname='drivencavity',
           N=10, Nts=10, Re=1e2, plain_bt=True,
+          use_ric_ini=[],
           savetomatfiles=False):
 
     problemdict = dict(drivencavity=dnsps.drivcav_fems,
@@ -71,7 +69,6 @@ def lqgbt(problemname='drivencavity',
     problemfem = problemdict[problemname]
     femp = problemfem(N)
 
-    data_prfx = problemname + '__'
     NU, NY = 3, 4
 
     # specify in what spatial direction Bu changes. The remaining is constant
@@ -123,6 +120,13 @@ def lqgbt(problemname='drivencavity',
     # casting some parameters
     NV, DT, INVINDS = len(femp['invinds']), tip['dt'], femp['invinds']
 
+    prbstr = '_bt' if plain_bt else '_lqgbt'
+    contsetupstr = 'NV{0}NU{1}NY{2}'.format(NV, NU, NY)
+
+    def get_fdstr(Re):
+        return ddir + problemname + '_Re{0}_'.format(Re) + \
+            contsetupstr + prbstr
+
     soldict = stokesmatsc  # containing A, J, JT
     soldict.update(femp)  # adding V, Q, invinds, diribcs
     soldict.update(rhsd_vfrc)  # adding fvc, fpr
@@ -131,7 +135,6 @@ def lqgbt(problemname='drivencavity',
                    nnewtsteps=tip['nnewtsteps'],
                    vel_nwtn_tol=tip['vel_nwtn_tol'],
                    ddir=ddir, get_datastring=None,
-                   data_prfx=data_prfx,
                    paraviewoutput=tip['ParaviewOutput'],
                    vfileprfx=tip['proutdir']+'vel_',
                    pfileprfx=tip['proutdir']+'p_')
@@ -144,8 +147,6 @@ def lqgbt(problemname='drivencavity',
 #
 # Prepare for control
 #
-
-    contsetupstr = problemname + '__NV{0}NU{1}NY{2}'.format(NV, NU, NY)
 
     # get the control and observation operators
     try:
@@ -174,6 +175,10 @@ def lqgbt(problemname='drivencavity',
     b_mat = b_mat[invinds, :][:, :]
 
     c_mat = lau.apply_massinv(y_masmat, mc_mat, output='sparse')
+    c_mat_reg = lau.app_prj_via_sadpnt(amat=stokesmatsc['M'],
+                                       jmat=stokesmatsc['J'],
+                                       rhsv=c_mat.T,
+                                       transposedprj=True).T
 
     # TODO: right choice of norms for y
     #       and necessity of regularization here
@@ -186,89 +191,74 @@ def lqgbt(problemname='drivencavity',
                                         V=femp['V'], diribcs=femp['diribcs'])
 
     f_mat = - stokesmatsc['A'] - convc_mat
+    mmat = stokesmatsc['M']
 
-    def get_fdstr(Re):
-        cdatstr = snu.get_datastr_snu(time=None, meshp=N, nu=charlen/Re)
-        return ddir + cdatstr + contsetupstr
+    if plain_bt:
+        get_gramians = pru.solve_proj_lyap_stein
+    else:
+        get_gramians = pru.proj_alg_ric_newtonadi
 
     fdstr = get_fdstr(Re)
-    if plain_bt:
-        data_zwc = fdstr + '__bt_zwc'
-        data_zwo = fdstr + '__bt_zwo'
-        get_gramians = pru.solve_proj_lyap_stein
-        data_tl = fdstr + '__bt_tl'
-        data_tr = fdstr + '__bt_tr'
-    else:
-        data_zwc = fdstr + '__lqgbt_zwc'
-        data_zwo = fdstr + '__lqgbt_zwo'
-        get_gramians = pru.proj_alg_ric_newtonadi
-        data_tl = fdstr + '__lqgbt_tl'
-        data_tr = fdstr + '__lqgbt_tr'
-
     try:
-        zwc = dou.load_npa(data_zwc)
-        zwo = dou.load_npa(data_zwo)
-        print 'loaded the factors of ' + \
-              'observability and controllability Gramians'
-
-    except IOError:
-        if not plain_bt:
-            zinic, zinio = None, None
-            for Re in use_ric_ini:
-                try:
-                    zinic = dou.load_npa(get_fdstr(Re) + '__Z')
-                    print 'Initialize Newton ADI by Z from ' + cdatstr
-                except IOError:
-                    raise Warning('No data for initialization of '
-                                  ' Newton ADI -- need ' + cdatstr + '__Z')
-                cdatstr = get_datastr(meshp=N, nu=nu, data_prfx=data_prfx)
-            else:
-
-            Z = pru.proj_alg_ric_newtonadi(mmat=M, amat=-A-convc_mat,
-                                           jmat=stokesmatsc['J'],
-                                           bmat=tb_mat, wmat=trct_mat,
-                                           nwtn_adi_dict=
-                                           tip['nwtn_adi_dict'],
-                                           z0=zini)['zfac']
-            dou.save_npa(Z, fstring=ddir + cdatstr + cntpstr + '__Z')
-            print 'saved ' + ddir + cdatstr + cntpstr + '__Z'
-        c_mat = lau.apply_massinv(y_masmat, mc_mat, output='sparse')
-        c_mat_reg = lau.app_prj_via_sadpnt(amat=stokesmatsc['M'],
-                                           jmat=stokesmatsc['J'],
-                                           rhsv=c_mat.T,
-                                           transposedprj=True).T
-
-        # solve for the contr gramian: A*Wc*M.T + M*Wc*A.T - ... = -B*B.T
-        print 'computing the factors of the ' + \
-              'observability and controllability Gramians'
-        zwc = get_gramians(mmat=stokesmatsc['M'].T, amat=f_mat.T,
-                           jmat=stokesmatsc['J'],
-                           bmat=c_mat_reg.T,
-                           wmat=b_mat,
-                           nwtn_adi_dict=tip['nwtn_adi_dict'])['zfac']
-
-        # solve for the obs gramian: A.T*Wo*M + M.T*Wo*A - ... = -C*C.T
-        zwo = get_gramians(mmat=stokesmatsc['M'], amat=f_mat,
-                           jmat=stokesmatsc['J'], bmat=b_mat,
-                           wmat=c_mat_reg.T,
-                           nwtn_adi_dict=tip['nwtn_adi_dict'])['zfac']
-
-        # save the data
-        dou.save_npa(zwc, fstring=data_zwc)
-        dou.save_npa(zwo, fstring=data_zwo)
-
-    try:
-        tl = dou.load_npa(data_tl)
-        tr = dou.load_npa(data_tr)
+        tl = dou.load_npa(fdstr + '__tl')
+        tr = dou.load_npa(fdstr + '__tr')
         print 'loaded the left and right transformations: \n' + \
-            data_tr
+            fdstr + '__tl/__tr'
     except IOError:
         print 'computing the left and right transformations' + \
-            ' and saving to:\n' + data_tr
+            ' and saving to: \n' + fdstr + '__tl/__tr'
+
+        try:
+            zwc = dou.load_npa(fdstr + '__zwc')
+            zwo = dou.load_npa(fdstr + '__zwo')
+            print 'loaded factor of the Gramians: \n\t' + \
+                fdstr + '__zwc/__zwo'
+        except IOError:
+            zinic, zinio = None, None
+            for cre in use_ric_ini:
+                fdstr = get_fdstr(cre)
+                try:
+                    zinic = dou.load_npa(fdstr + '__zwc')
+                    zinio = dou.load_npa(fdstr + '__zwo')
+                    print 'Initialize Newton ADI by zwc/zwo from ' + fdstr
+                except IOError:
+                    print 'Computing initial guess for ADI with Re{0}'.\
+                        format(cre)
+                    zinic = get_gramians(mmat=mmat.T, amat=f_mat.T,
+                                         jmat=stokesmatsc['J'],
+                                         bmat=c_mat_reg.T, wmat=b_mat,
+                                         nwtn_adi_dict=tip['nwtn_adi_dict'],
+                                         z0=zinic)['zfac']
+                    dou.save_npa(zinic, fdstr + '__zwc')
+                    zinio = get_gramians(mmat=mmat, amat=f_mat,
+                                         jmat=stokesmatsc['J'],
+                                         bmat=b_mat, wmat=c_mat_reg.T,
+                                         nwtn_adi_dict=tip['nwtn_adi_dict'],
+                                         z0=zinio)['zfac']
+                    dou.save_npa(zinio, fdstr + '__zwo')
+
+            fdstr = get_fdstr(Re)
+            print 'computing factors of Gramians: \n\t' + \
+                fdstr + '__zwc/__zwo'
+            zwc = get_gramians(mmat=mmat.T, amat=f_mat.T,
+                               jmat=stokesmatsc['J'],
+                               bmat=c_mat_reg.T, wmat=b_mat,
+                               nwtn_adi_dict=tip['nwtn_adi_dict'],
+                               z0=zinic)['zfac']
+            dou.save_npa(zwc, fdstr + '__zwc')
+            zwo = get_gramians(mmat=mmat, amat=f_mat,
+                               jmat=stokesmatsc['J'],
+                               bmat=b_mat, wmat=c_mat_reg.T,
+                               nwtn_adi_dict=tip['nwtn_adi_dict'],
+                               z0=zinio)['zfac']
+            dou.save_npa(zwo, fdstr + '__zwo')
+
+        print 'computing the left and right transformations' + \
+            ' and saving to:\n' + fdstr + '__tr/__tl'
         tl, tr = btu.compute_lrbt_transfos(zfc=zwc, zfo=zwo,
                                            mmat=stokesmatsc['M'])
-        dou.save_npa(tl, data_tl)
-        dou.save_npa(tr, data_tr)
+        dou.save_npa(tl, fdstr + '__tl')
+        dou.save_npa(tr, fdstr + '__tr')
 
     btu.compare_freqresp(mmat=stokesmatsc['M'], amat=f_mat,
                          jmat=stokesmatsc['J'], bmat=b_mat,
@@ -277,6 +267,6 @@ def lqgbt(problemname='drivencavity',
 
 
 if __name__ == '__main__':
-    # drivcav_lqgbt(N=10, nu=1e-1, plain_bt=True)
-    lqgbt(problemname='cylinderwake', N=2, Re=1e2, plain_bt=False,
-          savetomatfiles=True)
+    lqgbt(N=10, Re=1e3+1, use_ric_ini=[100, 500, 750], plain_bt=False)
+    # lqgbt(problemname='cylinderwake', N=2, Re=1e2, plain_bt=False,
+    #       savetomatfiles=True)
