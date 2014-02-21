@@ -200,15 +200,15 @@ def lqgbt(problemname='drivencavity',
             ' or inhomogeneities here. To get the actual flow, superpose \n' +\
             ' the steadystate velocity solution `v_ss_nse` \n\n' +\
             ' the control setup is as follows \n' +\
-            ' B maps into the domain of control - the first half of the ' +\
+            ' B maps into the domain of control - the first half of the colums' +\
             'actuate in x-direction, the second in y direction \n' +\
             ' C measures averaged velocities in the domain of observation' +\
             ' the first components are in x, the last in y-direction \n\n' +\
             ' Visualization: \n\n' +\
             ' `coors`   -- array of (x,y) coordinates in ' +\
-            ' the same order as v \n' +\
+            ' the same order as v[xinds] or v[yinds] \n' +\
             ' `xinds`, `yinds` -- indices of x and y components' +\
-            ' of v = [vx, vy] \n' +\
+            ' of v = [vx, vy] -- note that indexing starts with 0\n' +\
             ' for testing use corfunvec wich is the interpolant of\n' +\
             ' f(x,y) = [x, y] on the grid \n\n' +\
             'Created in `exp_cylinder_mats.py` ' +\
@@ -235,122 +235,3 @@ def lqgbt(problemname='drivencavity',
 
         return
 
-    if plain_bt:
-        data_zwc = ddir + cdatstr + contsetupstr + '__bt_zwc'
-        data_zwo = ddir + cdatstr + contsetupstr + '__bt_zwo'
-        get_gramians = pru.solve_proj_lyap_stein
-        data_tl = ddir + cdatstr + contsetupstr + '__bt_tl'
-        data_tr = ddir + cdatstr + contsetupstr + '__bt_tr'
-    else:
-        data_zwc = ddir + cdatstr + contsetupstr + '__lqgbt_zwc'
-        data_zwo = ddir + cdatstr + contsetupstr + '__lqgbt_zwo'
-        get_gramians = pru.proj_alg_ric_newtonadi
-        data_tl = ddir + cdatstr + contsetupstr + '__lqgbt_tl'
-        data_tr = ddir + cdatstr + contsetupstr + '__lqgbt_tr'
-
-    try:
-        zwc = dou.load_npa(data_zwc)
-        zwo = dou.load_npa(data_zwo)
-        print 'loaded the factors of ' + \
-              'observability and controllability Gramians'
-    except IOError:
-        # TODO: this inverse only on the nonzero columns
-        c_mat = lau.apply_massinv(y_masmat, mc_mat, output='sparse')
-        c_mat_reg = lau.app_prj_via_sadpnt(amat=stokesmatsc['M'],
-                                           jmat=stokesmatsc['J'],
-                                           rhsv=c_mat.T,
-                                           transposedprj=True).T
-
-        # solve for the contr gramian: A*Wc*M.T + M*Wc*A.T - ... = -B*B.T
-        print 'computing the factors of the ' + \
-              'observability and controllability Gramians'
-        zwc = get_gramians(mmat=stokesmatsc['M'].T, amat=f_mat.T,
-                           jmat=stokesmatsc['J'],
-                           bmat=c_mat_reg.T,
-                           wmat=b_mat,
-                           nwtn_adi_dict=tip['nwtn_adi_dict'])['zfac']
-
-        # solve for the obs gramian: A.T*Wo*M + M.T*Wo*A - ... = -C*C.T
-        zwo = get_gramians(mmat=stokesmatsc['M'], amat=f_mat,
-                           jmat=stokesmatsc['J'], bmat=b_mat,
-                           wmat=c_mat_reg.T,
-                           nwtn_adi_dict=tip['nwtn_adi_dict'])['zfac']
-
-        # save the data
-        dou.save_npa(zwc, fstring=data_zwc)
-        dou.save_npa(zwo, fstring=data_zwo)
-
-    try:
-        tl = dou.load_npa(data_tl)
-        tr = dou.load_npa(data_tr)
-        print 'loaded the left and right transformations: \n' + \
-            data_tr
-    except IOError:
-        print 'computing the left and right transformations' + \
-            ' and saving to:\n' + data_tr
-        tl, tr = btu.compute_lrbt_transfos(zfc=zwc, zfo=zwo,
-                                           mmat=stokesmatsc['M'])
-        dou.save_npa(tl, data_tl)
-        dou.save_npa(tr, data_tr)
-
-    btu.compare_freqresp(mmat=stokesmatsc['M'], amat=f_mat,
-                         jmat=stokesmatsc['J'], bmat=b_mat,
-                         cmat=c_mat, tr=tr, tl=tl,
-                         plot=True)
-
-
-#    # solve the closed loop system
-#    set_vpfiles(tip, fstring=('results/' + 'closedloop' + cntpstr +
-#                              'NewtonIt{0}').format(newtk))
-#
-#    v_old = inivalvec
-#    for t in np.linspace(tip['t0']+DT, tip['tE'], Nts):
-#
-#        # t for implicit scheme
-#        ndatstr = get_datastr(nwtn=newtk, time=t,
-#                              meshp=N, timps=tip)
-#
-#        # convec mats
-#        next_v = dou.load_npa(ddir + ndatstr + '__vel')
-#        convc_mat, rhs_con, rhsv_conbc = get_v_conv_conts(next_v,
-#                                                          femp, tip)
-#
-#        # feedback mats
-#        next_zmat = dou.load_npa(ddir + ndatstr + cntpstr + '__Z')
-#        next_w = dou.load_npa(ddir + ndatstr + cntpstr + '__w')
-#        print 'norm of w:', np.linalg.norm(next_w)
-#
-#        umat = DT*MT*np.dot(next_zmat, next_zmat.T*tb_mat)
-#        vmat = tb_mat.T
-#
-#        vmate = sps.hstack([vmat, sps.csc_matrix((vmat.shape[0], NP))])
-#        umate = DT*np.vstack([umat, np.zeros((NP, umat.shape[1]))])
-#
-#        fvn = rhs_con[INVINDS, :] + rhsv_conbc + rhsd_vfstbc['fv']
-#        # rhsn = M*next_v + DT*(fvn + tb_mat * (tb_mat.T * next_w))
-#        rhsn = M*v_old + DT*(fvn + 0*tb_mat * (tb_mat.T * next_w))
-#
-#        amat = M + DT*(A + convc_mat)
-#        rvec = np.random.randn(next_zmat.shape[0], 1)
-#        print 'norm of amat', np.linalg.norm(amat*rvec)
-#        print 'norm of gain mat', np.linalg.norm(np.dot(umat, vmat*rvec))
-#
-#        amat, currhs = dts.sadpnt_matsrhs(amat, stokesmatsc['J'], rhsn)
-#
-#        vpn = lau.app_smw_inv(amat, umat=-umate, vmat=vmate, rhsa=currhs)
-#        # vpn = np.atleast_2d(sps.linalg.spsolve(amat, currhs)).T
-#        v_old = vpn[:NV]
-#
-#        yn = lau.apply_massinv(y_masmat, mc_mat*vpn[:NV])
-#        print 'current y: ', yn
-#
-#        dou.save_npa(vpn[:NV], fstring=ddir + cdatstr + '__cont_vel')
-#
-#        dou.output_paraview(tip, femp, vp=vpn, t=t),
-#
-#    print 'dim of v :', femp['V'].dim()
-
-if __name__ == '__main__':
-    # drivcav_lqgbt(N=10, nu=1e-1, plain_bt=True)
-    lqgbt(problemname='cylinderwake', N=2, nu=2e-2, plain_bt=True,
-          savetomatfiles=True)
