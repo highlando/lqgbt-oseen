@@ -2,6 +2,6 @@
 
 git pull
 git status
-FILETOEDIT=lqg_drivcav.py
+FILETOEDIT=lqgbt_lnse.py
 echo $FILETOEDIT
 gvim --remote-silent $FILETOEDIT 

@@ -57,13 +57,16 @@ def time_int_params(Nts, nu):
 
 
 def lqgbt(problemname='drivencavity',
-          N=10, Nts=10, nu=1e-2, plain_bt=True,
+          N=10, Nts=10, Re=1e2, plain_bt=True,
           savetomatfiles=False):
-
-    tip = time_int_params(Nts, nu)
 
     problemdict = dict(drivencavity=dnsps.drivcav_fems,
                        cylinderwake=dnsps.cyl_fems)
+
+    typprb = 'BT' if plain_bt else 'LQG-BT'
+
+    print '\n ### We solve the {0} problem for the {1} at Re={2} ###\n'.\
+        format(typprb, problemname, Re)
 
     problemfem = problemdict[problemname]
     femp = problemfem(N)
@@ -73,10 +76,14 @@ def lqgbt(problemname='drivencavity',
 
     # specify in what spatial direction Bu changes. The remaining is constant
     if problemname == 'drivencavity':
+        charlen = 1.0
         uspacedep = 0
     elif problemname == 'cylinderwake':
+        charlen = 0.15
         uspacedep = 1
+    nu = charlen/Re
 
+    tip = time_int_params(Nts, nu)
     # output
     ddir = 'data/'
     try:
@@ -180,76 +187,51 @@ def lqgbt(problemname='drivencavity',
 
     f_mat = - stokesmatsc['A'] - convc_mat
 
-    cdatstr = snu.get_datastr_snu(time=None, meshp=N, nu=tip['nu'],
-                                  Nts=None, dt=None)
+    def get_fdstr(Re):
+        cdatstr = snu.get_datastr_snu(time=None, meshp=N, nu=charlen/Re)
+        return ddir + cdatstr + contsetupstr
 
-    if savetomatfiles:
-        import datetime
-        import scipy.io
-
-        coors, xinds, yinds = dts.get_dof_coors(femp['V'], invinds=invinds)
-        infostr = 'These are the coefficient matrices of the linearized ' +\
-            'Navier-Stokes Equations \n for the ' +\
-            problemname + ' to be used as \n\n' +\
-            ' $M \\dot v = Av + J^Tp + Bu$   and  $Jv = 0$ \n\n' +\
-            ' the Reynoldsnumber is computed as L/nu \n' +\
-            ' Note that this is the reduced system for the velocity update\n' +\
-            ' caused by the control, i.e., no boundary conditions\n' +\
-            ' or inhomogeneities here. To get the actual flow, superpose \n' +\
-            ' the steadystate velocity solution `v_ss_nse` \n\n' +\
-            ' Visualization: \n\n' +\
-            ' `coors`   -- array of (x,y) coordinates in ' +\
-            ' the same order as v \n' +\
-            ' `xinds`, `yinds` -- indices of x and y components' +\
-            ' of v = [vx, vy] \n\n' +\
-            ' the control setup is as follows \n' +\
-            ' B maps into the domain of control - the first half of the ' +\
-            'actuate in x-direction, the second in y direction \n' +\
-            ' C measures averaged velocities in the domain of observation' +\
-            ' the first components are in x, the last in y-direction \n\n' +\
-            'Created in `lqgbt_lnse` ' +\
-            '(see https://github.com/highlando/lqgbt-oseen) at\n' +\
-            datetime.datetime.now().strftime("%I:%M%p on %B %d, %Y")
-
-        mddir = '/afs/mpi-magdeburg.mpg.de/data/csc/projects/qbdae-nse/data/'
-        if problemname == 'cylinderwake':
-            charlen = 0.15  # diameter of the cylinder
-            Re = charlen/nu
-        elif problemname == 'drivencavity':
-            Re = nu
-        else:
-            Re = nu
-        
-        scipy.io.savemat(mddir + problemname +
-                         '__mats_N{0}_Re{1}'.format(NV, Re),
-                         dict(A=f_mat, M=stokesmatsc['M'], nu=nu, Re=Re,
-                              J=stokesmatsc['J'], B=b_mat, C=c_mat,
-                              v_ss_nse=v_ss_nse, info=infostr,
-                              contsetupstr=contsetupstr, datastr=cdatstr,
-                              coors=coors, xinds=xinds, yinds=yinds))
-
-        return
-
+    fdstr = get_fdstr(Re)
     if plain_bt:
-        data_zwc = ddir + cdatstr + contsetupstr + '__bt_zwc'
-        data_zwo = ddir + cdatstr + contsetupstr + '__bt_zwo'
+        data_zwc = fdstr + '__bt_zwc'
+        data_zwo = fdstr + '__bt_zwo'
         get_gramians = pru.solve_proj_lyap_stein
-        data_tl = ddir + cdatstr + contsetupstr + '__bt_tl'
-        data_tr = ddir + cdatstr + contsetupstr + '__bt_tr'
+        data_tl = fdstr + '__bt_tl'
+        data_tr = fdstr + '__bt_tr'
     else:
-        data_zwc = ddir + cdatstr + contsetupstr + '__lqgbt_zwc'
-        data_zwo = ddir + cdatstr + contsetupstr + '__lqgbt_zwo'
+        data_zwc = fdstr + '__lqgbt_zwc'
+        data_zwo = fdstr + '__lqgbt_zwo'
         get_gramians = pru.proj_alg_ric_newtonadi
-        data_tl = ddir + cdatstr + contsetupstr + '__lqgbt_tl'
-        data_tr = ddir + cdatstr + contsetupstr + '__lqgbt_tr'
+        data_tl = fdstr + '__lqgbt_tl'
+        data_tr = fdstr + '__lqgbt_tr'
 
     try:
         zwc = dou.load_npa(data_zwc)
         zwo = dou.load_npa(data_zwo)
         print 'loaded the factors of ' + \
               'observability and controllability Gramians'
+
     except IOError:
-        # TODO: this inverse only on the nonzero columns
+        if not plain_bt:
+            zinic, zinio = None, None
+            for Re in use_ric_ini:
+                try:
+                    zinic = dou.load_npa(get_fdstr(Re) + '__Z')
+                    print 'Initialize Newton ADI by Z from ' + cdatstr
+                except IOError:
+                    raise Warning('No data for initialization of '
+                                  ' Newton ADI -- need ' + cdatstr + '__Z')
+                cdatstr = get_datastr(meshp=N, nu=nu, data_prfx=data_prfx)
+            else:
+
+            Z = pru.proj_alg_ric_newtonadi(mmat=M, amat=-A-convc_mat,
+                                           jmat=stokesmatsc['J'],
+                                           bmat=tb_mat, wmat=trct_mat,
+                                           nwtn_adi_dict=
+                                           tip['nwtn_adi_dict'],
+                                           z0=zini)['zfac']
+            dou.save_npa(Z, fstring=ddir + cdatstr + cntpstr + '__Z')
+            print 'saved ' + ddir + cdatstr + cntpstr + '__Z'
         c_mat = lau.apply_massinv(y_masmat, mc_mat, output='sparse')
         c_mat_reg = lau.app_prj_via_sadpnt(amat=stokesmatsc['M'],
                                            jmat=stokesmatsc['J'],
@@ -294,58 +276,7 @@ def lqgbt(problemname='drivencavity',
                          plot=True)
 
 
-#    # solve the closed loop system
-#    set_vpfiles(tip, fstring=('results/' + 'closedloop' + cntpstr +
-#                              'NewtonIt{0}').format(newtk))
-#
-#    v_old = inivalvec
-#    for t in np.linspace(tip['t0']+DT, tip['tE'], Nts):
-#
-#        # t for implicit scheme
-#        ndatstr = get_datastr(nwtn=newtk, time=t,
-#                              meshp=N, timps=tip)
-#
-#        # convec mats
-#        next_v = dou.load_npa(ddir + ndatstr + '__vel')
-#        convc_mat, rhs_con, rhsv_conbc = get_v_conv_conts(next_v,
-#                                                          femp, tip)
-#
-#        # feedback mats
-#        next_zmat = dou.load_npa(ddir + ndatstr + cntpstr + '__Z')
-#        next_w = dou.load_npa(ddir + ndatstr + cntpstr + '__w')
-#        print 'norm of w:', np.linalg.norm(next_w)
-#
-#        umat = DT*MT*np.dot(next_zmat, next_zmat.T*tb_mat)
-#        vmat = tb_mat.T
-#
-#        vmate = sps.hstack([vmat, sps.csc_matrix((vmat.shape[0], NP))])
-#        umate = DT*np.vstack([umat, np.zeros((NP, umat.shape[1]))])
-#
-#        fvn = rhs_con[INVINDS, :] + rhsv_conbc + rhsd_vfstbc['fv']
-#        # rhsn = M*next_v + DT*(fvn + tb_mat * (tb_mat.T * next_w))
-#        rhsn = M*v_old + DT*(fvn + 0*tb_mat * (tb_mat.T * next_w))
-#
-#        amat = M + DT*(A + convc_mat)
-#        rvec = np.random.randn(next_zmat.shape[0], 1)
-#        print 'norm of amat', np.linalg.norm(amat*rvec)
-#        print 'norm of gain mat', np.linalg.norm(np.dot(umat, vmat*rvec))
-#
-#        amat, currhs = dts.sadpnt_matsrhs(amat, stokesmatsc['J'], rhsn)
-#
-#        vpn = lau.app_smw_inv(amat, umat=-umate, vmat=vmate, rhsa=currhs)
-#        # vpn = np.atleast_2d(sps.linalg.spsolve(amat, currhs)).T
-#        v_old = vpn[:NV]
-#
-#        yn = lau.apply_massinv(y_masmat, mc_mat*vpn[:NV])
-#        print 'current y: ', yn
-#
-#        dou.save_npa(vpn[:NV], fstring=ddir + cdatstr + '__cont_vel')
-#
-#        dou.output_paraview(tip, femp, vp=vpn, t=t),
-#
-#    print 'dim of v :', femp['V'].dim()
-
 if __name__ == '__main__':
     # drivcav_lqgbt(N=10, nu=1e-1, plain_bt=True)
-    lqgbt(problemname='cylinderwake', N=2, nu=2e-2, plain_bt=True,
+    lqgbt(problemname='cylinderwake', N=2, Re=1e2, plain_bt=False,
           savetomatfiles=True)
