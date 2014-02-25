@@ -1,5 +1,6 @@
 import dolfin
 import os
+import numpy as np
 
 import dolfin_navier_scipy.dolfin_to_sparrays as dts
 import dolfin_navier_scipy.data_output_utils as dou
@@ -15,47 +16,21 @@ import distr_control_fenics.cont_obs_utils as cou
 dolfin.parameters.linear_algebra_backend = 'uBLAS'
 
 
-def time_int_params(Nts, nu):
-    t0 = 0.0
-    tE = 1.0
-    dt = (tE - t0) / Nts
-    tip = dict(t0=t0,
-               tE=tE,
-               dt=dt,
-               Nts=Nts,
-               vfile=None,
-               pfile=None,
-               Residuals=[],
-               ParaviewOutput=True,
-               proutdir='results/',
-               prfprfx='',
-               nu=nu,
-               nnewtsteps=9,  # n nwtn stps for vel comp
-               vel_nwtn_tol=1e-14,
-               norm_nwtnupd_list=[],
-               # parameters for newton adi iteration
-               nwtn_adi_dict=dict(
-                   adi_max_steps=250,
-                   adi_newZ_reltol=1e-5,
-                   nwtn_max_steps=9,
-                   nwtn_upd_reltol=4e-8,
-                   nwtn_upd_abstol=1e-7,
-                   verbose=False,
-                   full_upd_norm_check=False,
-                   check_lyap_res=False
-               ),
-               compress_z=True,  # whether or not to compress Z
-               comprz_maxc=500,  # compression of the columns of Z by QR
-               comprz_thresh=5e-5,  # threshold for trunc of SVD
-               save_full_z=False,  # whether or not to save the uncompressed Z
-               )
-
-    return tip
+def nwtn_adi_params():
+    return dict(nwtn_adi_dict=dict(
+                adi_max_steps=250,
+                adi_newZ_reltol=1e-5,
+                nwtn_max_steps=20,
+                nwtn_upd_reltol=4e-8,
+                nwtn_upd_abstol=1e-7,
+                verbose=True,
+                full_upd_norm_check=False,
+                check_lyap_res=False))
 
 
 def lqgbt(problemname='drivencavity',
-          N=10, Nts=10, Re=1e2, plain_bt=True,
-          use_ric_ini=[],
+          N=10, Re=1e2, plain_bt=True,
+          use_ric_ini=None, t0=0.0, tE=1.0, Nts=10,
           savetomatfiles=False):
 
     problemdict = dict(drivencavity=dnsps.drivcav_fems,
@@ -80,7 +55,7 @@ def lqgbt(problemname='drivencavity',
         uspacedep = 1
     nu = charlen/Re
 
-    tip = time_int_params(Nts, nu)
+    nap = nwtn_adi_params()
     # output
     ddir = 'data/'
     try:
@@ -89,8 +64,7 @@ def lqgbt(problemname='drivencavity',
         raise Warning('need "' + ddir + '" subdir for storing the data')
     os.chdir('..')
 
-    stokesmats = dts.get_stokessysmats(femp['V'], femp['Q'],
-                                       tip['nu'])
+    stokesmats = dts.get_stokessysmats(femp['V'], femp['Q'], nu)
 
     rhsd_vf = dts.setget_rhs(femp['V'], femp['Q'],
                              femp['fv'], femp['fp'], t=0)
@@ -118,7 +92,7 @@ def lqgbt(problemname='drivencavity',
     femp.update(bcdata)
 
     # casting some parameters
-    NV, DT, INVINDS = len(femp['invinds']), tip['dt'], femp['invinds']
+    NV, INVINDS = len(femp['invinds']), femp['invinds']
 
     prbstr = '_bt' if plain_bt else '_lqgbt'
     contsetupstr = 'NV{0}NU{1}NY{2}'.format(NV, NU, NY)
@@ -131,13 +105,7 @@ def lqgbt(problemname='drivencavity',
     soldict.update(femp)  # adding V, Q, invinds, diribcs
     soldict.update(rhsd_vfrc)  # adding fvc, fpr
     soldict.update(fv_stbc=rhsd_stbc['fv'], fp_stbc=rhsd_stbc['fp'],
-                   N=N, nu=tip['nu'],
-                   nnewtsteps=tip['nnewtsteps'],
-                   vel_nwtn_tol=tip['vel_nwtn_tol'],
-                   ddir=ddir, get_datastring=None,
-                   paraviewoutput=tip['ParaviewOutput'],
-                   vfileprfx=tip['proutdir']+'vel_',
-                   pfileprfx=tip['proutdir']+'p_')
+                   N=N, nu=nu, ddir=ddir)
 
 #
 # compute the uncontrolled steady state Stokes solution
@@ -179,6 +147,7 @@ def lqgbt(problemname='drivencavity',
                                        jmat=stokesmatsc['J'],
                                        rhsv=c_mat.T,
                                        transposedprj=True).T
+    # c_mat_reg = np.array(c_mat.todense())
 
     # TODO: right choice of norms for y
     #       and necessity of regularization here
@@ -192,6 +161,8 @@ def lqgbt(problemname='drivencavity',
 
     f_mat = - stokesmatsc['A'] - convc_mat
     mmat = stokesmatsc['M']
+
+    # ssv_rhs = rhsv_conbc + rhsv_conbc + rhsd_vfrc['fvc'] + rhsd_stbc['fv']
 
     if plain_bt:
         get_gramians = pru.solve_proj_lyap_stein
@@ -215,27 +186,15 @@ def lqgbt(problemname='drivencavity',
                 fdstr + '__zwc/__zwo'
         except IOError:
             zinic, zinio = None, None
-            for cre in use_ric_ini:
-                fdstr = get_fdstr(cre)
+            if use_ric_ini is not None:
+                fdstr = get_fdstr(use_ric_ini)
                 try:
                     zinic = dou.load_npa(fdstr + '__zwc')
                     zinio = dou.load_npa(fdstr + '__zwo')
                     print 'Initialize Newton ADI by zwc/zwo from ' + fdstr
                 except IOError:
-                    print 'Computing initial guess for ADI with Re{0}'.\
-                        format(cre)
-                    zinic = get_gramians(mmat=mmat.T, amat=f_mat.T,
-                                         jmat=stokesmatsc['J'],
-                                         bmat=c_mat_reg.T, wmat=b_mat,
-                                         nwtn_adi_dict=tip['nwtn_adi_dict'],
-                                         z0=zinic)['zfac']
-                    dou.save_npa(zinic, fdstr + '__zwc')
-                    zinio = get_gramians(mmat=mmat, amat=f_mat,
-                                         jmat=stokesmatsc['J'],
-                                         bmat=b_mat, wmat=c_mat_reg.T,
-                                         nwtn_adi_dict=tip['nwtn_adi_dict'],
-                                         z0=zinio)['zfac']
-                    dou.save_npa(zinio, fdstr + '__zwo')
+                    raise UserWarning('No initial guess with Re={0}'.
+                                      format(use_ric_ini))
 
             fdstr = get_fdstr(Re)
             print 'computing factors of Gramians: \n\t' + \
@@ -243,13 +202,13 @@ def lqgbt(problemname='drivencavity',
             zwc = get_gramians(mmat=mmat.T, amat=f_mat.T,
                                jmat=stokesmatsc['J'],
                                bmat=c_mat_reg.T, wmat=b_mat,
-                               nwtn_adi_dict=tip['nwtn_adi_dict'],
+                               nwtn_adi_dict=nap['nwtn_adi_dict'],
                                z0=zinic)['zfac']
             dou.save_npa(zwc, fdstr + '__zwc')
             zwo = get_gramians(mmat=mmat, amat=f_mat,
                                jmat=stokesmatsc['J'],
                                bmat=b_mat, wmat=c_mat_reg.T,
-                               nwtn_adi_dict=tip['nwtn_adi_dict'],
+                               nwtn_adi_dict=nap['nwtn_adi_dict'],
                                z0=zinio)['zfac']
             dou.save_npa(zwo, fdstr + '__zwo')
 
@@ -260,13 +219,38 @@ def lqgbt(problemname='drivencavity',
         dou.save_npa(tl, fdstr + '__tl')
         dou.save_npa(tr, fdstr + '__tr')
 
-    btu.compare_freqresp(mmat=stokesmatsc['M'], amat=f_mat,
-                         jmat=stokesmatsc['J'], bmat=b_mat,
-                         cmat=c_mat, tr=tr, tl=tl,
+    # btu.compare_freqresp(mmat=stokesmatsc['M'], amat=f_mat,
+    #                      jmat=stokesmatsc['J'], bmat=b_mat,
+    #                      cmat=c_mat, tr=tr, tl=tl,
+    #                      plot=True)
+
+    def fullstepresp_lnse(bcol=None, trange=None, ini_vel=None,
+                          cmat=None, soldict=None):
+        soldict.update(fv_stbc=rhsd_stbc['fv']+bcol,
+                       vel_nwtn_stps=1, trange=trange,
+                       iniv=ini_vel, lin_vel_point=ini_vel,
+                       clearprvdata=True, data_prfx='stepresp_',
+                       return_dictofvelstrs=True)
+
+        dictofvelstrs = snu.solve_nse(**soldict)
+
+        return cou.extract_output(strdict=dictofvelstrs, tmesh=trange,
+                                  c_mat=cmat, load_data=dou.load_npa)
+
+    print np.dot(c_mat_reg, v_ss_nse)
+    print np.dot(np.dot(c_mat_reg, tr),
+                 np.dot(tl.T, stokesmatsc['M']*v_ss_nse))
+
+    btu.compare_stepresp(tmesh=np.linspace(t0, tE, Nts),
+                         a_mat=f_mat, c_mat=c_mat_reg, b_mat=b_mat,
+                         m_mat=stokesmatsc['M'], tr=tr, tl=tl, iniv=v_ss_nse,
+                         # ss_rhs=ssv_rhs,
+                         fullresp=fullstepresp_lnse, fsr_soldict=soldict,
                          plot=True)
 
 
 if __name__ == '__main__':
-    lqgbt(N=10, Re=1e3+1, use_ric_ini=[100, 500, 750], plain_bt=False)
-    # lqgbt(problemname='cylinderwake', N=2, Re=1e2, plain_bt=False,
-    #       savetomatfiles=True)
+    # lqgbt(N=10, Re=500, use_ric_ini=None, plain_bt=False)
+    lqgbt(problemname='cylinderwake', N=1,  # use_ric_ini=2.5e2,
+          Re=1e1, plain_bt=True, savetomatfiles=True,
+          t0=0.0, tE=1.0, Nts=1e1)
