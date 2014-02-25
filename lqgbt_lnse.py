@@ -18,8 +18,8 @@ dolfin.parameters.linear_algebra_backend = 'uBLAS'
 
 def nwtn_adi_params():
     return dict(nwtn_adi_dict=dict(
-                adi_max_steps=250,
-                adi_newZ_reltol=1e-5,
+                adi_max_steps=300,
+                adi_newZ_reltol=1e-7,
                 nwtn_max_steps=20,
                 nwtn_upd_reltol=4e-8,
                 nwtn_upd_abstol=1e-7,
@@ -31,7 +31,7 @@ def nwtn_adi_params():
 def lqgbt(problemname='drivencavity',
           N=10, Re=1e2, plain_bt=True,
           use_ric_ini=None, t0=0.0, tE=1.0, Nts=10,
-          savetomatfiles=False):
+          plot_freqresp=False, plot_stepresp=True):
 
     problemdict = dict(drivencavity=dnsps.drivcav_fems,
                        cylinderwake=dnsps.cyl_fems)
@@ -44,7 +44,7 @@ def lqgbt(problemname='drivencavity',
     problemfem = problemdict[problemname]
     femp = problemfem(N)
 
-    NU, NY = 3, 4
+    NU, NY = 3, 3
 
     # specify in what spatial direction Bu changes. The remaining is constant
     if problemname == 'drivencavity':
@@ -219,10 +219,11 @@ def lqgbt(problemname='drivencavity',
         dou.save_npa(tl, fdstr + '__tl')
         dou.save_npa(tr, fdstr + '__tr')
 
-    # btu.compare_freqresp(mmat=stokesmatsc['M'], amat=f_mat,
-    #                      jmat=stokesmatsc['J'], bmat=b_mat,
-    #                      cmat=c_mat, tr=tr, tl=tl,
-    #                      plot=True)
+    if plot_freqresp:
+        btu.compare_freqresp(mmat=stokesmatsc['M'], amat=f_mat,
+                             jmat=stokesmatsc['J'], bmat=b_mat,
+                             cmat=c_mat, tr=tr, tl=tl,
+                             plot=True)
 
     def fullstepresp_lnse(bcol=None, trange=None, ini_vel=None,
                           cmat=None, soldict=None):
@@ -241,16 +242,18 @@ def lqgbt(problemname='drivencavity',
     print np.dot(np.dot(c_mat_reg, tr),
                  np.dot(tl.T, stokesmatsc['M']*v_ss_nse))
 
-    btu.compare_stepresp(tmesh=np.linspace(t0, tE, Nts),
-                         a_mat=f_mat, c_mat=c_mat_reg, b_mat=b_mat,
-                         m_mat=stokesmatsc['M'], tr=tr, tl=tl, iniv=v_ss_nse,
-                         # ss_rhs=ssv_rhs,
-                         fullresp=fullstepresp_lnse, fsr_soldict=soldict,
-                         plot=True)
-
+    if plot_stepresp:
+        btu.compare_stepresp(tmesh=np.linspace(t0, tE, Nts),
+                             a_mat=f_mat, c_mat=c_mat_reg, b_mat=b_mat,
+                             m_mat=stokesmatsc['M'],
+                             tr=tr, tl=tl, iniv=v_ss_nse,
+                             # ss_rhs=ssv_rhs,
+                             fullresp=fullstepresp_lnse, fsr_soldict=soldict,
+                             plot=True)
 
 if __name__ == '__main__':
     # lqgbt(N=10, Re=500, use_ric_ini=None, plain_bt=False)
-    lqgbt(problemname='cylinderwake', N=1,  # use_ric_ini=2.5e2,
-          Re=1e1, plain_bt=True, savetomatfiles=True,
-          t0=0.0, tE=1.0, Nts=1e1)
+    lqgbt(problemname='cylinderwake', N=2,  # use_ric_ini=1e2,
+          Re=1e2, plain_bt=False,
+          t0=0.0, tE=2.0, Nts=1e2+1,
+          plot_freqresp=False, plot_stepresp=True)
