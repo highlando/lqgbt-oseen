@@ -20,7 +20,7 @@ def nwtn_adi_params():
     return dict(nwtn_adi_dict=dict(
                 adi_max_steps=300,
                 adi_newZ_reltol=1e-7,
-                nwtn_max_steps=20,
+                nwtn_max_steps=30,
                 nwtn_upd_reltol=4e-8,
                 nwtn_upd_abstol=1e-7,
                 verbose=True,
@@ -31,7 +31,7 @@ def nwtn_adi_params():
 def lqgbt(problemname='drivencavity',
           N=10, Re=1e2, plain_bt=True,
           use_ric_ini=None, t0=0.0, tE=1.0, Nts=10,
-          plot_freqresp=False, plot_stepresp=True):
+          comp_freqresp=False, comp_stepresp='nonlinear'):
 
     problemdict = dict(drivencavity=dnsps.drivcav_fems,
                        cylinderwake=dnsps.cyl_fems)
@@ -108,11 +108,6 @@ def lqgbt(problemname='drivencavity',
                    N=N, nu=nu, ddir=ddir)
 
 #
-# compute the uncontrolled steady state Stokes solution
-#
-    v_ss_nse, list_norm_nwtnupd = snu.solve_steadystate_nse(**soldict)
-
-#
 # Prepare for control
 #
 
@@ -155,6 +150,10 @@ def lqgbt(problemname='drivencavity',
 #
 # setup the system for the correction
 #
+#
+# compute the uncontrolled steady state Stokes solution
+#
+    v_ss_nse, list_norm_nwtnupd = snu.solve_steadystate_nse(**soldict)
     (convc_mat, rhs_con,
      rhsv_conbc) = snu.get_v_conv_conts(prev_v=v_ss_nse, invinds=invinds,
                                         V=femp['V'], diribcs=femp['diribcs'])
@@ -219,41 +218,54 @@ def lqgbt(problemname='drivencavity',
         dou.save_npa(tl, fdstr + '__tl')
         dou.save_npa(tr, fdstr + '__tr')
 
-    if plot_freqresp:
+    if comp_freqresp:
         btu.compare_freqresp(mmat=stokesmatsc['M'], amat=f_mat,
                              jmat=stokesmatsc['J'], bmat=b_mat,
                              cmat=c_mat, tr=tr, tl=tl,
                              plot=True)
 
-    def fullstepresp_lnse(bcol=None, trange=None, ini_vel=None,
-                          cmat=None, soldict=None):
-        soldict.update(fv_stbc=rhsd_stbc['fv']+bcol,
-                       vel_nwtn_stps=1, trange=trange,
-                       iniv=ini_vel, lin_vel_point=ini_vel,
-                       clearprvdata=True, data_prfx='stepresp_',
-                       return_dictofvelstrs=True)
+    if comp_stepresp is not False:
+        if comp_stepresp == 'nonlinear':
+            stp_rsp_nwtn = 3
+            stp_rsp_dtpr = 'nonl_stepresp_'
+        else:
+            stp_rsp_nwtn = 1
+            stp_rsp_dtpr = 'stepresp_'
 
-        dictofvelstrs = snu.solve_nse(**soldict)
+        def fullstepresp_lnse(bcol=None, trange=None, ini_vel=None,
+                              cmat=None, soldict=None):
+            soldict.update(fv_stbc=rhsd_stbc['fv']+bcol,
+                           vel_nwtn_stps=stp_rsp_nwtn, trange=trange,
+                           iniv=ini_vel, lin_vel_point=ini_vel,
+                           clearprvdata=True, data_prfx=stp_rsp_dtpr,
+                           return_dictofvelstrs=True)
 
-        return cou.extract_output(strdict=dictofvelstrs, tmesh=trange,
-                                  c_mat=cmat, load_data=dou.load_npa)
+            dictofvelstrs = snu.solve_nse(**soldict)
 
-    print np.dot(c_mat_reg, v_ss_nse)
-    print np.dot(np.dot(c_mat_reg, tr),
-                 np.dot(tl.T, stokesmatsc['M']*v_ss_nse))
+            return cou.extract_output(strdict=dictofvelstrs, tmesh=trange,
+                                      c_mat=cmat, load_data=dou.load_npa)
 
-    if plot_stepresp:
+    # differences in the initial vector
+    # print np.dot(c_mat_reg, v_ss_nse)
+    # print np.dot(np.dot(c_mat_reg, tr),
+    #              np.dot(tl.T, stokesmatsc['M']*v_ss_nse))
+
+        jsonstr = fdstr + stp_rsp_dtpr + '_Nred{0}_t0tENts{1}{2}{3}.json'.\
+            format(tl.shape[1], t0, tE, Nts)
         btu.compare_stepresp(tmesh=np.linspace(t0, tE, Nts),
                              a_mat=f_mat, c_mat=c_mat_reg, b_mat=b_mat,
                              m_mat=stokesmatsc['M'],
                              tr=tr, tl=tl, iniv=v_ss_nse,
                              # ss_rhs=ssv_rhs,
                              fullresp=fullstepresp_lnse, fsr_soldict=soldict,
-                             plot=True)
+                             plot=True, jsonstr=jsonstr)
+
+    print 'NV = {0}, NP = {2}, k = {1}'.\
+        format(tl.shape[0], tl.shape[1], stokesmatsc['J'].shape[0])
 
 if __name__ == '__main__':
     # lqgbt(N=10, Re=500, use_ric_ini=None, plain_bt=False)
-    lqgbt(problemname='cylinderwake', N=2,  # use_ric_ini=1e2,
-          Re=1e2, plain_bt=False,
-          t0=0.0, tE=2.0, Nts=1e2+1,
-          plot_freqresp=False, plot_stepresp=True)
+    lqgbt(problemname='cylinderwake', N=3,  # use_ric_ini=2e2,
+          Re=1.0e2, plain_bt=False,
+          t0=0.0, tE=2.0, Nts=1e3+1,
+          comp_freqresp=False, comp_stepresp=False)
