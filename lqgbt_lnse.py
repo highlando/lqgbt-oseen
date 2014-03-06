@@ -29,9 +29,17 @@ def nwtn_adi_params():
 
 
 def lqgbt(problemname='drivencavity',
-          N=10, Re=1e2, plain_bt=True,
+          N=10, Re=1e2, plain_bt=True, alphau=1,
           use_ric_ini=None, t0=0.0, tE=1.0, Nts=10,
           comp_freqresp=False, comp_stepresp='nonlinear'):
+    """Main routine for LQGBT
+
+    Parameters
+    ----------
+    alphau : real, optional
+        weighting parameter for the contribution of `u` to the
+        LQG performance criterion
+    """
 
     problemdict = dict(drivencavity=dnsps.drivcav_fems,
                        cylinderwake=dnsps.cyl_fems)
@@ -95,6 +103,7 @@ def lqgbt(problemname='drivencavity',
     NV, INVINDS = len(femp['invinds']), femp['invinds']
 
     prbstr = '_bt' if plain_bt else '_lqgbt'
+    # contsetupstr = 'NV{0}NU{1}NY{2}alphau{3}'.format(NV, NU, NY, alphau)
     contsetupstr = 'NV{0}NU{1}NY{2}'.format(NV, NU, NY)
 
     def get_fdstr(Re):
@@ -136,6 +145,8 @@ def lqgbt(problemname='drivencavity',
     # restrict the operators to the inner nodes
     mc_mat = mc_mat[:, invinds][:, :]
     b_mat = b_mat[invinds, :][:, :]
+
+    tb_mat = 1./np.sqrt(alphau)
 
     c_mat = lau.apply_massinv(y_masmat, mc_mat, output='sparse')
     c_mat_reg = lau.app_prj_via_sadpnt(amat=stokesmatsc['M'],
@@ -261,7 +272,7 @@ def lqgbt(problemname='drivencavity',
                              plot=True, jsonstr=jsonstr)
 
 # compute the regulated system
-    zwc = dou.load_npa(fdstr + '__zwc')
+    zwc = dou.load_npa(fdstr + '__zwo')
     mtxtb = pru.get_mTzzTtb(stokesmatsc['M'].T, zwc, b_mat)
 
     tmdp_dict = dict(linv=v_ss_nse, tb_mat=b_mat, tbxm_mat=mtxtb.T)
@@ -269,13 +280,14 @@ def lqgbt(problemname='drivencavity',
     def fv_tmdp_fullstatefb(time=None, curvel=None,
                             linv=None, tb_mat=None, tbxm_mat=None, **kw):
         actua = lau.comp_uvz_spdns(tb_mat, tbxm_mat, curvel-linv)
+        # actua = 0*curvel
         print '\n norm of deviation', np.linalg.norm(curvel-linv)
         print 'norm of linpoint', np.linalg.norm(linv)
         print 'norm of actuation {0}\n'.format(np.linalg.norm(actua))
         return actua
 
     trange = np.linspace(t0, tE, Nts)
-    perturbini = 1e-3*np.random.randn(NV, 1)
+    perturbini = 1e-3*np.ones((NV, 1))
     reg_pertubini = lau.app_prj_via_sadpnt(amat=stokesmatsc['M'],
                                            jmat=stokesmatsc['J'],
                                            rhsv=perturbini)
