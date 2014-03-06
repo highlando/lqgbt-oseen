@@ -146,7 +146,7 @@ def lqgbt(problemname='drivencavity',
     mc_mat = mc_mat[:, invinds][:, :]
     b_mat = b_mat[invinds, :][:, :]
 
-    tb_mat = 1./np.sqrt(alphau)
+    # tb_mat = 1./np.sqrt(alphau)
 
     c_mat = lau.apply_massinv(y_masmat, mc_mat, output='sparse')
     c_mat_reg = lau.app_prj_via_sadpnt(amat=stokesmatsc['M'],
@@ -272,14 +272,14 @@ def lqgbt(problemname='drivencavity',
                              plot=True, jsonstr=jsonstr)
 
 # compute the regulated system
-    zwc = dou.load_npa(fdstr + '__zwo')
+    zwc = dou.load_npa(fdstr + '__zwc')
     mtxtb = pru.get_mTzzTtb(stokesmatsc['M'].T, zwc, b_mat)
 
     tmdp_dict = dict(linv=v_ss_nse, tb_mat=b_mat, tbxm_mat=mtxtb.T)
 
     def fv_tmdp_fullstatefb(time=None, curvel=None,
                             linv=None, tb_mat=None, tbxm_mat=None, **kw):
-        actua = lau.comp_uvz_spdns(tb_mat, tbxm_mat, curvel-linv)
+        actua = -lau.comp_uvz_spdns(tb_mat, tbxm_mat, curvel-linv)
         # actua = 0*curvel
         print '\n norm of deviation', np.linalg.norm(curvel-linv)
         print 'norm of linpoint', np.linalg.norm(linv)
@@ -287,18 +287,19 @@ def lqgbt(problemname='drivencavity',
         return actua
 
     trange = np.linspace(t0, tE, Nts)
-    perturbini = 1e-3*np.ones((NV, 1))
+    perturbini = 1e-1*np.ones((NV, 1))
     reg_pertubini = lau.app_prj_via_sadpnt(amat=stokesmatsc['M'],
                                            jmat=stokesmatsc['J'],
                                            rhsv=perturbini)
 
-    soldict.update(fv_stbc=rhsd_stbc['fv'], vel_nwtn_stps=3,
+    soldict.update(fv_stbc=rhsd_stbc['fv'],
                    trange=trange,
                    iniv=v_ss_nse + reg_pertubini,
                    lin_vel_point=v_ss_nse,
                    clearprvdata=True, data_prfx='justtrying',
                    fv_tmdp=fv_tmdp_fullstatefb,
                    # fv_tmdp=None,
+                   vel_nwtn_stps=1,
                    comp_nonl_semexp=True,
                    fv_tmdp_params=tmdp_dict,
                    return_dictofvelstrs=True)
@@ -307,9 +308,14 @@ def lqgbt(problemname='drivencavity',
 
     yscomplist = cou.extract_output(strdict=dictofvelstrs, tmesh=trange,
                                     c_mat=c_mat, load_data=dou.load_npa)
-    import matplotlib.pyplot as plt
-    plt.plot(trange, yscomplist)
-    plt.show(block=False)
+
+    dou.save_output_json(dict(tmesh=trange.tolist(), outsig=yscomplist),
+                         fstring=fdstr)
+
+    dou.plot_outp_sig(tmesh=trange, outsig=yscomplist)
+    # import matplotlib.pyplot as plt
+    # plt.plot(trange, yscomplist)
+    # plt.show(block=False)
 
     print 'NV = {0}, NP = {2}, k = {1}'.\
         format(tl.shape[0], tl.shape[1], stokesmatsc['J'].shape[0])
