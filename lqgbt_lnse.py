@@ -275,7 +275,7 @@ def lqgbt(problemname='drivencavity',
     zwc = dou.load_npa(fdstr + '__zwc')
     mtxtb = pru.get_mTzzTtb(stokesmatsc['M'].T, zwc, b_mat)
 
-    tmdp_dict = dict(linv=v_ss_nse, tb_mat=b_mat, tbxm_mat=mtxtb.T)
+    tmdp_fsfb_dict = dict(linv=v_ss_nse, tb_mat=b_mat, tbxm_mat=mtxtb.T)
 
     def fv_tmdp_fullstatefb(time=None, curvel=None,
                             linv=None, tb_mat=None, tbxm_mat=None, **kw):
@@ -286,7 +286,40 @@ def lqgbt(problemname='drivencavity',
         print 'norm of actuation {0}\n'.format(np.linalg.norm(actua))
         return actua
 
+    ak_mat = np.dot(tl.T, f_mat*tr)
+    ck_mat = c_mat_reg*tr
+    bk_mat = tl.T*b_mat
+
+    tltm, trtm = tl.T*stokesmatsc['M'], tr.T*stokesmatsc['M']
+    xok = pru.get_mTzzTtb(tltm, zwo, tltm.T)
+    xck = pru.get_mTzzTtb(trtm, zwc, trtm.T)
+
+    obs_bk = np.dot(xok, ck_mat.T)
+
     trange = np.linspace(t0, tE, Nts)
+    DT = (t0 - tE)/(Nts-1)
+
+    sysmatk_inv = np.linalg.inv(np.eye(tl.shape[1]) - DT*(ak_mat -
+                                np.dot(np.dot(xok, ck_mat.t), ck_mat) -
+                                np.dot(bk_mat, np.dot(bk_mat, xck))))
+
+    def fv_tmdp_redoutpfb(time=None, curvel=None, linvel=None,
+                          ipsysk_mat_inv=None,
+                          obs_bk=None, cts=None,
+                          b_mat=None, c_mat=None,
+                          # sysk_mat=None, xok=None, xck=None,
+                          # ak_mat=None, ck_mat=None,
+                          bk_mat=None, xk_old=None, **kw):
+        """
+        Parameters:
+        -----------
+        xk_old : np.array
+            previous state estimate (updated internally because of PYTHON!!)
+        """
+        xk_old = np.dot(ipsysk_mat_inv,
+                        xk_old + cts*obs_bk(c_mat*(curvel-linvel)))
+        return -b_mat*np.dot(bk_mat.T, xk_old)
+
     perturbini = 1e-1*np.ones((NV, 1))
     reg_pertubini = lau.app_prj_via_sadpnt(amat=stokesmatsc['M'],
                                            jmat=stokesmatsc['J'],
@@ -297,11 +330,11 @@ def lqgbt(problemname='drivencavity',
                    iniv=v_ss_nse + reg_pertubini,
                    lin_vel_point=v_ss_nse,
                    clearprvdata=True, data_prfx='justtrying',
-                   fv_tmdp=fv_tmdp_fullstatefb,
-                   # fv_tmdp=None,
+                   # fv_tmdp=fv_tmdp_fullstatefb,
+                   fv_tmdp=None,
                    vel_nwtn_stps=1,
                    comp_nonl_semexp=True,
-                   fv_tmdp_params=tmdp_dict,
+                   fv_tmdp_params=tmdp_fsfb_dict,
                    return_dictofvelstrs=True)
 
     dictofvelstrs = snu.solve_nse(**soldict)

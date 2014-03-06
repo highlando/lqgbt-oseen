@@ -3,8 +3,8 @@ import lqgbt_lnse
 # import glob
 # import time
 
-relist = [None, 1.0e2, 1.5e2, 2.0e2, 2.5e2]
-cyldim = 2
+relist = [None, 2.5e2]
+cyldim = 1
 # os.chdir('data/')
 # for fname in glob.glob('*__vel*'):
 #     os.remove(fname)
@@ -14,7 +14,7 @@ for cre in range(1, len(relist)):
     lqgbt_lnse.lqgbt(problemname='cylinderwake', N=cyldim,
                      use_ric_ini=relist[cre-1],
                      Re=relist[cre], plain_bt=False,
-                     t0=0.0, tE=2.0, Nts=1.5e2+1,
+                     t0=0.0, tE=5.0, Nts=3e2+1,
                      comp_freqresp=False, comp_stepresp=False)
 
 ### Use for plots:
