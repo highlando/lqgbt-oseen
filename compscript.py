@@ -4,7 +4,7 @@ import lqgbt_lnse
 # import time
 
 relist = [None, 1e2, 1.5e2, 2.0e2, 2.5e2]
-cyldim = 1
+cyldim = 2
 # os.chdir('data/')
 # for fname in glob.glob('*__vel*'):
 #     os.remove(fname)
