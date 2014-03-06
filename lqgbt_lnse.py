@@ -209,18 +209,18 @@ def lqgbt(problemname='drivencavity',
             fdstr = get_fdstr(Re)
             print 'computing factors of Gramians: \n\t' + \
                 fdstr + '__zwc/__zwo'
-            zwc = get_gramians(mmat=mmat.T, amat=f_mat.T,
+            zwo = get_gramians(mmat=mmat.T, amat=f_mat.T,
                                jmat=stokesmatsc['J'],
                                bmat=c_mat_reg.T, wmat=b_mat,
                                nwtn_adi_dict=nap['nwtn_adi_dict'],
-                               z0=zinic)['zfac']
-            dou.save_npa(zwc, fdstr + '__zwc')
-            zwo = get_gramians(mmat=mmat, amat=f_mat,
+                               z0=zinio)['zfac']
+            dou.save_npa(zwo, fdstr + '__zwo')
+            zwc = get_gramians(mmat=mmat, amat=f_mat,
                                jmat=stokesmatsc['J'],
                                bmat=b_mat, wmat=c_mat_reg.T,
                                nwtn_adi_dict=nap['nwtn_adi_dict'],
-                               z0=zinio)['zfac']
-            dou.save_npa(zwo, fdstr + '__zwo')
+                               z0=zinic)['zfac']
+            dou.save_npa(zwc, fdstr + '__zwc')
 
         print 'computing the left and right transformations' + \
             ' and saving to:\n' + fdstr + '__tr/__tl'
