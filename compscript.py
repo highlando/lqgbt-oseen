@@ -1,29 +1,21 @@
 import lqgbt_lnse
-import os
-import glob
+# import os
+# import glob
 # import time
 
-relist = [None, 2.5e2]
-cyldim = 2
-os.chdir('data/')
-for fname in glob.glob('*__vel*'):
-    os.remove(fname)
-os.chdir('..')
-
-# timestart = time.time()
-# lqgbt_lnse.lqgbt(problemname='cylinderwake', N=cyldim,
-#                  Re=relist[0], plain_bt=False,
-#                  t0=0.0, tE=10.0, Nts=18e0+1,
-#                  comp_freqresp=False, comp_stepresp='nonlinear')
-# timeend = time.time()
-# print 'elapsed time is ', timeend - timestart
+relist = [None, 2.0e2]
+cyldim = 1
+# os.chdir('data/')
+# for fname in glob.glob('*__vel*'):
+#     os.remove(fname)
+# os.chdir('..')
 
 for cre in range(1, len(relist)):
     lqgbt_lnse.lqgbt(problemname='cylinderwake', N=cyldim,
                      use_ric_ini=relist[cre-1],
                      Re=relist[cre], plain_bt=False,
-                     t0=0.0, tE=5.0, Nts=2e2+1,
-                     comp_freqresp=True, comp_stepresp=False)
+                     t0=0.0, tE=3.0, Nts=2.5e2+1,
+                     comp_freqresp=False, comp_stepresp=False)
 
 ### Use for plots:
 # from sadptprj_riclyap_adi.bal_trunc_utils import plot_step_resp
