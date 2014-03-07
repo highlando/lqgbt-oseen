@@ -15,11 +15,11 @@ for cre in range(1, len(relist)):
                      use_ric_ini=relist[cre-1],
                      Re=relist[cre], plain_bt=False,
                      trunc_lqgbtcv=1e-5,
-                     t0=0.0, tE=15.0, Nts=3e3+1,
+                     t0=0.0, tE=12.0, Nts=2.4e3+1,
                      comp_freqresp=False, comp_stepresp=False,
                      # closed_loop='full_state_fb')
-                     # closed_loop='red_output_fb')
-                     closed_loop=None)
+                     closed_loop='red_output_fb')
+                     # closed_loop=None)
 
 ### Use for plots:
 # from sadptprj_riclyap_adi.bal_trunc_utils import plot_step_resp
