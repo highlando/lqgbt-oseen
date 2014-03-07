@@ -121,11 +121,13 @@ def lqgbt(problemname='drivencavity',
         return ddir + problemname + '_Re{0}_'.format(Re) + \
             contsetupstr + prbstr
 
+    fdstr = get_fdstr(Re)
+
     soldict = stokesmatsc  # containing A, J, JT
     soldict.update(femp)  # adding V, Q, invinds, diribcs
     soldict.update(rhsd_vfrc)  # adding fvc, fpr
     soldict.update(fv_stbc=rhsd_stbc['fv'], fp_stbc=rhsd_stbc['fp'],
-                   N=N, nu=nu, ddir=ddir)
+                   N=N, nu=nu, data_prfx=fdstr)
 
 #
 # Prepare for control
@@ -190,7 +192,6 @@ def lqgbt(problemname='drivencavity',
     else:
         get_gramians = pru.proj_alg_ric_newtonadi
 
-    fdstr = get_fdstr(Re)
     truncstr = '__lqgbtcv{0}'.format(trunc_lqgbtcv)
     try:
         tl = dou.load_npa(fdstr + '__tl' + truncstr)
