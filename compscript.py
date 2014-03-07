@@ -3,8 +3,8 @@ import lqgbt_lnse
 # import glob
 # import time
 
-relist = [None, 1e2, 1.5e2, 2.0e2, 2.5e2]
-cyldim = 2
+relist = [None, 2.0e2, 2.5e2]
+cyldim = 1
 # os.chdir('data/')
 # for fname in glob.glob('*__vel*'):
 #     os.remove(fname)
@@ -14,8 +14,8 @@ for cre in range(1, len(relist)):
     lqgbt_lnse.lqgbt(problemname='cylinderwake', N=cyldim,
                      use_ric_ini=relist[cre-1],
                      Re=relist[cre], plain_bt=False,
-                     t0=0.0, tE=5.0, Nts=2e2+1,
-                     comp_freqresp=True, comp_stepresp=False)
+                     t0=0.0, tE=2.0, Nts=2e2+1,
+                     comp_freqresp=False, comp_stepresp='nonlinear')
 
 ### Use for plots:
 # from sadptprj_riclyap_adi.bal_trunc_utils import plot_step_resp
