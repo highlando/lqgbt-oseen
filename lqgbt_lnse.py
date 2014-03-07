@@ -29,9 +29,28 @@ def nwtn_adi_params():
 
 
 def lqgbt(problemname='drivencavity',
-          N=10, Re=1e2, plain_bt=True,
+          N=10, Re=1e2, plain_bt=True, alphau=1,
           use_ric_ini=None, t0=0.0, tE=1.0, Nts=10,
-          comp_freqresp=False, comp_stepresp='nonlinear'):
+          trunc_lqgbtcv=1e-6,
+          comp_freqresp=False, comp_stepresp='nonlinear',
+          closed_loop=None):
+    """Main routine for LQGBT
+
+    Parameters
+    ----------
+    trunc_lqgbtcv : real, optional
+        threshold at what the lqgbt characteristiv values are truncated,
+        defaults to `1e-6`
+    alphau : real, optional
+        weighting parameter for the contribution of `u` to the
+        LQG performance criterion
+    closed_loop : string, optional
+        how to do the closed loop simulation:
+        if == 'full_state_fb' -> full state feedback
+        if == 'red_output_fb' -> reduced output feedback
+        else -> no control is applied
+
+    """
 
     problemdict = dict(drivencavity=dnsps.drivcav_fems,
                        cylinderwake=dnsps.cyl_fems)
@@ -95,6 +114,7 @@ def lqgbt(problemname='drivencavity',
     NV, INVINDS = len(femp['invinds']), femp['invinds']
 
     prbstr = '_bt' if plain_bt else '_lqgbt'
+    # contsetupstr = 'NV{0}NU{1}NY{2}alphau{3}'.format(NV, NU, NY, alphau)
     contsetupstr = 'NV{0}NU{1}NY{2}'.format(NV, NU, NY)
 
     def get_fdstr(Re):
@@ -137,6 +157,8 @@ def lqgbt(problemname='drivencavity',
     mc_mat = mc_mat[:, invinds][:, :]
     b_mat = b_mat[invinds, :][:, :]
 
+    # tb_mat = 1./np.sqrt(alphau)
+
     c_mat = lau.apply_massinv(y_masmat, mc_mat, output='sparse')
     c_mat_reg = lau.app_prj_via_sadpnt(amat=stokesmatsc['M'],
                                        jmat=stokesmatsc['J'],
@@ -169,14 +191,15 @@ def lqgbt(problemname='drivencavity',
         get_gramians = pru.proj_alg_ric_newtonadi
 
     fdstr = get_fdstr(Re)
+    truncstr = '__lqgbtcv{0}'.format(trunc_lqgbtcv)
     try:
-        tl = dou.load_npa(fdstr + '__tl')
-        tr = dou.load_npa(fdstr + '__tr')
+        tl = dou.load_npa(fdstr + '__tl' + truncstr)
+        tr = dou.load_npa(fdstr + '__tr' + truncstr)
         print 'loaded the left and right transformations: \n' + \
-            fdstr + '__tl/__tr'
+            fdstr + '__tl/__tr' + truncstr
     except IOError:
         print 'computing the left and right transformations' + \
-            ' and saving to: \n' + fdstr + '__tl/__tr'
+            ' and saving to: \n' + fdstr + '__tl/__tr' + truncstr
 
         try:
             zwc = dou.load_npa(fdstr + '__zwc')
@@ -212,11 +235,13 @@ def lqgbt(problemname='drivencavity',
             dou.save_npa(zwc, fdstr + '__zwc')
 
         print 'computing the left and right transformations' + \
-            ' and saving to:\n' + fdstr + '__tr/__tl'
+            ' and saving to:\n' + fdstr + '__tr/__tl' + truncstr
         tl, tr = btu.compute_lrbt_transfos(zfc=zwc, zfo=zwo,
-                                           mmat=stokesmatsc['M'])
-        dou.save_npa(tl, fdstr + '__tl')
-        dou.save_npa(tr, fdstr + '__tr')
+                                           mmat=stokesmatsc['M'],
+                                           trunck={'threshh': trunc_lqgbtcv}
+                                           )
+        dou.save_npa(tl, fdstr + '__tl' + truncstr)
+        dou.save_npa(tr, fdstr + '__tr' + truncstr)
 
     if comp_freqresp:
         btu.compare_freqresp(mmat=stokesmatsc['M'], amat=f_mat,
@@ -259,6 +284,130 @@ def lqgbt(problemname='drivencavity',
                              # ss_rhs=ssv_rhs,
                              fullresp=fullstepresp_lnse, fsr_soldict=soldict,
                              plot=True, jsonstr=jsonstr)
+
+# compute the regulated system
+    zwc = dou.load_npa(fdstr + '__zwc')
+    zwo = dou.load_npa(fdstr + '__zwo')
+
+    trange = np.linspace(t0, tE, Nts)
+
+    if closed_loop == 'full_state_fb':
+
+        mtxtb = pru.get_mTzzTtb(stokesmatsc['M'].T, zwc, b_mat)
+
+        def fv_tmdp_fullstatefb(time=None, curvel=None,
+                                linv=None, tb_mat=None, tbxm_mat=None, **kw):
+            actua = -lau.comp_uvz_spdns(tb_mat, tbxm_mat, curvel-linv)
+            # actua = 0*curvel
+            print '\nnorm of deviation', np.linalg.norm(curvel-linv)
+            # print 'norm of actuation {0}'.format(np.linalg.norm(actua))
+            return actua, {}
+
+        tmdp_fsfb_dict = dict(linv=v_ss_nse, tb_mat=b_mat, tbxm_mat=mtxtb.T)
+
+        fv_tmdp = fv_tmdp_fullstatefb
+        fv_tmdp_params = tmdp_fsfb_dict
+        fv_tmdp_memory = None
+
+    elif closed_loop == 'red_output_fb':
+        ak_mat = np.dot(tl.T, f_mat*tr)
+        ck_mat = lau.matvec_densesparse(c_mat_reg, tr)
+        bk_mat = tl.T*b_mat
+
+        tltm, trtm = tl.T*stokesmatsc['M'], tr.T*stokesmatsc['M']
+        xok = np.dot(np.dot(tltm, zwo), np.dot(zwo.T, tltm.T))
+        xck = np.dot(np.dot(trtm, zwc), np.dot(zwc.T, trtm.T))
+        # sysmatk = (ak_mat - np.dot(np.dot(xok, ck_mat.T), ck_mat) -
+        #                             np.dot(bk_mat, np.dot(bk_mat.T, xck)))
+
+        obs_bk = np.dot(xok, ck_mat.T)
+
+        DT = (tE - t0)/(Nts-1)
+
+        sysmatk_inv = np.linalg.inv(np.eye(tl.shape[1]) - DT*(ak_mat -
+                                    np.dot(np.dot(xok, ck_mat.T), ck_mat) -
+                                    np.dot(bk_mat, np.dot(bk_mat.T, xck))))
+
+        # raise Warning('TODO: debug')
+
+        def fv_tmdp_redoutpfb(time=None, curvel=None, memory=None,
+                              linvel=None,
+                              ipsysk_mat_inv=None,
+                              obs_bk=None, cts=None,
+                              b_mat=None, c_mat=None,
+                              # sysk_mat=None, xok=None,
+                              xck=None,
+                              # ak_mat=None, ck_mat=None,
+                              bk_mat=None, xk_old=None, **kw):
+            """
+            Parameters:
+            -----------
+            xk_old : nparray
+                previous state estimate (updated internally -- PYTHON!!)
+
+            Returns:
+            --------
+            actua : (N,1) nparray
+                the current actuation
+            memory : dictionary
+                to be passed back in the next timestep
+
+            """
+            xk_old = memory['xk_old']
+            buk = cts*np.dot(obs_bk,
+                             lau.matvec_densesparse(c_mat, (curvel-linvel)))
+            xk_old = np.dot(ipsysk_mat_inv, xk_old + buk)
+            #         cts*np.dot(obs_bk,
+            #                 lau.matvec_densesparse(c_mat, (curvel-linvel))))
+            memory['xk_old'] = xk_old
+            actua = -b_mat*np.dot(bk_mat.T, np.dot(xck, xk_old))
+            print '\nnorm of deviation', np.linalg.norm(curvel-linvel)
+            # print 'norm of actuation {0}'.format(np.linalg.norm(actua))
+            return actua, memory
+
+        fv_rofb_dict = dict(cts=DT, linvel=v_ss_nse, b_mat=b_mat,
+                            c_mat=c_mat_reg, obs_bk=obs_bk, bk_mat=bk_mat,
+                            ipsysk_mat_inv=sysmatk_inv, xck=xck)
+
+        fv_tmdp = fv_tmdp_redoutpfb
+        fv_tmdp_params = fv_rofb_dict
+        fv_tmdp_memory = dict(xk_old=np.zeros((tl.shape[1], 1)))
+
+    else:
+        fv_tmdp = None
+        fv_tmdp_params = {}
+        fv_tmdp_memory = {}
+
+    perturbini = 1e-3*np.ones((NV, 1))
+    reg_pertubini = lau.app_prj_via_sadpnt(amat=stokesmatsc['M'],
+                                           jmat=stokesmatsc['J'],
+                                           rhsv=perturbini)
+
+    soldict.update(fv_stbc=rhsd_stbc['fv'],
+                   trange=trange,
+                   iniv=v_ss_nse + reg_pertubini,
+                   lin_vel_point=v_ss_nse,
+                   clearprvdata=True, data_prfx=fdstr + truncstr,
+                   fv_tmdp=fv_tmdp,
+                   vel_nwtn_stps=1,
+                   comp_nonl_semexp=True,
+                   fv_tmdp_params=fv_tmdp_params,
+                   fv_tmdp_memory=fv_tmdp_memory,
+                   return_dictofvelstrs=True)
+
+    dictofvelstrs = snu.solve_nse(**soldict)
+
+    yscomplist = cou.extract_output(strdict=dictofvelstrs, tmesh=trange,
+                                    c_mat=c_mat, load_data=dou.load_npa)
+
+    dou.save_output_json(dict(tmesh=trange.tolist(), outsig=yscomplist),
+                         fstring=fdstr + truncstr + '{0}'.format(closed_loop) +
+                         't0{0}tE{1}Nts{2}'.format(t0, tE, Nts))
+
+    dou.plot_outp_sig(tmesh=trange, outsig=yscomplist)
+    # import matplotlib.pyplot as plt
+    # plt.plot(trange, yscomplist)
+    # plt.show(block=False)
 
     print 'NV = {0}, NP = {2}, k = {1}'.\
         format(tl.shape[0], tl.shape[1], stokesmatsc['J'].shape[0])
