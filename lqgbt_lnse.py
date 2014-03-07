@@ -31,12 +31,16 @@ def nwtn_adi_params():
 def lqgbt(problemname='drivencavity',
           N=10, Re=1e2, plain_bt=True, alphau=1,
           use_ric_ini=None, t0=0.0, tE=1.0, Nts=10,
+          trunc_lqgbtcv=1e-6,
           comp_freqresp=False, comp_stepresp='nonlinear',
-          closed_loop='red_output_fb'):
+          closed_loop=None):
     """Main routine for LQGBT
 
     Parameters
     ----------
+    trunc_lqgbtcv : real, optional
+        threshold at what the lqgbt characteristiv values are truncated,
+        defaults to `1e-6`
     alphau : real, optional
         weighting parameter for the contribution of `u` to the
         LQG performance criterion
@@ -187,14 +191,15 @@ def lqgbt(problemname='drivencavity',
         get_gramians = pru.proj_alg_ric_newtonadi
 
     fdstr = get_fdstr(Re)
+    truncstr = '__lqgbtcv{0}'.format(trunc_lqgbtcv)
     try:
-        tl = dou.load_npa(fdstr + '__tl')
-        tr = dou.load_npa(fdstr + '__tr')
+        tl = dou.load_npa(fdstr + '__tl' + truncstr)
+        tr = dou.load_npa(fdstr + '__tr' + truncstr)
         print 'loaded the left and right transformations: \n' + \
-            fdstr + '__tl/__tr'
+            fdstr + '__tl/__tr' + truncstr
     except IOError:
         print 'computing the left and right transformations' + \
-            ' and saving to: \n' + fdstr + '__tl/__tr'
+            ' and saving to: \n' + fdstr + '__tl/__tr' + truncstr
 
         try:
             zwc = dou.load_npa(fdstr + '__zwc')
@@ -230,11 +235,13 @@ def lqgbt(problemname='drivencavity',
             dou.save_npa(zwc, fdstr + '__zwc')
 
         print 'computing the left and right transformations' + \
-            ' and saving to:\n' + fdstr + '__tr/__tl'
+            ' and saving to:\n' + fdstr + '__tr/__tl' + truncstr
         tl, tr = btu.compute_lrbt_transfos(zfc=zwc, zfo=zwo,
-                                           mmat=stokesmatsc['M'])
-        dou.save_npa(tl, fdstr + '__tl')
-        dou.save_npa(tr, fdstr + '__tr')
+                                           mmat=stokesmatsc['M'],
+                                           trunck={'threshh': trunc_lqgbtcv}
+                                           )
+        dou.save_npa(tl, fdstr + '__tl' + truncstr)
+        dou.save_npa(tr, fdstr + '__tr' + truncstr)
 
     if comp_freqresp:
         btu.compare_freqresp(mmat=stokesmatsc['M'], amat=f_mat,
@@ -282,6 +289,8 @@ def lqgbt(problemname='drivencavity',
     zwc = dou.load_npa(fdstr + '__zwc')
     zwo = dou.load_npa(fdstr + '__zwo')
 
+    trange = np.linspace(t0, tE, Nts)
+
     if closed_loop == 'full_state_fb':
 
         mtxtb = pru.get_mTzzTtb(stokesmatsc['M'].T, zwc, b_mat)
@@ -290,10 +299,9 @@ def lqgbt(problemname='drivencavity',
                                 linv=None, tb_mat=None, tbxm_mat=None, **kw):
             actua = -lau.comp_uvz_spdns(tb_mat, tbxm_mat, curvel-linv)
             # actua = 0*curvel
-            print '\n norm of deviation', np.linalg.norm(curvel-linv)
-            print 'norm of linpoint', np.linalg.norm(linv)
-            print 'norm of actuation {0}\n'.format(np.linalg.norm(actua))
-            return actua
+            print '\nnorm of deviation', np.linalg.norm(curvel-linv)
+            # print 'norm of actuation {0}'.format(np.linalg.norm(actua))
+            return actua, {}
 
         tmdp_fsfb_dict = dict(linv=v_ss_nse, tb_mat=b_mat, tbxm_mat=mtxtb.T)
 
@@ -309,12 +317,11 @@ def lqgbt(problemname='drivencavity',
         tltm, trtm = tl.T*stokesmatsc['M'], tr.T*stokesmatsc['M']
         xok = np.dot(np.dot(tltm, zwo), np.dot(zwo.T, tltm.T))
         xck = np.dot(np.dot(trtm, zwc), np.dot(zwc.T, trtm.T))
-        sysmatk = (ak_mat - np.dot(np.dot(xok, ck_mat.T), ck_mat) -
-                                    np.dot(bk_mat, np.dot(bk_mat.T, xck)))
+        # sysmatk = (ak_mat - np.dot(np.dot(xok, ck_mat.T), ck_mat) -
+        #                             np.dot(bk_mat, np.dot(bk_mat.T, xck)))
 
         obs_bk = np.dot(xok, ck_mat.T)
 
-        trange = np.linspace(t0, tE, Nts)
         DT = (tE - t0)/(Nts-1)
 
         sysmatk_inv = np.linalg.inv(np.eye(tl.shape[1]) - DT*(ak_mat -
@@ -347,20 +354,16 @@ def lqgbt(problemname='drivencavity',
 
             """
             xk_old = memory['xk_old']
-            print '\n norm of xkold: {0}'.format(np.linalg.norm(xk_old))
-            print 'cts = {0}'.format(cts)
-            buk = cts*np.dot(obs_bk, lau.matvec_densesparse(c_mat, (curvel-linvel)))
-            print 'buk = {0}'.format(np.linalg.norm(buk))
+            buk = cts*np.dot(obs_bk,
+                             lau.matvec_densesparse(c_mat, (curvel-linvel)))
             xk_old = np.dot(ipsysk_mat_inv, xk_old + buk)
             #         cts*np.dot(obs_bk,
             #                 lau.matvec_densesparse(c_mat, (curvel-linvel))))
             memory['xk_old'] = xk_old
             actua = -b_mat*np.dot(bk_mat.T, np.dot(xck, xk_old))
-            print 'norm of xkold: {0}'.format(np.linalg.norm(xk_old))
-            print '\n norm of deviation', np.linalg.norm(curvel-linvel)
-            print 'norm of linpoint', np.linalg.norm(linvel)
-            print 'norm of actuation {0}\n'.format(np.linalg.norm(actua))
-            return 0*actua, memory
+            print '\nnorm of deviation', np.linalg.norm(curvel-linvel)
+            # print 'norm of actuation {0}'.format(np.linalg.norm(actua))
+            return actua, memory
 
         fv_rofb_dict = dict(cts=DT, linvel=v_ss_nse, b_mat=b_mat,
                             c_mat=c_mat_reg, obs_bk=obs_bk, bk_mat=bk_mat,
@@ -372,8 +375,8 @@ def lqgbt(problemname='drivencavity',
 
     else:
         fv_tmdp = None
-        fv_tmdp_params = None
-        fv_tmdp_memory = None
+        fv_tmdp_params = {}
+        fv_tmdp_memory = {}
 
     perturbini = 1e-3*np.ones((NV, 1))
     reg_pertubini = lau.app_prj_via_sadpnt(amat=stokesmatsc['M'],
@@ -384,7 +387,7 @@ def lqgbt(problemname='drivencavity',
                    trange=trange,
                    iniv=v_ss_nse + reg_pertubini,
                    lin_vel_point=v_ss_nse,
-                   clearprvdata=True, data_prfx='justtrying',
+                   clearprvdata=True, data_prfx=fdstr + truncstr,
                    fv_tmdp=fv_tmdp,
                    vel_nwtn_stps=1,
                    comp_nonl_semexp=True,
@@ -398,7 +401,8 @@ def lqgbt(problemname='drivencavity',
                                     c_mat=c_mat, load_data=dou.load_npa)
 
     dou.save_output_json(dict(tmesh=trange.tolist(), outsig=yscomplist),
-                         fstring=fdstr)
+                         fstring=fdstr + truncstr + '{0}'.format(closed_loop) +
+                         't0{0}tE{1}Nts{2}'.format(t0, tE, Nts))
 
     dou.plot_outp_sig(tmesh=trange, outsig=yscomplist)
     # import matplotlib.pyplot as plt
