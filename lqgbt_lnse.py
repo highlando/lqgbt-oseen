@@ -18,8 +18,8 @@ dolfin.parameters.linear_algebra_backend = 'uBLAS'
 
 def nwtn_adi_params():
     """
-    Returns:
-    --------
+    Returns
+    -------
     , : dictionary
         of the parameters for the Newton-ADI iteration
     """
@@ -325,8 +325,8 @@ def lqgbt(problemname='drivencavity',
             that can be passed to a solution routine for the
             unsteady Navier-Stokes equations
 
-            Parameters:
-            -----------
+            Parameters
+            ----------
             time : real
                 current time
             curvel : (N,1) nparray
@@ -338,8 +338,8 @@ def lqgbt(problemname='drivencavity',
             tbxm_mat : (N,K) nparray
                 `tb_mat * gain * mass`
 
-            Returns:
-            --------
+            Returns
+            -------
             actua : (N,1) nparray
                 current contribution to the right-hand side
             , : dictionary
@@ -392,8 +392,8 @@ def lqgbt(problemname='drivencavity',
             unsteady Navier-Stokes equations
 
             For convinience the
-            Parameters:
-            -----------
+            Parameters
+            ----------
             time : real
                 current time
             curvel : (N,1) nparray
@@ -422,8 +422,8 @@ def lqgbt(problemname='drivencavity',
             bk_mat : (K,NU) nparray
                 reduced input matrix
 
-            Returns:
-            --------
+            Returns
+            -------
             actua : (N,1) nparray
                 the current actuation
             memory : dictionary
