@@ -86,14 +86,9 @@ def lqgbt(problemname='drivencavity',
     problemfem = problemdict[problemname]
     femp = problemfem(N)
 
+    nu = femp['charlen']/Re
     # specify in what spatial direction Bu changes. The remaining is constant
-    if problemname == 'drivencavity':
-        charlen = 1.0
-        uspacedep = 0
-    elif problemname == 'cylinderwake':
-        charlen = 0.15
-        uspacedep = 1
-    nu = charlen/Re
+    uspacedep = femp['uspacedep']
 
     nap = nwtn_adi_params()
     # output
