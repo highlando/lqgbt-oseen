@@ -17,6 +17,12 @@ dolfin.parameters.linear_algebra_backend = 'uBLAS'
 
 
 def nwtn_adi_params():
+    """
+    Returns:
+    --------
+    , : dictionary
+        of the parameters for the Newton-ADI iteration
+    """
     return dict(nwtn_adi_dict=dict(
                 adi_max_steps=300,
                 adi_newZ_reltol=1e-7,
@@ -29,8 +35,10 @@ def nwtn_adi_params():
 
 
 def lqgbt(problemname='drivencavity',
-          N=10, Re=1e2, plain_bt=True, alphau=1,
-          use_ric_ini=None, t0=0.0, tE=1.0, Nts=10,
+          N=10, Re=1e2, plain_bt=False,
+          use_ric_ini=None, t0=0.0, tE=1.0, Nts=11,
+          NU=3, NY=3,
+          paraoutput=True,
           trunc_lqgbtcv=1e-6,
           comp_freqresp=False, comp_stepresp='nonlinear',
           closed_loop=None):
@@ -38,14 +46,29 @@ def lqgbt(problemname='drivencavity',
 
     Parameters
     ----------
+    problemname : string, optional
+        what problem to be solved, 'cylinderwake' or 'drivencavity'
+    N : int, optional
+        parameter for the dimension of the space discretization
+    Re : real, optional
+        Reynolds number, defaults to `1e2`
+    plain_bt : boolean, optional
+        whether to try simple *balanced truncation*, defaults to False
+    use_ric_ini : real, optional
+        use the solution with this Re number as stabilizing initial guess,
+        defaults to `None`
+    t0, tE, Nts : real, real, int, optional
+        starting and endpoint of the considered time interval, number of
+        time instancses, default to `0.0, 1.0, 11`
+    NU, NY : int, optional
+        dimensions of components of in and output space (will double because
+        there are two components), default to `3, 3`
     trunc_lqgbtcv : real, optional
         threshold at what the lqgbt characteristiv values are truncated,
         defaults to `1e-6`
-    alphau : real, optional
-        weighting parameter for the contribution of `u` to the
-        LQG performance criterion
     closed_loop : string, optional
         how to do the closed loop simulation:
+        if False -> no simulation
         if == 'full_state_fb' -> full state feedback
         if == 'red_output_fb' -> reduced output feedback
         else -> no control is applied
@@ -62,8 +85,6 @@ def lqgbt(problemname='drivencavity',
 
     problemfem = problemdict[problemname]
     femp = problemfem(N)
-
-    NU, NY = 3, 3
 
     # specify in what spatial direction Bu changes. The remaining is constant
     if problemname == 'drivencavity':
@@ -248,7 +269,7 @@ def lqgbt(problemname='drivencavity',
         btu.compare_freqresp(mmat=stokesmatsc['M'], amat=f_mat,
                              jmat=stokesmatsc['J'], bmat=b_mat,
                              cmat=c_mat, tr=tr, tl=tl,
-                             plot=True)
+                             plot=True, datastr=fdstr + '__tl' + truncstr)
 
     if comp_stepresp is not False:
         if comp_stepresp == 'nonlinear':
@@ -292,12 +313,44 @@ def lqgbt(problemname='drivencavity',
 
     trange = np.linspace(t0, tE, Nts)
 
-    if closed_loop == 'full_state_fb':
+    print 'NV = {0}, NP = {2}, k = {1}'.\
+        format(tl.shape[0], tl.shape[1], stokesmatsc['J'].shape[0])
+
+    if closed_loop is False:
+        return
+
+    elif closed_loop == 'full_state_fb':
 
         mtxtb = pru.get_mTzzTtb(stokesmatsc['M'].T, zwc, b_mat)
 
         def fv_tmdp_fullstatefb(time=None, curvel=None,
                                 linv=None, tb_mat=None, tbxm_mat=None, **kw):
+            """realizes a full state static feedback as a function
+
+            that can be passed to a solution routine for the
+            unsteady Navier-Stokes equations
+
+            Parameters:
+            -----------
+            time : real
+                current time
+            curvel : (N,1) nparray
+                current velocity
+            linv : (N,1) nparray
+                linearization point for the linear model
+            tb_mat : (N,K) nparray
+                input matrix containing the input weighting
+            tbxm_mat : (N,K) nparray
+                `tb_mat * gain * mass`
+
+            Returns:
+            --------
+            actua : (N,1) nparray
+                current contribution to the right-hand side
+            , : dictionary
+                dummy `{}` for consistency
+            """
+
             actua = -lau.comp_uvz_spdns(tb_mat, tbxm_mat, curvel-linv)
             # actua = 0*curvel
             print '\nnorm of deviation', np.linalg.norm(curvel-linv)
@@ -336,15 +389,43 @@ def lqgbt(problemname='drivencavity',
                               ipsysk_mat_inv=None,
                               obs_bk=None, cts=None,
                               b_mat=None, c_mat=None,
-                              # sysk_mat=None, xok=None,
-                              xck=None,
-                              # ak_mat=None, ck_mat=None,
-                              bk_mat=None, xk_old=None, **kw):
-            """
+                              xck=None, bk_mat=None,
+                              **kw):
+            """realizes a reduced static output feedback as a function
+
+            that can be passed to a solution routine for the
+            unsteady Navier-Stokes equations
+
+            For convinience the
             Parameters:
             -----------
-            xk_old : nparray
-                previous state estimate (updated internally -- PYTHON!!)
+            time : real
+                current time
+            curvel : (N,1) nparray
+                current velocity. For consistency, the full state is taken
+                as input. However, internally, we only use the observation
+                `y = c_mat*curvel`
+            memory : dictionary
+                contains values from previous call, in particular the
+                previous state estimate
+            linvel : (N,1) nparray
+                linearization point for the linear model
+            ipsysk_mat_inv : (K,K) nparray
+                inverse of the system matrix that defines the update
+                of the state estimate
+            obs_bk : (K,NU) nparray
+                input matrix in the observer
+            cts : real
+                time step length
+            b_mat : (N,NU) sparse matrix
+                input matrix of the full system
+                c_mat=None,
+            c_mat : (NY,N) sparse matrix
+                output matrix of the full system
+            xck : (K,K) nparray
+                reduced solution of the CARE
+            bk_mat : (K,NU) nparray
+                reduced input matrix
 
             Returns:
             --------
@@ -396,6 +477,13 @@ def lqgbt(problemname='drivencavity',
                    fv_tmdp_memory=fv_tmdp_memory,
                    return_dictofvelstrs=True)
 
+    outstr = truncstr + '{0}'.format(closed_loop) \
+        + 't0{0}tE{1}Nts{2}'.format(t0, tE, Nts)
+    if paraoutput:
+        soldict.update(paraviewoutput=True,
+                       vfileprfx='results/vel_'+outstr,
+                       pfileprfx='results/p_'+outstr)
+
     dictofvelstrs = snu.solve_nse(**soldict)
 
     yscomplist = cou.extract_output(strdict=dictofvelstrs, tmesh=trange,
@@ -409,9 +497,6 @@ def lqgbt(problemname='drivencavity',
     # import matplotlib.pyplot as plt
     # plt.plot(trange, yscomplist)
     # plt.show(block=False)
-
-    print 'NV = {0}, NP = {2}, k = {1}'.\
-        format(tl.shape[0], tl.shape[1], stokesmatsc['J'].shape[0])
 
 if __name__ == '__main__':
     # lqgbt(N=10, Re=500, use_ric_ini=None, plain_bt=False)
