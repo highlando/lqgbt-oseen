@@ -12,8 +12,8 @@ As an example we consider the stabilization of the cylinder wake at moderate Rey
 
 Dependencies:
 
-* `numpy and scipy <http://scipy.org/>`_
-* `dolfin <http://fenicsproject.org/>`_
+* `numpy and scipy (v0.13) <http://scipy.org/>`_
+* `dolfin (v1.3) <http://fenicsproject.org/>`_
 * `dolfin_navier_scipy <https://github.com/highlando/dolfin_navier_scipy/releases/tag/v1.0-lqgbtpaper>`_
 * `sadptprj_riclyap_adi <https://github.com/highlando/sadptprj_riclyap_adi/releases/tag/v1.0-lqgbtpaper>`_
 * `distr_control_fenics <https://github.com/highlando/distr_control_fenics/releases/tag/v1.0-lqgbtpaper>`_
