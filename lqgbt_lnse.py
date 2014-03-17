@@ -41,7 +41,7 @@ def lqgbt(problemname='drivencavity',
           paraoutput=True,
           trunc_lqgbtcv=1e-6,
           comp_freqresp=False, comp_stepresp='nonlinear',
-          closed_loop=None):
+          closed_loop=False):
     """Main routine for LQGBT
 
     Parameters
@@ -63,15 +63,24 @@ def lqgbt(problemname='drivencavity',
     NU, NY : int, optional
         dimensions of components of in and output space (will double because
         there are two components), default to `3, 3`
+    comp_freqresp : boolean, optional
+        whether to compute and compare the frequency responses,
+        defaults to `False`
+    comp_stepresp : {'nonlinear', False, None}
+        whether to compute and compare the step responses
+        | if False -> no step response
+        | if == 'nonlinear' -> compare linear reduced to nonlinear full model
+        | else -> linear reduced versus linear full model
     trunc_lqgbtcv : real, optional
         threshold at what the lqgbt characteristiv values are truncated,
         defaults to `1e-6`
-    closed_loop : string, optional
-        | how to do the closed loop simulation:
+    closed_loop : {'full_state_fb', 'red_output_fb', False, None}
+        how to do the closed loop simulation:
         | if False -> no simulation
         | if == 'full_state_fb' -> full state feedback
         | if == 'red_output_fb' -> reduced output feedback
         | else -> no control is applied
+        defaults to `False`
 
     """
 
