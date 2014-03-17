@@ -24,9 +24,15 @@ import mock
 MOCK_MODULES = ['dolfin', 'numpy', 'scipy', 'scipy.linalg',
                 'scipy.sparse', 'scipy.sparse.linalg',
                 'scipy.io',
-                'sadptprj_riclyap_adi', 'sadptprj_riclyap_adi.lin_alg_utils',
+                'sadptprj_riclyap_adi',
+                'sadptprj_riclyap_adi.lin_alg_utils',
                 'sadptprj_riclyap_adi.proj_ric_utils',
-                'sadptprj_riclyap_adi', 'sadptprj_riclyap_adi.bal_trunc_utils'
+                'sadptprj_riclyap_adi.bal_trunc_utils',
+                'dolfin_navier_scipy',
+                'dolfin_navier_scipy.dolfin_to_sparrays',
+                'dolfin_navier_scipy.stokes_navier_utils',
+                'dolfin_navier_scipy.problem_setups',
+                'dolfin_navier_scipy.data_output_utils'
                 ]
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = mock.Mock()

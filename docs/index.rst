@@ -11,11 +11,12 @@ This is a Python module for application of LQG-balanced truncation for low-order
 As an example we consider the stabilization of the cylinder wake at moderate Reynoldsnumbers via distributed control and observation.
 
 Dependencies:
-* numpy and scipy
-* dolfin
-* dolfin_navier_scipy
-* sadptprj_riclyap_adi
-* distr_control_fenics
+
+* `numpy and scipy <http://scipy.org/>`_
+* `dolfin <http://fenicsproject.org/>`_
+* `dolfin_navier_scipy <https://github.com/highlando/dolfin_navier_scipy/releases/tag/v1.0-lqgbtpaper>`_
+* `sadptprj_riclyap_adi <https://github.com/highlando/sadptprj_riclyap_adi/releases/tag/v1.0-lqgbtpaper>`_
+* `distr_control_fenics <https://github.com/highlando/distr_control_fenics/releases/tag/v1.0-lqgbtpaper>`_
 
 Contents:
 
