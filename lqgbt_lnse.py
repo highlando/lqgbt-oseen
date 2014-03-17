@@ -67,11 +67,11 @@ def lqgbt(problemname='drivencavity',
         threshold at what the lqgbt characteristiv values are truncated,
         defaults to `1e-6`
     closed_loop : string, optional
-        how to do the closed loop simulation:
-        if False -> no simulation
-        if == 'full_state_fb' -> full state feedback
-        if == 'red_output_fb' -> reduced output feedback
-        else -> no control is applied
+        | how to do the closed loop simulation:
+        | if False -> no simulation
+        | if == 'full_state_fb' -> full state feedback
+        | if == 'red_output_fb' -> reduced output feedback
+        | else -> no control is applied
 
     """
 
