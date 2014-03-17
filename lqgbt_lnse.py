@@ -68,18 +68,24 @@ def lqgbt(problemname='drivencavity',
         defaults to `False`
     comp_stepresp : {'nonlinear', False, None}
         whether to compute and compare the step responses
+
         | if False -> no step response
         | if == 'nonlinear' -> compare linear reduced to nonlinear full model
         | else -> linear reduced versus linear full model
+
+        defaults to `False`
+
     trunc_lqgbtcv : real, optional
         threshold at what the lqgbt characteristiv values are truncated,
         defaults to `1e-6`
     closed_loop : {'full_state_fb', 'red_output_fb', False, None}
         how to do the closed loop simulation:
+
         | if False -> no simulation
         | if == 'full_state_fb' -> full state feedback
         | if == 'red_output_fb' -> reduced output feedback
         | else -> no control is applied
+
         defaults to `False`
 
     """
