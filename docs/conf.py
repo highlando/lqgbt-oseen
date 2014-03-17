@@ -32,7 +32,9 @@ MOCK_MODULES = ['dolfin', 'numpy', 'scipy', 'scipy.linalg',
                 'dolfin_navier_scipy.dolfin_to_sparrays',
                 'dolfin_navier_scipy.stokes_navier_utils',
                 'dolfin_navier_scipy.problem_setups',
-                'dolfin_navier_scipy.data_output_utils'
+                'dolfin_navier_scipy.data_output_utils',
+                'distr_control_fenics',
+                'distr_control_fenics.cont_obs_utils'
                 ]
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = mock.Mock()
