@@ -5,6 +5,8 @@ Python module for application of LQG-balanced truncation for low-order controlle
 
 As an example we consider the stabilization of the cylinder wake at moderate Reynoldsnumbers via distributed control and observation.
 
+Documentation goes [here](http://lqgbt-for-flow-stabilization.readthedocs.org/en/latest/).
+
 Dependencies:
 * numpy and scipy
 * dolfin
