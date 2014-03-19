@@ -10,7 +10,7 @@ This is a Python module for application of LQG-balanced truncation for low-order
 
 As an example we consider the stabilization of the cylinder wake at moderate Reynoldsnumbers via distributed control and observation.
 
-To get started, install all dependencies, download the code from the linked github repository, create the subdirectory `data`, and run `compscript.py`. Since the problem already is unstable, the Newton-ADI iterations will not simply converge. You will need to compute stabilizing initial guesses first. Therefore, uncomment the respective line in the header of `compscript.py`.
+To get started, install all dependencies, download the code from the linked github repository, create the subdirectory `data`, and run `compscript.py <https://github.com/highlando/lqgbt-oseen/blob/master/compscript.py>`_. Since the problem already is unstable, the Newton-ADI iterations will not simply converge. You will need to compute stabilizing initial guesses first. Therefore, uncomment the respective line in the header of `compscript.py <https://github.com/highlando/lqgbt-oseen/blob/master/compscript.py>`_.
 
 Dependencies:
 
