@@ -21,6 +21,7 @@ Dependencies:
 * `distr_control_fenics <https://github.com/highlando/distr_control_fenics/releases/tag/v1.0-lqgbtpaper>`_
 
 Alternatively:
+
 If you have dolfin and scipy installed, all you need is in tar file attached to the github release `v1.0-lqgbtpaper <https://github.com/highlando/lqgbt-oseen/releases/tag/v1.0-lqgbtpaper>`_.
 
 Contents:
