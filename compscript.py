@@ -1,34 +1,26 @@
 import lqgbt_lnse
-# import os
-# import glob
-# import time
+# to compute stabilizing initial values for higher Re numbers
+relist = [None, 5.0e1, 1.0e2, 1.5e2, 2.0e2]
 
-relist = [None, 1.0e2, 1.5e2, 2.0e2]  # , 2.5e2]
-cyldim = 2
-# os.chdir('data/')
-# for fname in glob.glob('*__vel*'):
-#     os.remove(fname)
-# os.chdir('..')
+# mesh parameter for the cylinder meshes
+cyldim = 4
+# where to truncate the LQGBT characteristic values
+trunclist = [1e-2]  # , 1e-3, 1e-2, 1e-1, 1e-0]
+# dimension of in and output spaces
+NU, NY = 3, 3
 
-for cre in range(1, len(relist)):
-    lqgbt_lnse.lqgbt(problemname='cylinderwake', N=cyldim,
-                     use_ric_ini=relist[cre-1],
-                     Re=relist[cre], plain_bt=False,
-                     trunc_lqgbtcv=1e-5,
-                     t0=0.0, tE=12.0, Nts=2.4e3+1,
-                     comp_freqresp=False, comp_stepresp=False,
-                     # closed_loop='full_state_fb')
-                     closed_loop=False)
-                     # closed_loop='red_output_fb')
-                     # closed_loop=None)
-
-### Use for plots:
-# from sadptprj_riclyap_adi.bal_trunc_utils import plot_step_resp
-# plot_step_resp("data/
-#     cylinderwake_Re250.0_NV19468NU3NY3_lqgbt_Nred85_t0tENts0.06.0201.0.json")
-# NV = 19468, NP = 2591, k = 85
-
-# from sadptprj_riclyap_adi.bal_trunc_utils import plot_step_resp
-# plot_step_resp("data/
-#     cylinderwake_Re250.0_NV9356NU3NY3_lqgbt_Nred87_t0tENts0.05.02001.0.json")
-# NV = 9356, NP = 1288, k = 87
+for ctrunc in trunclist:
+    for cre in range(1, len(relist)):
+        lqgbt_lnse.lqgbt(problemname='cylinderwake', N=cyldim,
+                         use_ric_ini=relist[cre-1],
+                         NU=NU, NY=NY,
+                         Re=relist[cre], plain_bt=False,
+                         trunc_lqgbtcv=ctrunc,
+                         t0=0.0, tE=12.0, Nts=2.4e3+1,
+                         paraoutput=False,
+                         comp_freqresp=True, comp_stepresp=False,
+                         # 'nonlinear',
+                         # closed_loop='full_state_fb')
+                         closed_loop='red_output_fb')
+                         # closed_loop=None)
+                         # closed_loop=False)
