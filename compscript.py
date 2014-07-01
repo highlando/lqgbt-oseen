@@ -10,6 +10,15 @@ trunclist = [1e-2]  # , 1e-3, 1e-2, 1e-1, 1e-0]
 # dimension of in and output spaces
 NU, NY = 3, 3
 
+nwtn_adi_dict = dict(adi_max_steps=150,
+                     adi_newZ_reltol=1e-7,
+                     nwtn_upd_reltol=4e-8,
+                     nwtn_upd_abstol=1e-7,
+                     verbose=True,
+                     ms=[-30.0, -20.0, -10.0, -5.0, -3.0, -1.0],
+                     full_upd_norm_check=False,
+                     check_lyap_res=False)
+
 for ctrunc in trunclist:
     for cre in range(1, len(relist)):
         lqgbt_lnse.lqgbt(problemname='cylinderwake', N=cyldim,
@@ -18,10 +27,11 @@ for ctrunc in trunclist:
                          Re=relist[cre], plain_bt=False,
                          trunc_lqgbtcv=ctrunc,
                          t0=0.0, tE=12.0, Nts=4.8e3+1,
+                         nwtn_adi_dict=nwtn_adi_dict,
                          paraoutput=False,
-                         comp_freqresp=True, comp_stepresp=False,
+                         comp_freqresp=False, comp_stepresp=False,
                          # 'nonlinear',
                          # closed_loop='full_state_fb')
-                         closed_loop='red_output_fb')
+                         # closed_loop='red_output_fb')
                          # closed_loop=None)
-                         # closed_loop=False)
+                         closed_loop=False)
