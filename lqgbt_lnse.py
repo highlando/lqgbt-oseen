@@ -292,7 +292,10 @@ def lqgbt(problemname='drivencavity',
 
     trange = np.linspace(t0, tE, Nts)
 
-    if closed_loop == 'full_state_fb':
+    if closed_loop is False:
+        return
+
+    elif closed_loop == 'full_state_fb':
 
         mtxtb = pru.get_mTzzTtb(stokesmatsc['M'].T, zwc, b_mat)
 

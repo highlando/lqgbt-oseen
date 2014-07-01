@@ -3,7 +3,7 @@ import lqgbt_lnse
 # import glob
 # import time
 
-relist = [None, 2.0e2]  # , 2.5e2]
+relist = [None, 1.0e2, 1.5e2, 2.0e2]  # , 2.5e2]
 cyldim = 2
 # os.chdir('data/')
 # for fname in glob.glob('*__vel*'):
@@ -18,7 +18,8 @@ for cre in range(1, len(relist)):
                      t0=0.0, tE=12.0, Nts=2.4e3+1,
                      comp_freqresp=False, comp_stepresp=False,
                      # closed_loop='full_state_fb')
-                     closed_loop='red_output_fb')
+                     closed_loop=False)
+                     # closed_loop='red_output_fb')
                      # closed_loop=None)
 
 ### Use for plots:
