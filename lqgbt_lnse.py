@@ -29,6 +29,7 @@ def nwtn_adi_params():
                 nwtn_max_steps=30,
                 nwtn_upd_reltol=4e-8,
                 nwtn_upd_abstol=1e-7,
+                ms=[-30.0, -20.0, -10.0, -5.0, -3.0, -1.0],
                 verbose=True,
                 full_upd_norm_check=False,
                 check_lyap_res=False))
@@ -106,10 +107,10 @@ def lqgbt(problemname='drivencavity',
     # specify in what spatial direction Bu changes. The remaining is constant
     uspacedep = femp['uspacedep']
 
-    if nwtn_adi_dict is None:
-        nap = nwtn_adi_params()['nwtn_adi_dict']
-    else:
+    if nwtn_adi_dict is not None:
         nap = nwtn_adi_dict
+    else:
+        nap = nwtn_adi_params()['nwtn_adi_dict']
     # output
     ddir = 'data/'
     try:

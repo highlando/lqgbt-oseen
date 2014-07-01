@@ -12,10 +12,11 @@ NU, NY = 3, 3
 
 nwtn_adi_dict = dict(adi_max_steps=150,
                      adi_newZ_reltol=1e-7,
+                     nwtn_max_steps=1,
                      nwtn_upd_reltol=4e-8,
                      nwtn_upd_abstol=1e-7,
                      verbose=True,
-                     ms=[-30.0, -20.0, -10.0, -5.0, -3.0, -1.0],
+                     ms=[-10.0, -5.0, -3.0, -1.0],
                      full_upd_norm_check=False,
                      check_lyap_res=False)
 
