@@ -1,22 +1,29 @@
 import lqgbt_lnse
+import sys
+import datetime
+
+sys.stdout = open('logcompscript', 'a', 0)
+print('{0}'*10 + '\n log started at {1} \n' + '{0}'*10).\
+    format('X', str(datetime.datetime.now()))
+
 # to compute stabilizing initial values for higher Re numbers
 relist = [None, 5.0e1, 1.0e2, 1.5e2, 2.0e2, 2.5e2, 3.0e2, 3.5e2, 4.0e2]
 
 # relist = [None, 2.0e2]  # , 2.5e2]
 # mesh parameter for the cylinder meshes
-cyldim = 4
+cyldim = 3
 # where to truncate the LQGBT characteristic values
 trunclist = [1e-2]  # , 1e-3, 1e-2, 1e-1, 1e-0]
 # dimension of in and output spaces
 NU, NY = 3, 3
 
-nwtn_adi_dict = dict(adi_max_steps=150,
+nwtn_adi_dict = dict(adi_max_steps=350,
                      adi_newZ_reltol=1e-7,
-                     nwtn_max_steps=1,
+                     nwtn_max_steps=30,
                      nwtn_upd_reltol=4e-8,
                      nwtn_upd_abstol=1e-7,
                      verbose=True,
-                     ms=[-10.0, -5.0, -3.0, -1.0],
+                     ms=[-5.0, -3.0, -2.0, -1.5, -1.3, -1.1, -1.0],
                      full_upd_norm_check=False,
                      check_lyap_res=False)
 
