@@ -24,7 +24,7 @@ def nwtn_adi_params():
         of the parameters for the Newton-ADI iteration
     """
     return dict(nwtn_adi_dict=dict(
-                adi_max_steps=300,
+                adi_max_steps=3,
                 adi_newZ_reltol=1e-7,
                 nwtn_max_steps=30,
                 nwtn_upd_reltol=4e-8,

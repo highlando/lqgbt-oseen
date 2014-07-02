@@ -18,9 +18,9 @@ for ctrunc in trunclist:
                          trunc_lqgbtcv=ctrunc,
                          t0=0.0, tE=12.0, Nts=2.4e3+1,
                          paraoutput=False,
-                         comp_freqresp=True, comp_stepresp=False,
+                         comp_freqresp=False, comp_stepresp=False,
                          # 'nonlinear',
                          # closed_loop='full_state_fb')
-                         closed_loop='red_output_fb')
+                         # closed_loop='red_output_fb')
                          # closed_loop=None)
-                         # closed_loop=False)
+                         closed_loop=False)
