@@ -13,6 +13,8 @@ import sadptprj_riclyap_adi.bal_trunc_utils as btu
 
 import distr_control_fenics.cont_obs_utils as cou
 
+import multiprocessing
+
 dolfin.parameters.linear_algebra_backend = 'uBLAS'
 
 
@@ -258,18 +260,33 @@ def lqgbt(problemname='drivencavity',
             fdstr = get_fdstr(Re)
             print 'computing factors of Gramians: \n\t' + \
                 fdstr + '__zwc/__zwo'
-            zwo = get_gramians(mmat=mmat.T, amat=f_mat.T,
-                               jmat=stokesmatsc['J'],
-                               bmat=c_mat_reg.T, wmat=b_mat,
-                               nwtn_adi_dict=nap,
-                               z0=zinio)['zfac']
-            dou.save_npa(zwo, fdstr + '__zwo')
-            zwc = get_gramians(mmat=mmat, amat=f_mat,
-                               jmat=stokesmatsc['J'],
-                               bmat=b_mat, wmat=c_mat_reg.T,
-                               nwtn_adi_dict=nap,
-                               z0=zinic)['zfac']
-            dou.save_npa(zwc, fdstr + '__zwc')
+
+            def compobsg():
+                zwo = get_gramians(mmat=mmat.T, amat=f_mat.T,
+                                   jmat=stokesmatsc['J'],
+                                   bmat=c_mat_reg.T, wmat=b_mat,
+                                   nwtn_adi_dict=nap,
+                                   z0=zinio)['zfac']
+                dou.save_npa(zwo, fdstr + '__zwo')
+
+            def compcong():
+                zwc = get_gramians(mmat=mmat, amat=f_mat,
+                                   jmat=stokesmatsc['J'],
+                                   bmat=b_mat, wmat=c_mat_reg.T,
+                                   nwtn_adi_dict=nap,
+                                   z0=zinic)['zfac']
+                dou.save_npa(zwc, fdstr + '__zwc')
+
+            print '\n ### multithread start - output might be intermangled'
+
+            p1 = multiprocessing.Process(target=compobsg)
+            p2 = multiprocessing.Process(target=compcong)
+            p1.start()
+            p2.start()
+            p1.join()
+            p2.join()
+
+            print '### multithread end'
 
         print 'computing the left and right transformations' + \
             ' and saving to:\n' + fdstr + '__tr/__tl' + truncstr
