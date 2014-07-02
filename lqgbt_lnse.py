@@ -24,11 +24,12 @@ def nwtn_adi_params():
         of the parameters for the Newton-ADI iteration
     """
     return dict(nwtn_adi_dict=dict(
-                adi_max_steps=3,
+                adi_max_steps=350,
                 adi_newZ_reltol=1e-7,
                 nwtn_max_steps=30,
                 nwtn_upd_reltol=4e-8,
                 nwtn_upd_abstol=1e-7,
+                ms=[-30.0, -20.0, -10.0, -5.0, -3.0, -1.0],
                 verbose=True,
                 full_upd_norm_check=False,
                 check_lyap_res=False))
@@ -40,6 +41,7 @@ def lqgbt(problemname='drivencavity',
           NU=3, NY=3,
           paraoutput=True,
           trunc_lqgbtcv=1e-6,
+          nwtn_adi_dict=None,
           comp_freqresp=False, comp_stepresp='nonlinear',
           closed_loop=False):
     """Main routine for LQGBT
@@ -105,7 +107,10 @@ def lqgbt(problemname='drivencavity',
     # specify in what spatial direction Bu changes. The remaining is constant
     uspacedep = femp['uspacedep']
 
-    nap = nwtn_adi_params()
+    if nwtn_adi_dict is not None:
+        nap = nwtn_adi_dict
+    else:
+        nap = nwtn_adi_params()['nwtn_adi_dict']
     # output
     ddir = 'data/'
     try:
@@ -142,7 +147,7 @@ def lqgbt(problemname='drivencavity',
     femp.update(bcdata)
 
     # casting some parameters
-    NV, INVINDS = len(femp['invinds']), femp['invinds']
+    NV = len(femp['invinds'])
 
     prbstr = '_bt' if plain_bt else '_lqgbt'
     # contsetupstr = 'NV{0}NU{1}NY{2}alphau{3}'.format(NV, NU, NY, alphau)
@@ -256,13 +261,13 @@ def lqgbt(problemname='drivencavity',
             zwo = get_gramians(mmat=mmat.T, amat=f_mat.T,
                                jmat=stokesmatsc['J'],
                                bmat=c_mat_reg.T, wmat=b_mat,
-                               nwtn_adi_dict=nap['nwtn_adi_dict'],
+                               nwtn_adi_dict=nap,
                                z0=zinio)['zfac']
             dou.save_npa(zwo, fdstr + '__zwo')
             zwc = get_gramians(mmat=mmat, amat=f_mat,
                                jmat=stokesmatsc['J'],
                                bmat=b_mat, wmat=c_mat_reg.T,
-                               nwtn_adi_dict=nap['nwtn_adi_dict'],
+                               nwtn_adi_dict=nap,
                                z0=zinic)['zfac']
             dou.save_npa(zwc, fdstr + '__zwc')
 
