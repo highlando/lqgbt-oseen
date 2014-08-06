@@ -45,7 +45,7 @@ def lqgbt(problemname='drivencavity',
           trunc_lqgbtcv=1e-6,
           nwtn_adi_dict=None,
           comp_freqresp=False, comp_stepresp='nonlinear',
-          closed_loop=False):
+          closed_loop=False, multiproc=False):
     """Main routine for LQGBT
 
     Parameters
@@ -277,19 +277,26 @@ def lqgbt(problemname='drivencavity',
                                    z0=zinic)['zfac']
                 dou.save_npa(zwc, fdstr + '__zwc')
 
-            print '\n ### multithread start - output might be intermangled'
+            if multiproc:
+                print '\n ### multithread start - output might be intermangled'
+                p1 = multiprocessing.Process(target=compobsg)
+                p2 = multiprocessing.Process(target=compcong)
+                p1.start()
+                p2.start()
+                p1.join()
+                p2.join()
+                print '### multithread end'
 
-            p1 = multiprocessing.Process(target=compobsg)
-            p2 = multiprocessing.Process(target=compcong)
-            p1.start()
-            p2.start()
-            p1.join()
-            p2.join()
+            else:
+                compobsg()
+                compcong()
 
-            print '### multithread end'
+            zwc = dou.load_npa(fdstr + '__zwc')
+            zwo = dou.load_npa(fdstr + '__zwo')
 
         print 'computing the left and right transformations' + \
             ' and saving to:\n' + fdstr + '__tr/__tl' + truncstr
+
         tl, tr = btu.compute_lrbt_transfos(zfc=zwc, zfo=zwo,
                                            mmat=stokesmatsc['M'],
                                            trunck={'threshh': trunc_lqgbtcv}

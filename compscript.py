@@ -23,7 +23,7 @@ nwtn_adi_dict = dict(adi_max_steps=350,
                      nwtn_upd_reltol=4e-8,
                      nwtn_upd_abstol=1e-7,
                      verbose=True,
-                     ms=[-5.0, -3.0, -2.0, -1.5, -1.3, -1.1, -1.0],
+                     ms=[-5.0, -2.0, -1.5, -1.1, -1.0],
                      full_upd_norm_check=False,
                      check_lyap_res=False)
 
