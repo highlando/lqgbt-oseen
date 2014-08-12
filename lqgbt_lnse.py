@@ -280,8 +280,8 @@ def lqgbt(problemname='drivencavity',
             print '\n ### multithread start - output might be intermangled'
 
             p1 = multiprocessing.Process(target=compobsg)
-            p2 = multiprocessing.Process(target=compcong)
             p1.start()
+            p2 = multiprocessing.Process(target=compcong)
             p2.start()
             p1.join()
             p2.join()
