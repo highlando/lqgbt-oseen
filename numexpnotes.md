@@ -18,4 +18,6 @@ success
 
 Re 200
 ------
+kappa = 1e-2, eps = 1e-3
+FAIL
 
