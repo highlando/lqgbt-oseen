@@ -45,7 +45,8 @@ def lqgbt(problemname='drivencavity',
           trunc_lqgbtcv=1e-6,
           nwtn_adi_dict=None,
           comp_freqresp=False, comp_stepresp='nonlinear',
-          closed_loop=False, multiproc=False):
+          closed_loop=False, multiproc=False,
+          perturbpara=1e-3):
     """Main routine for LQGBT
 
     Parameters
@@ -404,7 +405,7 @@ def lqgbt(problemname='drivencavity',
 
     elif closed_loop == 'red_output_fb':
         ak_mat = np.dot(tl.T, f_mat*tr)
-        ck_mat = lau.matvec_densesparse(c_mat_reg, tr)
+        ck_mat = lau.mm_dnssps(c_mat_reg, tr)
         bk_mat = tl.T*b_mat
 
         tltm, trtm = tl.T*stokesmatsc['M'], tr.T*stokesmatsc['M']
@@ -476,14 +477,14 @@ def lqgbt(problemname='drivencavity',
             """
             xk_old = memory['xk_old']
             buk = cts*np.dot(obs_bk,
-                             lau.matvec_densesparse(c_mat, (curvel-linvel)))
+                             lau.mm_dnssps(c_mat, (curvel-linvel)))
             xk_old = np.dot(ipsysk_mat_inv, xk_old + buk)
             #         cts*np.dot(obs_bk,
-            #                 lau.matvec_densesparse(c_mat, (curvel-linvel))))
+            #                 lau.mm_dnssps(c_mat, (curvel-linvel))))
             memory['xk_old'] = xk_old
             actua = -b_mat*np.dot(bk_mat.T, np.dot(xck, xk_old))
             print '\nnorm of deviation', np.linalg.norm(curvel-linvel)
-            # print 'norm of actuation {0}'.format(np.linalg.norm(actua))
+            print 'norm of actuation {0}'.format(np.linalg.norm(actua))
             return actua, memory
 
         fv_rofb_dict = dict(cts=DT, linvel=v_ss_nse, b_mat=b_mat,
@@ -499,7 +500,7 @@ def lqgbt(problemname='drivencavity',
         fv_tmdp_params = {}
         fv_tmdp_memory = {}
 
-    perturbini = 1e-3*np.ones((NV, 1))
+    perturbini = perturbpara*np.ones((NV, 1))
     reg_pertubini = lau.app_prj_via_sadpnt(amat=stokesmatsc['M'],
                                            jmat=stokesmatsc['J'],
                                            rhsv=perturbini)
@@ -510,7 +511,7 @@ def lqgbt(problemname='drivencavity',
                    lin_vel_point=v_ss_nse,
                    clearprvdata=True, data_prfx=fdstr + truncstr,
                    fv_tmdp=fv_tmdp,
-                   vel_nwtn_stps=1,
+                   vel_nwtn_stps=0,
                    comp_nonl_semexp=True,
                    fv_tmdp_params=fv_tmdp_params,
                    fv_tmdp_memory=fv_tmdp_memory,
@@ -530,7 +531,8 @@ def lqgbt(problemname='drivencavity',
 
     dou.save_output_json(dict(tmesh=trange.tolist(), outsig=yscomplist),
                          fstring=fdstr + truncstr + '{0}'.format(closed_loop) +
-                         't0{0}tE{1}Nts{2}'.format(t0, tE, Nts))
+                         't0{0}tE{1}Nts{2}'.format(t0, tE, Nts) +
+                         'inipert{0}'.format(perturbpara))
 
     dou.plot_outp_sig(tmesh=trange, outsig=yscomplist)
     # import matplotlib.pyplot as plt
