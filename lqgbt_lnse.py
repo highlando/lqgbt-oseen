@@ -348,9 +348,6 @@ def lqgbt(problemname='drivencavity',
                              plot=True, jsonstr=jsonstr)
 
 # compute the regulated system
-    zwc = dou.load_npa(fdstr + '__zwc')
-    zwo = dou.load_npa(fdstr + '__zwo')
-
     trange = np.linspace(t0, tE, Nts)
 
     print 'NV = {0}, NP = {2}, k = {1}'.\
@@ -360,6 +357,8 @@ def lqgbt(problemname='drivencavity',
         return
 
     elif closed_loop == 'full_state_fb':
+        zwc = dou.load_npa(fdstr + '__zwc')
+        zwo = dou.load_npa(fdstr + '__zwo')
 
         mtxtb = pru.get_mTzzTtb(stokesmatsc['M'].T, zwc, b_mat)
 
@@ -404,21 +403,35 @@ def lqgbt(problemname='drivencavity',
         fv_tmdp_memory = None
 
     elif closed_loop == 'red_output_fb':
-        ak_mat = np.dot(tl.T, f_mat*tr)
-        ck_mat = lau.mm_dnssps(c_mat_reg, tr)
-        bk_mat = tl.T*b_mat
+        try:
+            xok = dou.load_npa(fdstr+truncstr+'__xok')
+            xck = dou.load_npa(fdstr+truncstr+'__xck')
+            ak_mat = dou.load_npa(fdstr+truncstr+'__ak_mat')
+            ck_mat = dou.load_npa(fdstr+truncstr+'__ck_mat')
+            bk_mat = dou.load_npa(fdstr+truncstr+'__bk_mat')
+        except IOError:
+            print 'couldn"t load the red system - compute it'
+            zwc = dou.load_npa(fdstr + '__zwc')
+            zwo = dou.load_npa(fdstr + '__zwo')
 
-        tltm, trtm = tl.T*stokesmatsc['M'], tr.T*stokesmatsc['M']
-        xok = np.dot(np.dot(tltm, zwo), np.dot(zwo.T, tltm.T))
-        xck = np.dot(np.dot(trtm, zwc), np.dot(zwc.T, trtm.T))
-        # sysmatk = (ak_mat - np.dot(np.dot(xok, ck_mat.T), ck_mat) -
-        #                             np.dot(bk_mat, np.dot(bk_mat.T, xck)))
+            ak_mat = np.dot(tl.T, f_mat*tr)
+            ck_mat = lau.mm_dnssps(c_mat_reg, tr)
+            bk_mat = tl.T*b_mat
+
+            tltm, trtm = tl.T*stokesmatsc['M'], tr.T*stokesmatsc['M']
+            xok = np.dot(np.dot(tltm, zwo), np.dot(zwo.T, tltm.T))
+            xck = np.dot(np.dot(trtm, zwc), np.dot(zwc.T, trtm.T))
+
+            dou.save_npa(xok, fdstr+truncstr+'__xok')
+            dou.save_npa(xck, fdstr+truncstr+'__xck')
+            dou.save_npa(ak_mat, fdstr+truncstr+'__ak_mat')
+            dou.save_npa(ck_mat, fdstr+truncstr+'__ck_mat')
+            dou.save_npa(bk_mat, fdstr+truncstr+'__bk_mat')
 
         obs_bk = np.dot(xok, ck_mat.T)
-
         DT = (tE - t0)/(Nts-1)
 
-        sysmatk_inv = np.linalg.inv(np.eye(tl.shape[1]) - DT*(ak_mat -
+        sysmatk_inv = np.linalg.inv(np.eye(ak_mat.shape[1]) - DT*(ak_mat -
                                     np.dot(np.dot(xok, ck_mat.T), ck_mat) -
                                     np.dot(bk_mat, np.dot(bk_mat.T, xck))))
 

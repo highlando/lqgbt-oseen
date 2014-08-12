@@ -9,7 +9,7 @@ relist = [None, 2.5e2]  # , 3.5e2, 4.0e2]
 # mesh parameter for the cylinder meshes
 cyldim = 3
 # where to truncate the LQGBT characteristic values
-trunclist = [1e-2]  # , 1e-3, 1e-2, 1e-1, 1e-0]
+trunclist = [1e-3]  # , 1e-3, 1e-2, 1e-1, 1e-0]
 # dimension of in and output spaces
 NU, NY = 3, 3
 # to what extend we perturb the initial value
