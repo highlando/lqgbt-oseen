@@ -22,7 +22,7 @@ kappa = 1e-2, eps = 1e-3, Nts = 4.8e3+1
 FAIL
 
 kappa = 1e-3, eps = 1e-6, Nts = 4.8e3+1
-FAIL
+FAIL 
 
 kappa = 1e-3, eps = 1e-6, Nts = 9.6e3+1
 success - note121 - (but with growing error)
