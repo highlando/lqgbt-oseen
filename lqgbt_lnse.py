@@ -521,7 +521,7 @@ def lqgbt(problemname='drivencavity',
     soldict.update(fv_stbc=rhsd_stbc['fv'],
                    trange=trange,
                    iniv=v_ss_nse + reg_pertubini,
-                   lin_vel_point=v_ss_nse,
+                   lin_vel_point=None,
                    clearprvdata=True, data_prfx=fdstr + truncstr,
                    fv_tmdp=fv_tmdp,
                    vel_nwtn_stps=0,
@@ -531,7 +531,7 @@ def lqgbt(problemname='drivencavity',
                    return_dictofvelstrs=True)
 
     outstr = truncstr + '{0}'.format(closed_loop) \
-        + 't0{0}tE{1}Nts{2}'.format(t0, tE, Nts)
+        + 't0{0}tE{1}Nts{2}N{3}Re{4}'.format(t0, tE, Nts, N, Re)
     if paraoutput:
         soldict.update(paraviewoutput=True,
                        vfileprfx='results/vel_'+outstr,

@@ -17,7 +17,7 @@ perturbpara = 1e-6
 # closed loop def
 closed_loop = 'red_output_fb'
 # number of time steps -- also define the lag in the control application
-t0, tE, Nts = 0.0, 12.0, 1*4.8e1+1
+t0, tE, Nts = 0.0, 12.0, 2*4.8e3+1
 
 nwtn_adi_dict = dict(adi_max_steps=350,
                      adi_newZ_reltol=1e-7,
