@@ -168,8 +168,9 @@ def lqgbt(problemname='drivencavity',
 
     soldict = stokesmatsc  # containing A, J, JT
     soldict.update(femp)  # adding V, Q, invinds, diribcs
-    soldict.update(rhsd_vfrc)  # adding fvc, fpr
-    soldict.update(fv_stbc=rhsd_stbc['fv'], fp_stbc=rhsd_stbc['fp'],
+    # soldict.update(rhsd_vfrc)  # adding fvc, fpr
+    soldict.update(fv=rhsd_stbc['fv']+rhsd_vfrc['fvc'],
+                   fp=rhsd_stbc['fp']+rhsd_vfrc['fpr'],
                    N=N, nu=nu, data_prfx=fdstr)
 
 #
@@ -439,8 +440,6 @@ def lqgbt(problemname='drivencavity',
                                     np.dot(np.dot(xok, ck_mat.T), ck_mat) -
                                     np.dot(bk_mat, np.dot(bk_mat.T, xck))))
 
-        # raise Warning('TODO: debug')
-
         def fv_tmdp_redoutpfb(time=None, curvel=None, memory=None,
                               linvel=None,
                               ipsysk_mat_inv=None,
@@ -528,7 +527,6 @@ def lqgbt(problemname='drivencavity',
                    lin_vel_point=None,
                    clearprvdata=True, data_prfx=fdstr + truncstr,
                    fv_tmdp=fv_tmdp,
-                   vel_nwtn_stps=0,
                    comp_nonl_semexp=True,
                    fv_tmdp_params=fv_tmdp_params,
                    fv_tmdp_memory=fv_tmdp_memory,
