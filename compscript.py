@@ -1,5 +1,5 @@
 import lqgbt_lnse
-import sys
+# import sys
 import datetime
 
 # to compute stabilizing initial values for higher Re numbers
@@ -35,9 +35,9 @@ logstr = 'logs/log_cyldim{0}NU{1}NY{2}'.format(cyldim, NU, NY) +\
     'Re{2}to{3}kappa{0}to{1}eps{4}'.format(trunclist[0], trunclist[-1],
                                            relist[0], relist[-1], perturbpara)
 
-print 'log goes ' + logstr
-print 'how about \ntail -f '+logstr
-sys.stdout = open(logstr, 'a', 0)
+# print 'log goes ' + logstr
+# print 'how about \ntail -f '+logstr
+# sys.stdout = open(logstr, 'a', 0)
 print('{0}'*10 + '\n log started at {1} \n' + '{0}'*10).\
     format('X', str(datetime.datetime.now()))
 
