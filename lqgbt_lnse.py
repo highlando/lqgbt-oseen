@@ -41,6 +41,7 @@ def lqgbt(problemname='drivencavity',
           N=10, Re=1e2, plain_bt=False,
           use_ric_ini=None, t0=0.0, tE=1.0, Nts=11,
           NU=3, NY=3,
+          bccontrol=False,
           paraoutput=True,
           trunc_lqgbtcv=1e-6,
           nwtn_adi_dict=None,
@@ -65,6 +66,9 @@ def lqgbt(problemname='drivencavity',
     t0, tE, Nts : real, real, int, optional
         starting and endpoint of the considered time interval, number of
         time instancses, default to `0.0, 1.0, 11`
+    bccontrol : boolean, optional
+        whether to apply boundary control via penalized robin conditions,
+        defaults to `False`
     NU, NY : int, optional
         dimensions of components of in and output space (will double because
         there are two components), default to `3, 3`
@@ -104,7 +108,7 @@ def lqgbt(problemname='drivencavity',
         format(typprb, problemname, Re)
 
     problemfem = problemdict[problemname]
-    femp = problemfem(N)
+    femp = problemfem(N, bccontrol=bccontrol)
 
     nu = femp['charlen']/Re
     # specify in what spatial direction Bu changes. The remaining is constant
