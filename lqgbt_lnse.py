@@ -2,7 +2,7 @@ import dolfin
 import os
 import numpy as np
 
-import dolfin_navier_scipy.dolfin_to_sparrays as dts
+# import dolfin_navier_scipy.dolfin_to_sparrays as dts
 import dolfin_navier_scipy.data_output_utils as dou
 import dolfin_navier_scipy.stokes_navier_utils as snu
 import dolfin_navier_scipy.problem_setups as dnsps
@@ -41,7 +41,7 @@ def lqgbt(problemname='drivencavity',
           N=10, Re=1e2, plain_bt=False,
           use_ric_ini=None, t0=0.0, tE=1.0, Nts=11,
           NU=3, NY=3,
-          bccontrol=False,
+          bccontrol=True, palpha=1e-5,
           paraoutput=True,
           trunc_lqgbtcv=1e-6,
           nwtn_adi_dict=None,
@@ -99,20 +99,10 @@ def lqgbt(problemname='drivencavity',
 
     """
 
-    problemdict = dict(drivencavity=dnsps.drivcav_fems,
-                       cylinderwake=dnsps.cyl_fems)
-
     typprb = 'BT' if plain_bt else 'LQG-BT'
 
     print '\n ### We solve the {0} problem for the {1} at Re={2} ###\n'.\
         format(typprb, problemname, Re)
-
-    problemfem = problemdict[problemname]
-    femp = problemfem(N, bccontrol=bccontrol)
-
-    nu = femp['charlen']/Re
-    # specify in what spatial direction Bu changes. The remaining is constant
-    uspacedep = femp['uspacedep']
 
     if nwtn_adi_dict is not None:
         nap = nwtn_adi_dict
@@ -126,39 +116,54 @@ def lqgbt(problemname='drivencavity',
         raise Warning('need "' + ddir + '" subdir for storing the data')
     os.chdir('..')
 
-    stokesmats = dts.get_stokessysmats(femp['V'], femp['Q'], nu)
+    # stokesmats = dts.get_stokessysmats(femp['V'], femp['Q'], nu)
 
-    rhsd_vf = dts.setget_rhs(femp['V'], femp['Q'],
-                             femp['fv'], femp['fp'], t=0)
+    # rhsd_vf = dts.setget_rhs(femp['V'], femp['Q'],
+    #                          femp['fv'], femp['fp'], t=0)
 
-    # remove the freedom in the pressure
-    stokesmats['J'] = stokesmats['J'][:-1, :][:, :]
-    stokesmats['JT'] = stokesmats['JT'][:, :-1][:, :]
-    rhsd_vf['fp'] = rhsd_vf['fp'][:-1, :]
+    # # remove the freedom in the pressure
+    # stokesmats['J'] = stokesmats['J'][:-1, :][:, :]
+    # stokesmats['JT'] = stokesmats['JT'][:, :-1][:, :]
+    # rhsd_vf['fp'] = rhsd_vf['fp'][:-1, :]
 
-    # reduce the matrices by resolving the BCs
-    (stokesmatsc,
-     rhsd_stbc,
-     invinds,
-     bcinds,
-     bcvals) = dts.condense_sysmatsbybcs(stokesmats,
-                                         femp['diribcs'])
+    # # reduce the matrices by resolving the BCs
+    # (stokesmatsc,
+    #  rhsd_stbc,
+    #  invinds,
+    #  bcinds,
+    #  bcvals) = dts.condense_sysmatsbybcs(stokesmats,
+    #                                      femp['diribcs'])
 
-    # pressure freedom and dirichlet reduced rhs
-    rhsd_vfrc = dict(fpr=rhsd_vf['fp'], fvc=rhsd_vf['fv'][invinds, ])
+    # # pressure freedom and dirichlet reduced rhs
+    # rhsd_vfrc = dict(fpr=rhsd_vf['fp'], fvc=rhsd_vf['fv'][invinds, ])
 
-    # add the info on boundary and inner nodes
-    bcdata = {'bcinds': bcinds,
-              'bcvals': bcvals,
-              'invinds': invinds}
-    femp.update(bcdata)
+    # # add the info on boundary and inner nodes
+    # bcdata = {'bcinds': bcinds,
+    #           'bcvals': bcvals,
+    #           'invinds': invinds}
+    # femp.update(bcdata)
+
+    femp, stokesmatsc, rhsd_vfrc, rhsd_stbc \
+        = dnsps.get_sysmats(problem=problemname, N=N, Re=Re,
+                            bccontrol=bccontrol, scheme='TH')
+
+    nu = femp['charlen']/Re
+    # specify in what spatial direction Bu changes. The remaining is constant
+    uspacedep = femp['uspacedep']
 
     # casting some parameters
-    NV = len(femp['invinds'])
+    invinds, NV = femp['invinds'], len(femp['invinds'])
 
     prbstr = '_bt' if plain_bt else '_lqgbt'
     # contsetupstr = 'NV{0}NU{1}NY{2}alphau{3}'.format(NV, NU, NY, alphau)
-    contsetupstr = 'NV{0}NU{1}NY{2}'.format(NV, NU, NY)
+    if bccontrol:
+        import scipy.sparse as sps
+        contsetupstr = 'NV{0}_bcc_NY{1}'.format(NV, NY)
+        stokesmatsc['A'] = stokesmatsc['A'] + 1./palpha*stokesmatsc['Arob']
+        b_mat = 1./palpha*stokesmatsc['Brob']
+        u_masmat = sps.eye(b_mat.shape[1], format='csr')
+    else:
+        contsetupstr = 'NV{0}NU{1}NY{2}'.format(NV, NU, NY)
 
     def get_fdstr(Re):
         return ddir + problemname + '_Re{0}_'.format(Re) + \
@@ -178,16 +183,21 @@ def lqgbt(problemname='drivencavity',
 #
 
     # get the control and observation operators
-    try:
-        b_mat = dou.load_spa(ddir + contsetupstr + '__b_mat')
-        u_masmat = dou.load_spa(ddir + contsetupstr + '__u_masmat')
-        print 'loaded `b_mat`'
-    except IOError:
-        print 'computing `b_mat`...'
-        b_mat, u_masmat = cou.get_inp_opa(cdcoo=femp['cdcoo'], V=femp['V'],
-                                          NU=NU, xcomp=uspacedep)
-        dou.save_spa(b_mat, ddir + contsetupstr + '__b_mat')
-        dou.save_spa(u_masmat, ddir + contsetupstr + '__u_masmat')
+    if not bccontrol:
+        try:
+            b_mat = dou.load_spa(ddir + contsetupstr + '__b_mat')
+            u_masmat = dou.load_spa(ddir + contsetupstr + '__u_masmat')
+            print 'loaded `b_mat`'
+        except IOError:
+            print 'computing `b_mat`...'
+            b_mat, u_masmat = cou.get_inp_opa(cdcoo=femp['cdcoo'], V=femp['V'],
+                                              NU=NU, xcomp=uspacedep)
+            dou.save_spa(b_mat, ddir + contsetupstr + '__b_mat')
+            dou.save_spa(u_masmat, ddir + contsetupstr + '__u_masmat')
+
+        b_mat = b_mat[invinds, :][:, :]
+        # tb_mat = 1./np.sqrt(alphau)
+
     try:
         mc_mat = dou.load_spa(ddir + contsetupstr + '__mc_mat')
         y_masmat = dou.load_spa(ddir + contsetupstr + '__y_masmat')
@@ -199,17 +209,14 @@ def lqgbt(problemname='drivencavity',
         dou.save_spa(mc_mat, ddir + contsetupstr + '__mc_mat')
         dou.save_spa(y_masmat, ddir + contsetupstr + '__y_masmat')
 
-    # restrict the operators to the inner nodes
-    mc_mat = mc_mat[:, invinds][:, :]
-    b_mat = b_mat[invinds, :][:, :]
-
-    # tb_mat = 1./np.sqrt(alphau)
-
     c_mat = lau.apply_massinv(y_masmat, mc_mat, output='sparse')
     c_mat_reg = lau.app_prj_via_sadpnt(amat=stokesmatsc['M'],
                                        jmat=stokesmatsc['J'],
                                        rhsv=c_mat.T,
                                        transposedprj=True).T
+
+    # restrict the operators to the inner nodes
+    mc_mat = mc_mat[:, invinds][:, :]
     # c_mat_reg = np.array(c_mat.todense())
 
     # TODO: right choice of norms for y
@@ -284,7 +291,8 @@ def lqgbt(problemname='drivencavity',
                 dou.save_npa(zwc, fdstr + '__zwc')
 
             if multiproc:
-                print '\n ### multithread start - output might be intermangled'
+                print '\n ### multithread start - ' +\
+                    'output might be intermangled'
                 p1 = multiprocessing.Process(target=compobsg)
                 p2 = multiprocessing.Process(target=compcong)
                 p1.start()
@@ -303,12 +311,15 @@ def lqgbt(problemname='drivencavity',
         print 'computing the left and right transformations' + \
             ' and saving to:\n' + fdstr + '__tr/__tl' + truncstr
 
-        tl, tr = btu.compute_lrbt_transfos(zfc=zwc, zfo=zwo,
-                                           mmat=stokesmatsc['M'],
-                                           trunck={'threshh': trunc_lqgbtcv}
-                                           )
+        tl, tr = btu.\
+            compute_lrbt_transfos(zfc=zwc, zfo=zwo,
+                                  mmat=stokesmatsc['M'],
+                                  trunck={'threshh': trunc_lqgbtcv})
         dou.save_npa(tl, fdstr + '__tl' + truncstr)
         dou.save_npa(tr, fdstr + '__tr' + truncstr)
+
+    print 'NV = {0}, NP = {2}, k = {1}'.\
+        format(tl.shape[0], tl.shape[1], stokesmatsc['J'].shape[0])
 
     if comp_freqresp:
         btu.compare_freqresp(mmat=stokesmatsc['M'], amat=f_mat,
@@ -354,9 +365,6 @@ def lqgbt(problemname='drivencavity',
 
 # compute the regulated system
     trange = np.linspace(t0, tE, Nts)
-
-    print 'NV = {0}, NP = {2}, k = {1}'.\
-        format(tl.shape[0], tl.shape[1], stokesmatsc['J'].shape[0])
 
     if closed_loop is False:
         return
@@ -421,7 +429,7 @@ def lqgbt(problemname='drivencavity',
 
             ak_mat = np.dot(tl.T, f_mat*tr)
             ck_mat = lau.mm_dnssps(c_mat_reg, tr)
-            bk_mat = tl.T*b_mat
+            bk_mat = lau.mm_dnssps(tl.T, b_mat)
 
             tltm, trtm = tl.T*stokesmatsc['M'], tr.T*stokesmatsc['M']
             xok = np.dot(np.dot(tltm, zwo), np.dot(zwo.T, tltm.T))
@@ -498,7 +506,8 @@ def lqgbt(problemname='drivencavity',
             #         cts*np.dot(obs_bk,
             #                 lau.mm_dnssps(c_mat, (curvel-linvel))))
             memory['xk_old'] = xk_old
-            actua = -b_mat*np.dot(bk_mat.T, np.dot(xck, xk_old))
+            actua = -lau.mm_dnssps(b_mat,
+                                   np.dot(bk_mat.T, np.dot(xck, xk_old)))
             print '\nnorm of deviation', np.linalg.norm(curvel-linvel)
             print 'norm of actuation {0}'.format(np.linalg.norm(actua))
             return actua, memory
@@ -556,7 +565,7 @@ def lqgbt(problemname='drivencavity',
 
 if __name__ == '__main__':
     # lqgbt(N=10, Re=500, use_ric_ini=None, plain_bt=False)
-    lqgbt(problemname='cylinderwake', N=3,  # use_ric_ini=2e2,
+    lqgbt(problemname='cylinderwake', N=4,  # use_ric_ini=2e2,
           Re=1.0e2, plain_bt=False,
           t0=0.0, tE=2.0, Nts=1e3+1,
           comp_freqresp=False, comp_stepresp=False)
