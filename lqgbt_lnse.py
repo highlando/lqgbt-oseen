@@ -1,4 +1,3 @@
-import dolfin
 import os
 import numpy as np
 
@@ -15,7 +14,7 @@ import distr_control_fenics.cont_obs_utils as cou
 
 import multiprocessing
 
-dolfin.parameters.linear_algebra_backend = 'uBLAS'
+# dolfin.parameters.linear_algebra_backend = 'uBLAS'
 
 
 def nwtn_adi_params():
@@ -210,13 +209,15 @@ def lqgbt(problemname='drivencavity',
         dou.save_spa(y_masmat, ddir + contsetupstr + '__y_masmat')
 
     c_mat = lau.apply_massinv(y_masmat, mc_mat, output='sparse')
+    # restrict the operators to the inner nodes
+
+    mc_mat = mc_mat[:, invinds][:, :]
+    c_mat = c_mat[:, invinds][:, :]
     c_mat_reg = lau.app_prj_via_sadpnt(amat=stokesmatsc['M'],
                                        jmat=stokesmatsc['J'],
                                        rhsv=c_mat.T,
                                        transposedprj=True).T
 
-    # restrict the operators to the inner nodes
-    mc_mat = mc_mat[:, invinds][:, :]
     # c_mat_reg = np.array(c_mat.todense())
 
     # TODO: right choice of norms for y
@@ -275,20 +276,28 @@ def lqgbt(problemname='drivencavity',
                 fdstr + '__zwc/__zwo'
 
             def compobsg():
-                zwo = get_gramians(mmat=mmat.T, amat=f_mat.T,
-                                   jmat=stokesmatsc['J'],
-                                   bmat=c_mat_reg.T, wmat=b_mat,
-                                   nwtn_adi_dict=nap,
-                                   z0=zinio)['zfac']
-                dou.save_npa(zwo, fdstr + '__zwo')
+                try:
+                    zwo = dou.load_npa(fdstr + '__zwo')
+                    print 'at least __zwo is there'
+                except IOError:
+                    zwo = get_gramians(mmat=mmat.T, amat=f_mat.T,
+                                       jmat=stokesmatsc['J'],
+                                       bmat=c_mat_reg.T, wmat=b_mat,
+                                       nwtn_adi_dict=nap,
+                                       z0=zinio)['zfac']
+                    dou.save_npa(zwo, fdstr + '__zwo')
 
             def compcong():
-                zwc = get_gramians(mmat=mmat, amat=f_mat,
-                                   jmat=stokesmatsc['J'],
-                                   bmat=b_mat, wmat=c_mat_reg.T,
-                                   nwtn_adi_dict=nap,
-                                   z0=zinic)['zfac']
-                dou.save_npa(zwc, fdstr + '__zwc')
+                try:
+                    zwc = dou.load_npa(fdstr + '__zwc')
+                    print 'at least __zwc is there'
+                except IOError:
+                    zwc = get_gramians(mmat=mmat, amat=f_mat,
+                                       jmat=stokesmatsc['J'],
+                                       bmat=b_mat, wmat=c_mat_reg.T,
+                                       nwtn_adi_dict=nap,
+                                       z0=zinic)['zfac']
+                    dou.save_npa(zwc, fdstr + '__zwc')
 
             if multiproc:
                 print '\n ### multithread start - ' +\
