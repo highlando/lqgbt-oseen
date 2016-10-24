@@ -5,10 +5,10 @@ import datetime
 # to compute stabilizing initial values for higher Re numbers
 # relist = [None, 5.0e1, 1.0e2, 1.5e2, 2.0e2, 2.5e2, 3.0e2]  # , 3.5e2, 4.0e2]
 # relist = [None, 5.0e1, 1.0e2]  # , 3.5e2, 4.0e2]
-relist = [5.0e1, 1.0e2]  # , 3.5e2, 4.0e2]
+relist = [5.0e1, 7.5e1, 1.0e2]  # , 3.5e2, 4.0e2]
 
 # mesh parameter for the cylinder meshes
-cyldim = 4
+cyldim = 5
 # where to truncate the LQGBT characteristic values
 trunclist = [1e-3]  # , 1e-3, 1e-2, 1e-1, 1e-0]
 # dimension of in and output spaces
