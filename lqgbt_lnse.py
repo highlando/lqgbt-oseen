@@ -115,33 +115,6 @@ def lqgbt(problemname='drivencavity',
         raise Warning('need "' + ddir + '" subdir for storing the data')
     os.chdir('..')
 
-    # stokesmats = dts.get_stokessysmats(femp['V'], femp['Q'], nu)
-
-    # rhsd_vf = dts.setget_rhs(femp['V'], femp['Q'],
-    #                          femp['fv'], femp['fp'], t=0)
-
-    # # remove the freedom in the pressure
-    # stokesmats['J'] = stokesmats['J'][:-1, :][:, :]
-    # stokesmats['JT'] = stokesmats['JT'][:, :-1][:, :]
-    # rhsd_vf['fp'] = rhsd_vf['fp'][:-1, :]
-
-    # # reduce the matrices by resolving the BCs
-    # (stokesmatsc,
-    #  rhsd_stbc,
-    #  invinds,
-    #  bcinds,
-    #  bcvals) = dts.condense_sysmatsbybcs(stokesmats,
-    #                                      femp['diribcs'])
-
-    # # pressure freedom and dirichlet reduced rhs
-    # rhsd_vfrc = dict(fpr=rhsd_vf['fp'], fvc=rhsd_vf['fv'][invinds, ])
-
-    # # add the info on boundary and inner nodes
-    # bcdata = {'bcinds': bcinds,
-    #           'bcvals': bcvals,
-    #           'invinds': invinds}
-    # femp.update(bcdata)
-
     femp, stokesmatsc, rhsd_vfrc, rhsd_stbc \
         = dnsps.get_sysmats(problem=problemname, N=N, Re=Re,
                             bccontrol=bccontrol, scheme='TH')
@@ -176,6 +149,14 @@ def lqgbt(problemname='drivencavity',
     soldict.update(fv=rhsd_stbc['fv']+rhsd_vfrc['fvc'],
                    fp=rhsd_stbc['fp']+rhsd_vfrc['fpr'],
                    N=N, nu=nu, data_prfx=fdstr)
+    print 'nu/Re/palpha = {0}/{1}/{2}'.format(femp['nu'], femp['Re'], palpha)
+    import scipy.sparse.linalg as spsla
+    print 'get expmats: ||Arob|| = {0}'.\
+        format(spsla.norm(stokesmatsc['Arob']))
+    print 'get expmats: ||fv|| = {0}'.format(np.linalg.norm(soldict['fv']))
+    print 'get expmats: ||fp|| = {0}'.format(np.linalg.norm(soldict['fp']))
+    print 'get expmats: ||A|| = {0}'.format(spsla.norm(soldict['A']))
+    raise Warning('TODO: debug')
 
 #
 # Prepare for control
@@ -574,7 +555,7 @@ def lqgbt(problemname='drivencavity',
 
 if __name__ == '__main__':
     # lqgbt(N=10, Re=500, use_ric_ini=None, plain_bt=False)
-    lqgbt(problemname='cylinderwake', N=4,  # use_ric_ini=2e2,
-          Re=1.0e2, plain_bt=False,
-          t0=0.0, tE=2.0, Nts=1e3+1,
+    lqgbt(problemname='cylinderwake', N=2,  # use_ric_ini=2e2,
+          Re=7.5e1, plain_bt=False,
+          t0=0.0, tE=2.0, Nts=1e3+1, palpha=1e-6,
           comp_freqresp=False, comp_stepresp=False)
