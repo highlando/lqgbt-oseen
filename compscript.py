@@ -4,8 +4,8 @@ import datetime
 
 # to compute stabilizing initial values for higher Re numbers
 # relist = [None, 5.0e1, 1.0e2]
-relist = [5.0e1, 1.0e2]
-# relist = [1.0e2, 1.5e2]
+# relist = [5.0e1, 1.0e2]
+relist = [1.0e2, 1.5e2]
 
 # mesh parameter for the cylinder meshes
 cyldim = 4
@@ -51,9 +51,9 @@ for ctrunc in trunclist:
                          trunc_lqgbtcv=ctrunc,
                          t0=t0, tE=tE, Nts=Nts,
                          nwtn_adi_dict=nwtn_adi_dict,
-                         paraoutput=True, multiproc=True,
+                         paraoutput=True, multiproc=False,
                          comp_freqresp=False, comp_stepresp=False,
-                         # closed_loop='red_output_fb',
-                         closed_loop=None,
+                         closed_loop='red_output_fb',
+                         # closed_loop=None,
                          # closed_loop=closed_loop,
                          perturbpara=perturbpara)
