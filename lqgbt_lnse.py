@@ -12,9 +12,8 @@ import sadptprj_riclyap_adi.bal_trunc_utils as btu
 
 import distr_control_fenics.cont_obs_utils as cou
 
-import multiprocessing
-
 # dolfin.parameters.linear_algebra_backend = 'uBLAS'
+debug = False
 
 
 def nwtn_adi_params():
@@ -40,7 +39,7 @@ def lqgbt(problemname='drivencavity',
           N=10, Re=1e2, plain_bt=False,
           use_ric_ini=None, t0=0.0, tE=1.0, Nts=11,
           NU=3, NY=3,
-          bccontrol=True, palpha=1e-5,
+          bccontrol=True, palpha=1e-5, npcrdstps=8,
           paraoutput=True,
           trunc_lqgbtcv=1e-6,
           nwtn_adi_dict=None,
@@ -149,14 +148,13 @@ def lqgbt(problemname='drivencavity',
     soldict.update(fv=rhsd_stbc['fv']+rhsd_vfrc['fvc'],
                    fp=rhsd_stbc['fp']+rhsd_vfrc['fpr'],
                    N=N, nu=nu, data_prfx=fdstr)
-    print 'nu/Re/palpha = {0}/{1}/{2}'.format(femp['nu'], femp['Re'], palpha)
-    import scipy.sparse.linalg as spsla
-    print 'get expmats: ||Arob|| = {0}'.\
-        format(spsla.norm(stokesmatsc['Arob']))
-    print 'get expmats: ||fv|| = {0}'.format(np.linalg.norm(soldict['fv']))
-    print 'get expmats: ||fp|| = {0}'.format(np.linalg.norm(soldict['fp']))
-    print 'get expmats: ||A|| = {0}'.format(spsla.norm(soldict['A']))
-    raise Warning('TODO: debug')
+    # print 'nu/Re/palpha = {0}/{1}/{2}'.format(femp['nu'], femp['Re'], palpha)
+    # import scipy.sparse.linalg as spsla
+    # print 'get expmats: ||Arob|| = {0}'.\
+    #     format(spsla.norm(stokesmatsc['Arob']))
+    # print 'get expmats: ||fv|| = {0}'.format(np.linalg.norm(soldict['fv']))
+    # print 'get expmats: ||fp|| = {0}'.format(np.linalg.norm(soldict['fp']))
+    # print 'get expmats: ||A|| = {0}'.format(spsla.norm(soldict['A']))
 
 #
 # Prepare for control
@@ -210,7 +208,9 @@ def lqgbt(problemname='drivencavity',
 #
 # compute the uncontrolled steady state Stokes solution
 #
-    v_ss_nse, list_norm_nwtnupd = snu.solve_steadystate_nse(**soldict)
+    v_ss_nse, list_norm_nwtnupd = snu.\
+        solve_steadystate_nse(vel_pcrd_stps=npcrdstps,
+                              clearprvdata=debug, **soldict)
     (convc_mat, rhs_con,
      rhsv_conbc) = snu.get_v_conv_conts(prev_v=v_ss_nse, invinds=invinds,
                                         V=femp['V'], diribcs=femp['diribcs'])
@@ -267,6 +267,7 @@ def lqgbt(problemname='drivencavity',
                                        nwtn_adi_dict=nap,
                                        z0=zinio)['zfac']
                     dou.save_npa(zwo, fdstr + '__zwo')
+                return
 
             def compcong():
                 try:
@@ -279,8 +280,11 @@ def lqgbt(problemname='drivencavity',
                                        nwtn_adi_dict=nap,
                                        z0=zinic)['zfac']
                     dou.save_npa(zwc, fdstr + '__zwc')
+                return
 
             if multiproc:
+                import multiprocessing
+
                 print '\n ### multithread start - ' +\
                     'output might be intermangled'
                 p1 = multiprocessing.Process(target=compobsg)
@@ -293,6 +297,16 @@ def lqgbt(problemname='drivencavity',
 
             else:
                 compobsg()
+                # try:
+                #     zwo = dou.load_npa(fdstr + '__zwo')
+                #     print 'at least __zwo is there'
+                # except IOError:
+                #     zwo = get_gramians(mmat=mmat.T, amat=f_mat.T,
+                #                        jmat=stokesmatsc['J'],
+                #                        bmat=c_mat_reg.T, wmat=b_mat,
+                #                        nwtn_adi_dict=nap,
+                #                        z0=zinio)['zfac']
+                #     dou.save_npa(zwo, fdstr + '__zwo')
                 compcong()
 
             zwc = dou.load_npa(fdstr + '__zwc')
@@ -498,8 +512,9 @@ def lqgbt(problemname='drivencavity',
             memory['xk_old'] = xk_old
             actua = -lau.mm_dnssps(b_mat,
                                    np.dot(bk_mat.T, np.dot(xck, xk_old)))
-            print '\nnorm of deviation', np.linalg.norm(curvel-linvel)
-            print 'norm of actuation {0}'.format(np.linalg.norm(actua))
+            if np.mod(np.int(time/DT), np.int(tE/DT)/100) == 0:
+                print '\nnorm of deviation', np.linalg.norm(curvel-linvel)
+                print 'norm of actuation {0}'.format(np.linalg.norm(actua))
             return actua, memory
 
         fv_rofb_dict = dict(cts=DT, linvel=v_ss_nse, b_mat=b_mat,
@@ -555,7 +570,7 @@ def lqgbt(problemname='drivencavity',
 
 if __name__ == '__main__':
     # lqgbt(N=10, Re=500, use_ric_ini=None, plain_bt=False)
-    lqgbt(problemname='cylinderwake', N=2,  # use_ric_ini=2e2,
+    lqgbt(problemname='cylinderwake', N=3,  # use_ric_ini=2e2,
           Re=7.5e1, plain_bt=False,
           t0=0.0, tE=2.0, Nts=1e3+1, palpha=1e-6,
           comp_freqresp=False, comp_stepresp=False)

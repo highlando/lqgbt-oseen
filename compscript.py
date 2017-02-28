@@ -3,12 +3,12 @@ import lqgbt_lnse
 import datetime
 
 # to compute stabilizing initial values for higher Re numbers
-# relist = [None, 5.0e1, 1.0e2, 1.5e2, 2.0e2, 2.5e2, 3.0e2]  # , 3.5e2, 4.0e2]
-# relist = [None, 5.0e1, 1.0e2]  # , 3.5e2, 4.0e2]
-relist = [5.0e1, 7.5e1, 1.0e2]  # , 3.5e2, 4.0e2]
+# relist = [None, 5.0e1, 1.0e2]
+relist = [5.0e1, 1.0e2]
+# relist = [1.0e2, 1.5e2]
 
 # mesh parameter for the cylinder meshes
-cyldim = 5
+cyldim = 4
 # where to truncate the LQGBT characteristic values
 trunclist = [1e-3]  # , 1e-3, 1e-2, 1e-1, 1e-0]
 # dimension of in and output spaces
@@ -16,11 +16,11 @@ NU, NY = 3, 3
 # to what extend we perturb the initial value
 perturbpara = 1e-6
 # closed loop def
-closed_loop = None  # 'red_output_fb'
+closed_loop = False  # None, 'red_output_fb'
 # number of time steps -- also define the lag in the control application
-t0, tE, Nts = 0.0, 12.0, 1*4.8e3+1
+t0, tE, Nts = 0.0, 12.0, 1*2.4e3+1
 
-nwtn_adi_dict = dict(adi_max_steps=450,
+nwtn_adi_dict = dict(adi_max_steps=300,  # 450,
                      adi_newZ_reltol=1e-7,
                      nwtn_max_steps=30,
                      nwtn_upd_reltol=4e-8,
@@ -54,9 +54,6 @@ for ctrunc in trunclist:
                          paraoutput=True, multiproc=True,
                          comp_freqresp=False, comp_stepresp=False,
                          # closed_loop='red_output_fb',
-                         closed_loop=closed_loop,
+                         closed_loop=None,
+                         # closed_loop=closed_loop,
                          perturbpara=perturbpara)
-
-# closed_loop='red_output_fb')
-# closed_loop=None)
-# closed_loop=False)
