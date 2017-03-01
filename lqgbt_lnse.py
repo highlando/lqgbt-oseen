@@ -267,7 +267,7 @@ def lqgbt(problemname='drivencavity',
                 except IOError:
                     zwo = get_gramians(mmat=mmat.T, amat=f_mat.T,
                                        jmat=stokesmatsc['J'],
-                                       bmat=c_mat_reg.T, wmat=b_mat*Rmhalf,
+                                       bmat=c_mat_reg.T, wmat=b_mat,
                                        nwtn_adi_dict=nap,
                                        z0=zinio)['zfac']
                     dou.save_npa(zwo, fdstr + '__zwo')
