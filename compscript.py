@@ -26,7 +26,7 @@ closed_loop = False  # None, 'red_output_fb'
 scaletest = 0.6  # for 1. we simulate till 12.
 t0, tE, Nts = 0.0, scaletest*12.0, np.int(scaletest*1*2.4e3+1)
 
-nwtn_adi_dict = dict(adi_max_steps=300,  # 450,
+nwtn_adi_dict = dict(adi_max_steps=450,
                      adi_newZ_reltol=1e-7,
                      nwtn_max_steps=30,
                      nwtn_upd_reltol=4e-8,
