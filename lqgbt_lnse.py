@@ -37,9 +37,11 @@ def nwtn_adi_params():
 
 def lqgbt(problemname='drivencavity',
           N=10, Re=1e2, plain_bt=False,
+          gamma=1.,
           use_ric_ini=None, t0=0.0, tE=1.0, Nts=11,
           NU=3, NY=3,
-          bccontrol=True, palpha=1e-5, npcrdstps=8,
+          bccontrol=True, palpha=1e-5,
+          npcrdstps=8,
           paraoutput=True,
           trunc_lqgbtcv=1e-6,
           nwtn_adi_dict=None,
@@ -56,6 +58,9 @@ def lqgbt(problemname='drivencavity',
         parameter for the dimension of the space discretization
     Re : real, optional
         Reynolds number, defaults to `1e2`
+    gamma : real, optional
+        regularization parameter, puts weight on `|u|` in the underlying
+        LQR cost functional that, defaults to `1.`
     plain_bt : boolean, optional
         whether to try simple *balanced truncation*, defaults to False
     use_ric_ini : real, optional
@@ -101,6 +106,7 @@ def lqgbt(problemname='drivencavity',
 
     print '\n ### We solve the {0} problem for the {1} at Re={2} ###\n'.\
         format(typprb, problemname, Re)
+    print ' ### The control is weighted with Gamma={0}'.format(gamma)
 
     if nwtn_adi_dict is not None:
         nap = nwtn_adi_dict
@@ -118,40 +124,23 @@ def lqgbt(problemname='drivencavity',
         = dnsps.get_sysmats(problem=problemname, N=N, Re=Re,
                             bccontrol=bccontrol, scheme='TH')
 
-    nu = femp['charlen']/Re
-    # specify in what spatial direction Bu changes. The remaining is constant
-    uspacedep = femp['uspacedep']
-
     # casting some parameters
     invinds, NV = femp['invinds'], len(femp['invinds'])
-
-    prbstr = '_bt' if plain_bt else '_lqgbt'
-    # contsetupstr = 'NV{0}NU{1}NY{2}alphau{3}'.format(NV, NU, NY, alphau)
-    if bccontrol:
-        import scipy.sparse as sps
-        contsetupstr = 'NV{0}_bcc_NY{1}'.format(NV, NY)
-        stokesmatsc['A'] = stokesmatsc['A'] + 1./palpha*stokesmatsc['Arob']
-        b_mat = 1./palpha*stokesmatsc['Brob']
-        u_masmat = sps.eye(b_mat.shape[1], format='csr')
-    else:
-        contsetupstr = 'NV{0}NU{1}NY{2}'.format(NV, NU, NY)
-
-    def get_fdstr(Re):
-        return ddir + problemname + '_Re{0}_'.format(Re) + \
-            contsetupstr + prbstr
-
-    fdstr = get_fdstr(Re)
-
-    soldict = stokesmatsc  # containing A, J, JT
-    soldict.update(femp)  # adding V, Q, invinds, diribcs
-    # soldict.update(rhsd_vfrc)  # adding fvc, fpr
-    soldict.update(fv=rhsd_stbc['fv']+rhsd_vfrc['fvc'],
-                   fp=rhsd_stbc['fp']+rhsd_vfrc['fpr'],
-                   N=N, nu=nu, data_prfx=fdstr)
 
 #
 # Prepare for control
 #
+    prbstr = '_bt' if plain_bt else '_lqgbt'
+    # contsetupstr = 'NV{0}NU{1}NY{2}alphau{3}'.format(NV, NU, NY, alphau)
+    if bccontrol:
+        import scipy.sparse as sps
+        contsetupstr = 'NV{0}_bcc_NY{1}_palpha{2}'.format(NV, NY, palpha)
+        stokesmatsc['A'] = stokesmatsc['A'] + 1./palpha*stokesmatsc['Arob']
+        b_mat = 1./palpha*stokesmatsc['Brob']
+        u_masmat = sps.eye(b_mat.shape[1], format='csr')
+        print ' ### Robin-type boundary control palpha={0}'.format(palpha)
+    else:
+        contsetupstr = 'NV{0}NU{1}NY{2}'.format(NV, NU, NY)
 
     # get the control and observation operators
     if not bccontrol:
@@ -162,7 +151,7 @@ def lqgbt(problemname='drivencavity',
         except IOError:
             print 'computing `b_mat`...'
             b_mat, u_masmat = cou.get_inp_opa(cdcoo=femp['cdcoo'], V=femp['V'],
-                                              NU=NU, xcomp=uspacedep)
+                                              NU=NU, xcomp=femp['uspacedep'])
             dou.save_spa(b_mat, ddir + contsetupstr + '__b_mat')
             dou.save_spa(u_masmat, ddir + contsetupstr + '__u_masmat')
 
@@ -195,12 +184,24 @@ def lqgbt(problemname='drivencavity',
     # TODO: right choice of norms for y
     #       and necessity of regularization here
     #       by now, we go on number save
+
 #
 # setup the system for the correction
 #
-#
-# compute the uncontrolled steady state Stokes solution
-#
+
+    # compute the uncontrolled steady state NSE solution for the linearization
+    soldict = stokesmatsc  # containing A, J, JT
+    soldict.update(femp)  # adding V, Q, invinds, diribcs
+    # soldict.update(rhsd_vfrc)  # adding fvc, fpr
+    veldatastr = ddir + problemname + '_Re{0}'
+    if bccontrol:
+        veldatastr = veldatastr + '__bcc_palpha{0}'.format(palpha)
+
+    nu = femp['charlen']/Re
+    soldict.update(fv=rhsd_stbc['fv']+rhsd_vfrc['fvc'],
+                   fp=rhsd_stbc['fp']+rhsd_vfrc['fpr'],
+                   N=N, nu=nu, data_prfx=veldatastr)
+
     v_ss_nse, list_norm_nwtnupd = snu.\
         solve_steadystate_nse(vel_pcrd_stps=npcrdstps,
                               clearprvdata=debug, **soldict)
@@ -209,9 +210,19 @@ def lqgbt(problemname='drivencavity',
                                         V=femp['V'], diribcs=femp['diribcs'])
 
     f_mat = - stokesmatsc['A'] - convc_mat
+    # the robin term `arob` has been added before
     mmat = stokesmatsc['M']
 
     # ssv_rhs = rhsv_conbc + rhsv_conbc + rhsd_vfrc['fvc'] + rhsd_stbc['fv']
+    def get_fdstr(Re):
+        return ddir + problemname + '_Re{0}_gamma{1}_'.format(Re, gamma) + \
+            contsetupstr + prbstr
+
+    fdstr = get_fdstr(Re)
+#
+# ### Compute or get the Gramians
+#
+    Rmo, Rmhalf = 1./gamma, 1./np.sqrt(gamma)
 
     if plain_bt:
         get_gramians = pru.solve_proj_lyap_stein
@@ -256,7 +267,7 @@ def lqgbt(problemname='drivencavity',
                 except IOError:
                     zwo = get_gramians(mmat=mmat.T, amat=f_mat.T,
                                        jmat=stokesmatsc['J'],
-                                       bmat=c_mat_reg.T, wmat=b_mat,
+                                       bmat=c_mat_reg.T, wmat=b_mat*Rmhalf,
                                        nwtn_adi_dict=nap,
                                        z0=zinio)['zfac']
                     dou.save_npa(zwo, fdstr + '__zwo')
@@ -269,7 +280,7 @@ def lqgbt(problemname='drivencavity',
                 except IOError:
                     zwc = get_gramians(mmat=mmat, amat=f_mat,
                                        jmat=stokesmatsc['J'],
-                                       bmat=b_mat, wmat=c_mat_reg.T,
+                                       bmat=b_mat*Rmhalf, wmat=c_mat_reg.T,
                                        nwtn_adi_dict=nap,
                                        z0=zinic)['zfac']
                     dou.save_npa(zwc, fdstr + '__zwc')
@@ -370,10 +381,10 @@ def lqgbt(problemname='drivencavity',
         zwc = dou.load_npa(fdstr + '__zwc')
         zwo = dou.load_npa(fdstr + '__zwo')
 
-        mtxtb = pru.get_mTzzTtb(stokesmatsc['M'].T, zwc, b_mat)
+        mtxb = pru.get_mTzzTtb(stokesmatsc['M'].T, zwc, b_mat)
 
         def fv_tmdp_fullstatefb(time=None, curvel=None,
-                                linv=None, tb_mat=None, tbxm_mat=None, **kw):
+                                linv=None, tb_mat=None, btxm_mat=None, **kw):
             """realizes a full state static feedback as a function
 
             that can be passed to a solution routine for the
@@ -389,8 +400,8 @@ def lqgbt(problemname='drivencavity',
                 linearization point for the linear model
             tb_mat : (N,K) nparray
                 input matrix containing the input weighting
-            tbxm_mat : (N,K) nparray
-                `tb_mat * gain * mass`
+            btxm_mat : (N,K) nparray
+                `b_mat.T * gain * mass`
 
             Returns
             -------
@@ -400,13 +411,14 @@ def lqgbt(problemname='drivencavity',
                 dummy `{}` for consistency
             """
 
-            actua = -lau.comp_uvz_spdns(tb_mat, tbxm_mat, curvel-linv)
+            actua = -lau.comp_uvz_spdns(tb_mat, btxm_mat, curvel-linv)
             # actua = 0*curvel
             print '\nnorm of deviation', np.linalg.norm(curvel-linv)
             # print 'norm of actuation {0}'.format(np.linalg.norm(actua))
             return actua, {}
 
-        tmdp_fsfb_dict = dict(linv=v_ss_nse, tb_mat=b_mat, tbxm_mat=mtxtb.T)
+        tmdp_fsfb_dict = dict(linv=v_ss_nse, tb_mat=b_mat*Rmo,
+                              btxm_mat=mtxb.T)
 
         fv_tmdp = fv_tmdp_fullstatefb
         fv_tmdp_params = tmdp_fsfb_dict
@@ -449,7 +461,7 @@ def lqgbt(problemname='drivencavity',
                               linvel=None,
                               ipsysk_mat_inv=None,
                               obs_bk=None, cts=None,
-                              b_mat=None, c_mat=None,
+                              b_mat=None, c_mat=None, Rmo=None,
                               xck=None, bk_mat=None,
                               **kw):
             """realizes a reduced static output feedback as a function
@@ -483,6 +495,8 @@ def lqgbt(problemname='drivencavity',
                 c_mat=None,
             c_mat : (NY,N) sparse matrix
                 output matrix of the full system
+            Rmo : float
+                inverse of the input weighting scalar
             xck : (K,K) nparray
                 reduced solution of the CARE
             bk_mat : (K,NU) nparray
@@ -503,14 +517,14 @@ def lqgbt(problemname='drivencavity',
             #         cts*np.dot(obs_bk,
             #                 lau.mm_dnssps(c_mat, (curvel-linvel))))
             memory['xk_old'] = xk_old
-            actua = -lau.mm_dnssps(b_mat,
+            actua = -lau.mm_dnssps(b_mat*Rmo,
                                    np.dot(bk_mat.T, np.dot(xck, xk_old)))
             if np.mod(np.int(time/DT), np.int(tE/DT)/100) == 0:
                 print '\nnorm of deviation', np.linalg.norm(curvel-linvel)
                 print 'norm of actuation {0}'.format(np.linalg.norm(actua))
             return actua, memory
 
-        fv_rofb_dict = dict(cts=DT, linvel=v_ss_nse, b_mat=b_mat,
+        fv_rofb_dict = dict(cts=DT, linvel=v_ss_nse, b_mat=b_mat, Rmo=Rmo,
                             c_mat=c_mat_reg, obs_bk=obs_bk, bk_mat=bk_mat,
                             ipsysk_mat_inv=sysmatk_inv, xck=xck)
 

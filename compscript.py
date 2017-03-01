@@ -1,11 +1,16 @@
+import numpy as np
+
 import lqgbt_lnse
 # import sys
 import datetime
 
 # to compute stabilizing initial values for higher Re numbers
 # relist = [None, 5.0e1, 1.0e2]
-# relist = [5.0e1, 1.0e2]
-relist = [1.0e2, 1.5e2]
+relist = [5.0e1, 1.0e2]
+# relist = [1.0e2, 1.5e2]
+
+# the input regularization parameter
+gamma = 1e5
 
 # mesh parameter for the cylinder meshes
 cyldim = 4
@@ -18,7 +23,8 @@ perturbpara = 1e-6
 # closed loop def
 closed_loop = False  # None, 'red_output_fb'
 # number of time steps -- also define the lag in the control application
-t0, tE, Nts = 0.0, 12.0, 1*2.4e3+1
+scaletest = 0.6  # for 1. we simulate till 12.
+t0, tE, Nts = 0.0, scaletest*12.0, np.int(scaletest*1*2.4e3+1)
 
 nwtn_adi_dict = dict(adi_max_steps=300,  # 450,
                      adi_newZ_reltol=1e-7,
@@ -48,6 +54,7 @@ for ctrunc in trunclist:
                          use_ric_ini=relist[cre-1],
                          NU=NU, NY=NY,
                          Re=relist[cre], plain_bt=False,
+                         gamma=gamma,
                          trunc_lqgbtcv=ctrunc,
                          t0=t0, tE=tE, Nts=Nts,
                          nwtn_adi_dict=nwtn_adi_dict,
