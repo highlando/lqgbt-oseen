@@ -148,13 +148,6 @@ def lqgbt(problemname='drivencavity',
     soldict.update(fv=rhsd_stbc['fv']+rhsd_vfrc['fvc'],
                    fp=rhsd_stbc['fp']+rhsd_vfrc['fpr'],
                    N=N, nu=nu, data_prfx=fdstr)
-    # print 'nu/Re/palpha = {0}/{1}/{2}'.format(femp['nu'], femp['Re'], palpha)
-    # import scipy.sparse.linalg as spsla
-    # print 'get expmats: ||Arob|| = {0}'.\
-    #     format(spsla.norm(stokesmatsc['Arob']))
-    # print 'get expmats: ||fv|| = {0}'.format(np.linalg.norm(soldict['fv']))
-    # print 'get expmats: ||fp|| = {0}'.format(np.linalg.norm(soldict['fp']))
-    # print 'get expmats: ||A|| = {0}'.format(spsla.norm(soldict['A']))
 
 #
 # Prepare for control
