@@ -43,6 +43,7 @@ def lqgbt(problemname='drivencavity',
           bccontrol=True, palpha=1e-5,
           npcrdstps=8,
           paraoutput=True,
+          plotit=True,
           trunc_lqgbtcv=1e-6,
           nwtn_adi_dict=None,
           comp_freqresp=False, comp_stepresp='nonlinear',
@@ -570,7 +571,8 @@ def lqgbt(problemname='drivencavity',
                          't0{0}tE{1}Nts{2}'.format(t0, tE, Nts) +
                          'inipert{0}'.format(perturbpara))
 
-    dou.plot_outp_sig(tmesh=trange, outsig=yscomplist)
+    if plotit:
+		dou.plot_outp_sig(tmesh=trange, outsig=yscomplist)
     # import matplotlib.pyplot as plt
     # plt.plot(trange, yscomplist)
     # plt.show(block=False)

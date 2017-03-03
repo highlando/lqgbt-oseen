@@ -56,6 +56,7 @@ datadict = dict(problemname='cylinderwake', N=cyldim,
 		gamma=gamma, NU=NU, NY=NY,
 		t0=t0, tE=tE, Nts=Nts,
 		nwtn_adi_dict=nwtn_adi_dict,
+		plotit=False,
 		paraoutput=True, multiproc=True, comp_freqresp=False,
 		plain_bt=False, comp_stepresp=False, closed_loop=False,
 		perturbpara=perturbpara)
