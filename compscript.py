@@ -10,7 +10,7 @@ relist = [None, 5.0e1, 1.0e2]
 # relist = [1.0e2, 1.5e2]
 
 # the input regularization parameter
-gamma = 1e5
+gamma = 1.  # e5
 # mesh parameter for the cylinder meshes
 cyldim = 4
 # whether to do bccontrol or distributed
@@ -57,7 +57,7 @@ for ctrunc in trunclist:
     for cre in range(1, len(relist)):
         lqgbt_lnse.lqgbt(problemname='cylinderwake', N=cyldim,
                          use_ric_ini=relist[cre-1],
-          		 bccontrol=bccontrol, palpha=palpha,
+                         bccontrol=bccontrol, palpha=palpha,
                          NU=NU, NY=NY,
                          Re=relist[cre], plain_bt=False,
                          gamma=gamma,
