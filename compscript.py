@@ -5,14 +5,12 @@ import lqgbt_lnse
 import datetime
 
 # to compute stabilizing initial values for higher Re numbers
-relist = [None, 5.0e1, 1.0e2]
-# relist = [5.0e1, 1.0e2]
-# relist = [1.0e2, 1.5e2]
+relist = [None, 5.0e1, 1.0e2]  # , 1.5e2]
 
 # the input regularization parameter
 gamma = 1.  # e5
 # mesh parameter for the cylinder meshes
-cyldim = 4
+cyldim = 2
 # whether to do bccontrol or distributed
 bccontrol = True
 palpha = 1e-5  # parameter for the Robin penalization
@@ -23,7 +21,7 @@ NU, NY = 3, 3
 # to what extend we perturb the initial value
 perturbpara = 1e-6
 # closed loop def
-closed_loop = False  # None, 'red_output_fb'
+closed_loop = 'red_output_fb'  # None, 'red_output_fb'
 # number of time steps -- also define the lag in the control application
 scaletest = 0.6  # for 1. we simulate till 12.
 t0, tE, Nts = 0.0, scaletest*12.0, np.int(scaletest*1*2.4e3+1)
@@ -33,6 +31,7 @@ nwtn_adi_dict = dict(adi_max_steps=450,
                      nwtn_max_steps=30,
                      nwtn_upd_reltol=4e-8,
                      nwtn_upd_abstol=1e-7,
+                     aditol=5e-5,  # tol for pymess (default is 5e-8)
                      verbose=True,
                      ms=[-2.0, -1.5, -1.25, -1.1, -1.0, -0.9, -0.7, -0.5],
                      full_upd_norm_check=False,
@@ -53,20 +52,24 @@ dou.logtofile(logstr=logstr)
 print('{0}'*10 + '\n log started at {1} \n' + '{0}'*10).\
     format('X', str(datetime.datetime.now()))
 
+datadict = dict(problemname='cylinderwake', N=cyldim,
+		bccontrol=bccontrol, palpha=palpha,
+		gamma=gamma, NU=NU, NY=NY,
+		t0=t0, tE=tE, Nts=Nts,
+		nwtn_adi_dict=nwtn_adi_dict,
+		paraoutput=True, multiproc=True, comp_freqresp=False,
+		plain_bt=False, comp_stepresp=False, closed_loop=False,
+		perturbpara=perturbpara)
+
+# ## compute the projections
 for ctrunc in trunclist:
     for cre in range(1, len(relist)):
-        lqgbt_lnse.lqgbt(problemname='cylinderwake', N=cyldim,
-                         use_ric_ini=relist[cre-1],
-                         bccontrol=bccontrol, palpha=palpha,
-                         NU=NU, NY=NY,
-                         Re=relist[cre], plain_bt=False,
-                         gamma=gamma,
-                         trunc_lqgbtcv=ctrunc,
-                         t0=t0, tE=tE, Nts=Nts,
-                         nwtn_adi_dict=nwtn_adi_dict,
-                         paraoutput=True, multiproc=False,
-                         comp_freqresp=False, comp_stepresp=False,
-                         closed_loop='red_output_fb',
-                         # closed_loop=None,
-                         # closed_loop=closed_loop,
-                         perturbpara=perturbpara)
+        datadict.update(dict(use_ric_ini=relist[cre-1],
+                             Re=relist[cre], trunc_lqgbtcv=ctrunc))
+        lqgbt_lnse.lqgbt(**datadict)
+
+# ## do the simulation(s)
+for ctrunc in trunclist:
+    datadict.update(dict(use_ric_ini=relist[-2], closed_loop=closed_loop,
+		         Re=relist[-1], trunc_lqgbtcv=ctrunc))
+    lqgbt_lnse.lqgbt(**datadict)

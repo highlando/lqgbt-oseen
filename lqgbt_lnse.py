@@ -227,8 +227,8 @@ def lqgbt(problemname='drivencavity',
     if plain_bt:
         get_gramians = pru.solve_proj_lyap_stein
     else:
-        get_gramians = pru.pymess_dae2_cnt_riccati
-        # get_gramians = pru.proj_alg_ric_newtonadi
+        # get_gramians = pru.pymess_dae2_cnt_riccati
+        get_gramians = pru.proj_alg_ric_newtonadi
 
     truncstr = '__lqgbtcv{0}'.format(trunc_lqgbtcv)
     try:
