@@ -42,9 +42,11 @@ def lqgbt(problemname='drivencavity',
           NU=3, NY=3,
           bccontrol=True, palpha=1e-5,
           npcrdstps=8,
+          pymess=False,
           paraoutput=True,
           trunc_lqgbtcv=1e-6,
           nwtn_adi_dict=None,
+          pymess_dict=None,
           comp_freqresp=False, comp_stepresp='nonlinear',
           closed_loop=False, multiproc=False,
           perturbpara=1e-3):
@@ -131,6 +133,8 @@ def lqgbt(problemname='drivencavity',
 # Prepare for control
 #
     prbstr = '_bt' if plain_bt else '_lqgbt'
+    if pymess:
+        prbstr = prbstr + '__pymess'
     # contsetupstr = 'NV{0}NU{1}NY{2}alphau{3}'.format(NV, NU, NY, alphau)
     if bccontrol:
         import scipy.sparse as sps
@@ -157,6 +161,11 @@ def lqgbt(problemname='drivencavity',
 
         b_mat = b_mat[invinds, :][:, :]
         # tb_mat = 1./np.sqrt(alphau)
+
+    b_mat_reg = lau.app_prj_via_sadpnt(amat=stokesmatsc['M'],
+                                       jmat=stokesmatsc['J'],
+                                       rhsv=b_mat,
+                                       transposedprj=True)
 
     try:
         mc_mat = dou.load_spa(ddir + contsetupstr + '__mc_mat')
@@ -227,8 +236,10 @@ def lqgbt(problemname='drivencavity',
     if plain_bt:
         get_gramians = pru.solve_proj_lyap_stein
     else:
-        # get_gramians = pru.pymess_dae2_cnt_riccati
         get_gramians = pru.proj_alg_ric_newtonadi
+        # if pymess:
+        #     get_gramians = pru.pymess_dae2_cnt_riccati
+        # else:
 
     truncstr = '__lqgbtcv{0}'.format(trunc_lqgbtcv)
     try:
@@ -264,26 +275,44 @@ def lqgbt(problemname='drivencavity',
             def compobsg():
                 try:
                     zwo = dou.load_npa(fdstr + '__zwo')
-                    print 'at least __zwo is there'
+                    print 'yeyeyeah, __zwo is there'
                 except IOError:
-                    zwo = get_gramians(mmat=mmat.T, amat=f_mat.T,
-                                       jmat=stokesmatsc['J'],
-                                       bmat=c_mat_reg.T, wmat=b_mat,
-                                       nwtn_adi_dict=nap,
-                                       z0=zinio)['zfac']
+                    if pymess and not plain_bt:
+                        zwo = pru.\
+                            pymess_dae2_cnt_riccati(mmat=mmat.T, amat=f_mat.T,
+                                                    jmat=stokesmatsc['J'],
+                                                    bmat=c_mat_reg.T,
+                                                    wmat=b_mat_reg,
+                                                    z0=zinio,
+                                                    **pymess_dict)['zfac']
+                    else:
+                        zwo = get_gramians(mmat=mmat.T, amat=f_mat.T,
+                                           jmat=stokesmatsc['J'],
+                                           bmat=c_mat_reg.T,
+                                           wmat=b_mat_reg,
+                                           nwtn_adi_dict=nap,
+                                           z0=zinio)['zfac']
                     dou.save_npa(zwo, fdstr + '__zwo')
                 return
 
             def compcong():
                 try:
                     zwc = dou.load_npa(fdstr + '__zwc')
-                    print 'at least __zwc is there'
+                    print 'yeyeyeah, __zwc is there'
                 except IOError:
-                    zwc = get_gramians(mmat=mmat, amat=f_mat,
-                                       jmat=stokesmatsc['J'],
-                                       bmat=b_mat*Rmhalf, wmat=c_mat_reg.T,
-                                       nwtn_adi_dict=nap,
-                                       z0=zinic)['zfac']
+                    if pymess and not plain_bt:
+                        zwc = pru.\
+                            pymess_dae2_cnt_riccati(mmat=mmat, amat=f_mat,
+                                                    jmat=stokesmatsc['J'],
+                                                    bmat=b_mat*Rmhalf,
+                                                    wmat=c_mat_reg.T, z0=zinic,
+                                                    **pymess_dict)['zfac']
+                    else:
+                        zwc = get_gramians(mmat=mmat, amat=f_mat,
+                                           jmat=stokesmatsc['J'],
+                                           bmat=b_mat*Rmhalf, wmat=c_mat_reg.T,
+                                           nwtn_adi_dict=nap,
+                                           z0=zinic)['zfac']
                     dou.save_npa(zwc, fdstr + '__zwc')
                 return
 
@@ -316,6 +345,34 @@ def lqgbt(problemname='drivencavity',
 
             zwc = dou.load_npa(fdstr + '__zwc')
             zwo = dou.load_npa(fdstr + '__zwo')
+
+        checktheres = True
+        if checktheres:
+            # check the cont Ric residual
+            umat = 0.5*b_mat*Rmo
+            vmat = np.dot(np.dot(b_mat.T, zwc), zwc.T)*mmat
+            res = pru.\
+                comp_proj_lyap_res_norm(zwc, amat=f_mat, mmat=mmat,
+                                        jmat=stokesmatsc['J'],
+                                        wmat=c_mat_reg.T,
+                                        umat=umat, vmat=vmat)
+            print 'sqrd Residual of cont-Riccati: ', res
+            nrhs = np.linalg.norm(np.dot(zwc.T, zwc))
+            print 'sqrd f-norm of rhs', nrhs**2
+
+            # check the obsv Ric residual
+            umat = 0.5*c_mat.T
+            vmat = np.dot(np.dot(c_mat_reg, zwo), zwo.T)*mmat
+            res = pru.\
+                comp_proj_lyap_res_norm(zwo, amat=f_mat.T, mmat=mmat.T,
+                                        jmat=stokesmatsc['J'],
+                                        wmat=b_mat,
+                                        umat=umat, vmat=vmat)
+            print 'sqrd Residual of obsv-Riccati: ', res
+            nrhs = np.linalg.norm(np.dot(zwo.T, zwo))
+            print 'sqrd f-norm of rhs', nrhs**2
+
+        import ipdb; ipdb.set_trace()
 
         print 'computing the left and right transformations' + \
             ' and saving to:\n' + fdstr + '__tr/__tl' + truncstr
