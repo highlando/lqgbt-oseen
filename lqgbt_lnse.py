@@ -99,8 +99,8 @@ def lqgbt(problemname='drivencavity',
 
     typprb = 'BT' if plain_bt else 'LQG-BT'
 
-    print '\n ### We solve the {0} problem for the {1} at Re={2} ###\n'.\
-        format(typprb, problemname, Re)
+    print('\n ### We solve the {0} problem for the {1} at Re={2} ###\n'.\
+        format(typprb, problemname, Re))
 
     if nwtn_adi_dict is not None:
         nap = nwtn_adi_dict
@@ -165,9 +165,9 @@ def lqgbt(problemname='drivencavity',
         try:
             b_mat = dou.load_spa(ddir + contsetupstr + '__b_mat')
             u_masmat = dou.load_spa(ddir + contsetupstr + '__u_masmat')
-            print 'loaded `b_mat`'
+            print('loaded `b_mat`')
         except IOError:
-            print 'computing `b_mat`...'
+            print('computing `b_mat`...')
             b_mat, u_masmat = cou.get_inp_opa(cdcoo=femp['cdcoo'], V=femp['V'],
                                               NU=NU, xcomp=uspacedep)
             dou.save_spa(b_mat, ddir + contsetupstr + '__b_mat')
@@ -179,9 +179,9 @@ def lqgbt(problemname='drivencavity',
     try:
         mc_mat = dou.load_spa(ddir + contsetupstr + '__mc_mat')
         y_masmat = dou.load_spa(ddir + contsetupstr + '__y_masmat')
-        print 'loaded `c_mat`'
+        print('loaded `c_mat`')
     except IOError:
-        print 'computing `c_mat`...'
+        print('computing `c_mat`...')
         mc_mat, y_masmat = cou.get_mout_opa(odcoo=femp['odcoo'],
                                             V=femp['V'], NY=NY)
         dou.save_spa(mc_mat, ddir + contsetupstr + '__mc_mat')
@@ -229,17 +229,17 @@ def lqgbt(problemname='drivencavity',
     try:
         tl = dou.load_npa(fdstr + '__tl' + truncstr)
         tr = dou.load_npa(fdstr + '__tr' + truncstr)
-        print 'loaded the left and right transformations: \n' + \
-            fdstr + '__tl/__tr' + truncstr
+        print('loaded the left and right transformations: \n' + \
+            fdstr + '__tl/__tr' + truncstr)
     except IOError:
-        print 'computing the left and right transformations' + \
-            ' and saving to: \n' + fdstr + '__tl/__tr' + truncstr
+        print('computing the left and right transformations' + \
+            ' and saving to: \n' + fdstr + '__tl/__tr' + truncstr)
 
         try:
             zwc = dou.load_npa(fdstr + '__zwc')
             zwo = dou.load_npa(fdstr + '__zwo')
-            print 'loaded factor of the Gramians: \n\t' + \
-                fdstr + '__zwc/__zwo'
+            print('loaded factor of the Gramians: \n\t' + \
+                fdstr + '__zwc/__zwo')
         except IOError:
             zinic, zinio = None, None
             if use_ric_ini is not None:
@@ -247,19 +247,19 @@ def lqgbt(problemname='drivencavity',
                 try:
                     zinic = dou.load_npa(fdstr + '__zwc')
                     zinio = dou.load_npa(fdstr + '__zwo')
-                    print 'Initialize Newton ADI by zwc/zwo from ' + fdstr
+                    print('Initialize Newton ADI by zwc/zwo from ' + fdstr)
                 except IOError:
                     raise UserWarning('No initial guess with Re={0}'.
                                       format(use_ric_ini))
 
             fdstr = get_fdstr(Re)
-            print 'computing factors of Gramians: \n\t' + \
-                fdstr + '__zwc/__zwo'
+            print('computing factors of Gramians: \n\t' + \
+                fdstr + '__zwc/__zwo')
 
             def compobsg():
                 try:
                     zwo = dou.load_npa(fdstr + '__zwo')
-                    print 'at least __zwo is there'
+                    print('at least __zwo is there')
                 except IOError:
                     zwo = get_gramians(mmat=mmat.T, amat=f_mat.T,
                                        jmat=stokesmatsc['J'],
@@ -272,7 +272,7 @@ def lqgbt(problemname='drivencavity',
             def compcong():
                 try:
                     zwc = dou.load_npa(fdstr + '__zwc')
-                    print 'at least __zwc is there'
+                    print('at least __zwc is there')
                 except IOError:
                     zwc = get_gramians(mmat=mmat, amat=f_mat,
                                        jmat=stokesmatsc['J'],
@@ -285,15 +285,15 @@ def lqgbt(problemname='drivencavity',
             if multiproc:
                 import multiprocessing
 
-                print '\n ### multithread start - ' +\
-                    'output might be intermangled'
+                print('\n ### multithread start - ' +\
+                    'output might be intermangled')
                 p1 = multiprocessing.Process(target=compobsg)
                 p2 = multiprocessing.Process(target=compcong)
                 p1.start()
                 p2.start()
                 p1.join()
                 p2.join()
-                print '### multithread end'
+                print('### multithread end')
 
             else:
                 compobsg()
@@ -312,8 +312,8 @@ def lqgbt(problemname='drivencavity',
             zwc = dou.load_npa(fdstr + '__zwc')
             zwo = dou.load_npa(fdstr + '__zwo')
 
-        print 'computing the left and right transformations' + \
-            ' and saving to:\n' + fdstr + '__tr/__tl' + truncstr
+        print('computing the left and right transformations' + \
+            ' and saving to:\n' + fdstr + '__tr/__tl' + truncstr)
 
         tl, tr = btu.\
             compute_lrbt_transfos(zfc=zwc, zfo=zwo,
@@ -322,8 +322,8 @@ def lqgbt(problemname='drivencavity',
         dou.save_npa(tl, fdstr + '__tl' + truncstr)
         dou.save_npa(tr, fdstr + '__tr' + truncstr)
 
-    print 'NV = {0}, NP = {2}, k = {1}'.\
-        format(tl.shape[0], tl.shape[1], stokesmatsc['J'].shape[0])
+    print('NV = {0}, NP = {2}, k = {1}'.\
+        format(tl.shape[0], tl.shape[1], stokesmatsc['J'].shape[0]))
 
     if comp_freqresp:
         btu.compare_freqresp(mmat=stokesmatsc['M'], amat=f_mat,
@@ -409,7 +409,7 @@ def lqgbt(problemname='drivencavity',
 
             actua = -lau.comp_uvz_spdns(tb_mat, tbxm_mat, curvel-linv)
             # actua = 0*curvel
-            print '\nnorm of deviation', np.linalg.norm(curvel-linv)
+            print('\nnorm of deviation', np.linalg.norm(curvel-linv))
             # print 'norm of actuation {0}'.format(np.linalg.norm(actua))
             return actua, {}
 
@@ -427,7 +427,7 @@ def lqgbt(problemname='drivencavity',
             ck_mat = dou.load_npa(fdstr+truncstr+'__ck_mat')
             bk_mat = dou.load_npa(fdstr+truncstr+'__bk_mat')
         except IOError:
-            print 'couldn"t load the red system - compute it'
+            print('couldn"t load the red system - compute it')
             zwc = dou.load_npa(fdstr + '__zwc')
             zwo = dou.load_npa(fdstr + '__zwo')
 
@@ -513,8 +513,8 @@ def lqgbt(problemname='drivencavity',
             actua = -lau.mm_dnssps(b_mat,
                                    np.dot(bk_mat.T, np.dot(xck, xk_old)))
             if np.mod(np.int(time/DT), np.int(tE/DT)/100) == 0:
-                print '\nnorm of deviation', np.linalg.norm(curvel-linvel)
-                print 'norm of actuation {0}'.format(np.linalg.norm(actua))
+                print('\nnorm of deviation', np.linalg.norm(curvel-linvel))
+                print('norm of actuation {0}'.format(np.linalg.norm(actua)))
             return actua, memory
 
         fv_rofb_dict = dict(cts=DT, linvel=v_ss_nse, b_mat=b_mat,

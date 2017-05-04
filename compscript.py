@@ -39,8 +39,8 @@ logstr = 'logs/log_cyldim{0}NU{1}NY{2}'.format(cyldim, NU, NY) +\
 # print 'log goes ' + logstr
 # print 'how about \ntail -f '+logstr
 # sys.stdout = open(logstr, 'a', 0)
-print('{0}'*10 + '\n log started at {1} \n' + '{0}'*10).\
-    format('X', str(datetime.datetime.now()))
+print(('{0}'*10 + '\n log started at {1} \n' + '{0}'*10).
+      format('X', str(datetime.datetime.now())))
 
 for ctrunc in trunclist:
     for cre in range(1, len(relist)):
