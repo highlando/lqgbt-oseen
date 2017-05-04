@@ -45,7 +45,7 @@ def lqgbt(problemname='drivencavity',
           nwtn_adi_dict=None,
           comp_freqresp=False, comp_stepresp='nonlinear',
           closed_loop=False, multiproc=False,
-          perturbpara=1e-3):
+          perturbpara=1e-3, trytofail=False, ttf_npcrdstps=3):
     """Main routine for LQGBT
 
     Parameters
@@ -148,13 +148,6 @@ def lqgbt(problemname='drivencavity',
     soldict.update(fv=rhsd_stbc['fv']+rhsd_vfrc['fvc'],
                    fp=rhsd_stbc['fp']+rhsd_vfrc['fpr'],
                    N=N, nu=nu, data_prfx=fdstr)
-    # print 'nu/Re/palpha = {0}/{1}/{2}'.format(femp['nu'], femp['Re'], palpha)
-    # import scipy.sparse.linalg as spsla
-    # print 'get expmats: ||Arob|| = {0}'.\
-    #     format(spsla.norm(stokesmatsc['Arob']))
-    # print 'get expmats: ||fv|| = {0}'.format(np.linalg.norm(soldict['fv']))
-    # print 'get expmats: ||fp|| = {0}'.format(np.linalg.norm(soldict['fp']))
-    # print 'get expmats: ||A|| = {0}'.format(spsla.norm(soldict['A']))
 
 #
 # Prepare for control
@@ -212,22 +205,25 @@ def lqgbt(problemname='drivencavity',
         solve_steadystate_nse(vel_pcrd_stps=npcrdstps,
                               clearprvdata=debug, **soldict)
 
-    v_ss_nse_MAF, _ = snu.\
-        solve_steadystate_nse(vel_pcrd_stps=5, vel_nwtn_stps=0,
-                              clearprvdata=True, **soldict)
-
-    # MAF -- need to change the convc_mat, i.e. we need another v_ss_nse
     (convc_mat, rhs_con,
      rhsv_conbc) = snu.get_v_conv_conts(prev_v=v_ss_nse, invinds=invinds,
                                         V=femp['V'], diribcs=femp['diribcs'])
 
-    # MAF -- need to change the f_mat, i.e. we need another convc_mat
     f_mat = - stokesmatsc['A'] - convc_mat
     mmat = stokesmatsc['M']
 
-    diffv = v_ss_nse - v_ss_nse_MAF
-    print np.dot(diffv.T, mmat*diffv)
-    # import ipdb; ipdb.set_trace()
+    # MAF -- need to change the convc_mat, i.e. we need another v_ss_nse
+    # MAF -- need to change the f_mat, i.e. we need another convc_mat
+    if trytofail:
+        v_ss_nse_MAF, _ = snu.\
+            solve_steadystate_nse(vel_pcrd_stps=ttf_npcrdstps, vel_nwtn_stps=0,
+                                  clearprvdata=True, **soldict)
+        diffv = v_ss_nse - v_ss_nse_MAF
+        convc_mat_MAF, _, _ = \
+            snu.get_v_conv_conts(prev_v=v_ss_nse, invinds=invinds, V=femp['V'],
+                                 diribcs=femp['diribcs'])
+        print np.dot(diffv.T, mmat*diffv)
+
     # ssv_rhs = rhsv_conbc + rhsv_conbc + rhsd_vfrc['fvc'] + rhsd_stbc['fv']
 
     if plain_bt:
