@@ -211,13 +211,23 @@ def lqgbt(problemname='drivencavity',
     v_ss_nse, list_norm_nwtnupd = snu.\
         solve_steadystate_nse(vel_pcrd_stps=npcrdstps,
                               clearprvdata=debug, **soldict)
+
+    v_ss_nse_MAF, _ = snu.\
+        solve_steadystate_nse(vel_pcrd_stps=5, vel_nwtn_stps=0,
+                              clearprvdata=True, **soldict)
+
+    # MAF -- need to change the convc_mat, i.e. we need another v_ss_nse
     (convc_mat, rhs_con,
      rhsv_conbc) = snu.get_v_conv_conts(prev_v=v_ss_nse, invinds=invinds,
                                         V=femp['V'], diribcs=femp['diribcs'])
 
+    # MAF -- need to change the f_mat, i.e. we need another convc_mat
     f_mat = - stokesmatsc['A'] - convc_mat
     mmat = stokesmatsc['M']
 
+    diffv = v_ss_nse - v_ss_nse_MAF
+    print np.dot(diffv.T, mmat*diffv)
+    # import ipdb; ipdb.set_trace()
     # ssv_rhs = rhsv_conbc + rhsv_conbc + rhsd_vfrc['fvc'] + rhsd_stbc['fv']
 
     if plain_bt:
@@ -375,7 +385,6 @@ def lqgbt(problemname='drivencavity',
 
     elif closed_loop == 'full_state_fb':
         zwc = dou.load_npa(fdstr + '__zwc')
-        zwo = dou.load_npa(fdstr + '__zwo')
 
         mtxtb = pru.get_mTzzTtb(stokesmatsc['M'].T, zwc, b_mat)
 
@@ -431,6 +440,7 @@ def lqgbt(problemname='drivencavity',
             zwc = dou.load_npa(fdstr + '__zwc')
             zwo = dou.load_npa(fdstr + '__zwo')
 
+            # MAF -- need to change the f_mat
             ak_mat = np.dot(tl.T, f_mat*tr)
             ck_mat = lau.mm_dnssps(c_mat_reg, tr)
             bk_mat = lau.mm_dnssps(tl.T, b_mat)
