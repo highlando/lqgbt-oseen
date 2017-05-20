@@ -217,12 +217,19 @@ def lqgbt(problemname='drivencavity',
     if trytofail:
         v_ss_nse_MAF, _ = snu.\
             solve_steadystate_nse(vel_pcrd_stps=ttf_npcrdstps, vel_nwtn_stps=0,
+                                  vel_pcrd_tol=1e-15,
                                   clearprvdata=True, **soldict)
         diffv = v_ss_nse - v_ss_nse_MAF
         convc_mat_MAF, _, _ = \
-            snu.get_v_conv_conts(prev_v=v_ss_nse, invinds=invinds, V=femp['V'],
-                                 diribcs=femp['diribcs'])
-        print(np.dot(diffv.T, mmat*diffv))
+            snu.get_v_conv_conts(prev_v=v_ss_nse_MAF, invinds=invinds,
+                                 V=femp['V'], diribcs=femp['diribcs'])
+        relnormdiffv = np.sqrt(np.dot(diffv.T, mmat*diffv) /
+                               np.dot(v_ss_nse.T, mmat*v_ss_nse))
+        print('relative difference to linearization: {0}'.format(relnormdiffv))
+        f_mat_gramians = - stokesmatsc['A'] - convc_mat_MAF
+        fdstr = fdstr + '_MAF_ttfnpcrds{0}'.format(ttf_npcrdstps)
+    else:
+        f_mat_gramians = f_mat
 
     # ssv_rhs = rhsv_conbc + rhsv_conbc + rhsd_vfrc['fvc'] + rhsd_stbc['fv']
 
@@ -249,16 +256,25 @@ def lqgbt(problemname='drivencavity',
         except IOError:
             zinic, zinio = None, None
             if use_ric_ini is not None:
-                fdstr = get_fdstr(use_ric_ini)
+                if trytofail:
+                    try:
+                        fdstrini = get_fdstr(Re)
+                        zinic = dou.load_npa(fdstrini + '__zwc')
+                        zinio = dou.load_npa(fdstrini + '__zwo')
+                    except IOError:
+                        fdstrini = get_fdstr(use_ric_ini)
+                else:
+                    fdstrini = get_fdstr(use_ric_ini)
+
                 try:
-                    zinic = dou.load_npa(fdstr + '__zwc')
-                    zinio = dou.load_npa(fdstr + '__zwo')
-                    print(('Initialize Newton ADI by zwc/zwo from ' + fdstr))
+                    zinic = dou.load_npa(fdstrini + '__zwc')
+                    zinio = dou.load_npa(fdstrini + '__zwo')
+                    print('Initialize Newton ADI by zwc/zwo from ' + fdstrini)
                 except IOError:
                     raise UserWarning('No initial guess with Re={0}'.
                                       format(use_ric_ini))
 
-            fdstr = get_fdstr(Re)
+            # fdstr = get_fdstr(Re)
             print(('computing factors of Gramians: \n\t' +
                    fdstr + '__zwc/__zwo'))
 
@@ -267,7 +283,7 @@ def lqgbt(problemname='drivencavity',
                     zwo = dou.load_npa(fdstr + '__zwo')
                     print('at least __zwo is there')
                 except IOError:
-                    zwo = get_gramians(mmat=mmat.T, amat=f_mat.T,
+                    zwo = get_gramians(mmat=mmat.T, amat=f_mat_gramians.T,
                                        jmat=stokesmatsc['J'],
                                        bmat=c_mat_reg.T, wmat=b_mat,
                                        nwtn_adi_dict=nap,
@@ -280,7 +296,7 @@ def lqgbt(problemname='drivencavity',
                     zwc = dou.load_npa(fdstr + '__zwc')
                     print('at least __zwc is there')
                 except IOError:
-                    zwc = get_gramians(mmat=mmat, amat=f_mat,
+                    zwc = get_gramians(mmat=mmat, amat=f_mat_gramians,
                                        jmat=stokesmatsc['J'],
                                        bmat=b_mat, wmat=c_mat_reg.T,
                                        nwtn_adi_dict=nap,
@@ -374,6 +390,7 @@ def lqgbt(problemname='drivencavity',
 
 # compute the regulated system
     trange = np.linspace(t0, tE, Nts)
+    DT = (tE - t0)/(Nts-1)
 
     if closed_loop is False:
         return
@@ -412,9 +429,11 @@ def lqgbt(problemname='drivencavity',
             """
 
             actua = -lau.comp_uvz_spdns(tb_mat, tbxm_mat, curvel-linv)
-            # actua = 0*curvel
-            print(('\nnorm of deviation', np.linalg.norm(curvel-linv)))
-            # print 'norm of actuation {0}'.format(np.linalg.norm(actua))
+            if np.mod(np.int(time/DT), np.int(tE/DT)/100) == 0:
+                print('\nnorm of deviation: {0}'.
+                      format(np.linalg.norm(curvel-linv)))
+                print('norm of actuation: {0}'.
+                      format(np.linalg.norm(actua)))
             return actua, {}
 
         tmdp_fsfb_dict = dict(linv=v_ss_nse, tb_mat=b_mat, tbxm_mat=mtxtb.T)
@@ -451,7 +470,6 @@ def lqgbt(problemname='drivencavity',
             dou.save_npa(bk_mat, fdstr+truncstr+'__bk_mat')
 
         obs_bk = np.dot(xok, ck_mat.T)
-        DT = (tE - t0)/(Nts-1)
 
         sysmatk_inv = np.linalg.inv(np.eye(ak_mat.shape[1]) - DT*(ak_mat -
                                     np.dot(np.dot(xok, ck_mat.T), ck_mat) -
