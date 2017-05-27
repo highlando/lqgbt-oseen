@@ -44,6 +44,7 @@ def lqgbt(problemname='drivencavity',
           npcrdstps=8,
           pymess=False,
           paraoutput=True,
+          plotit=True,
           trunc_lqgbtcv=1e-6,
           nwtn_adi_dict=None,
           pymess_dict=None,
@@ -578,6 +579,7 @@ def lqgbt(problemname='drivencavity',
             actua = -lau.mm_dnssps(b_mat*Rmo,
                                    np.dot(bk_mat.T, np.dot(xck, xk_old)))
             if np.mod(np.int(time/DT), np.int(tE/DT)/100) == 0:
+                print('time now: {0}, end time: {1}'.format(time, tE))
                 print '\nnorm of deviation', np.linalg.norm(curvel-linvel)
                 print 'norm of actuation {0}'.format(np.linalg.norm(actua))
             return actua, memory
@@ -611,6 +613,9 @@ def lqgbt(problemname='drivencavity',
                    fv_tmdp_memory=fv_tmdp_memory,
                    return_dictofvelstrs=True)
 
+    if closed_loop == 'red_output_fb':
+        soldict.update(dict(verbose=False))
+
     outstr = truncstr + '{0}'.format(closed_loop) \
         + 't0{0}tE{1}Nts{2}N{3}Re{4}'.format(t0, tE, Nts, N, Re)
     if paraoutput:
@@ -628,7 +633,8 @@ def lqgbt(problemname='drivencavity',
                          't0{0}tE{1}Nts{2}'.format(t0, tE, Nts) +
                          'inipert{0}'.format(perturbpara))
 
-    dou.plot_outp_sig(tmesh=trange, outsig=yscomplist)
+    if plotit:
+		dou.plot_outp_sig(tmesh=trange, outsig=yscomplist)
     # import matplotlib.pyplot as plt
     # plt.plot(trange, yscomplist)
     # plt.show(block=False)
