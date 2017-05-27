@@ -45,7 +45,9 @@ def lqgbt(problemname='drivencavity',
           nwtn_adi_dict=None,
           comp_freqresp=False, comp_stepresp='nonlinear',
           closed_loop=False, multiproc=False,
-          perturbpara=1e-3, trytofail=False, ttf_npcrdstps=3):
+          perturbpara=1e-3,
+          trytofail=False, ttf_npcrdstps=3,
+          robit=False, robmrgnfac=0.5):
     """Main routine for LQGBT
 
     Parameters
@@ -244,6 +246,9 @@ def lqgbt(problemname='drivencavity',
         tr = dou.load_npa(fdstr + '__tr' + truncstr)
         print(('loaded the left and right transformations: \n' +
                fdstr + '__tl/__tr' + truncstr))
+        if robit:
+            svs = dou.load_npa(fdstr + '__svs')
+
     except IOError:
         print(('computing the left and right transformations' +
                ' and saving to: \n' + fdstr + '__tl/__tr' + truncstr))
@@ -318,16 +323,6 @@ def lqgbt(problemname='drivencavity',
 
             else:
                 compobsg()
-                # try:
-                #     zwo = dou.load_npa(fdstr + '__zwo')
-                #     print 'at least __zwo is there'
-                # except IOError:
-                #     zwo = get_gramians(mmat=mmat.T, amat=f_mat.T,
-                #                        jmat=stokesmatsc['J'],
-                #                        bmat=c_mat_reg.T, wmat=b_mat,
-                #                        nwtn_adi_dict=nap,
-                #                        z0=zinio)['zfac']
-                #     dou.save_npa(zwo, fdstr + '__zwo')
                 compcong()
 
             zwc = dou.load_npa(fdstr + '__zwc')
@@ -336,15 +331,20 @@ def lqgbt(problemname='drivencavity',
         print(('computing the left and right transformations' +
                ' and saving to:\n' + fdstr + '__tr/__tl' + truncstr))
 
-        tl, tr = btu.\
+        tl, tr, svs = btu.\
             compute_lrbt_transfos(zfc=zwc, zfo=zwo,
                                   mmat=stokesmatsc['M'],
                                   trunck={'threshh': trunc_lqgbtcv})
         dou.save_npa(tl, fdstr + '__tl' + truncstr)
         dou.save_npa(tr, fdstr + '__tr' + truncstr)
+        dou.save_npa(svs, fdstr + '__svs')
 
     print(('NV = {0}, NP = {2}, k = {1}'.format(tl.shape[0], tl.shape[1],
                                                 stokesmatsc['J'].shape[0])))
+    # import matplotlib.pyplot as plt
+    # plt.semilogy(svs)
+    # import ipdb; ipdb.set_trace()
+    # plt.show()
 
     if comp_freqresp:
         btu.compare_freqresp(mmat=stokesmatsc['M'], amat=f_mat,
@@ -469,16 +469,11 @@ def lqgbt(problemname='drivencavity',
             dou.save_npa(ck_mat, fdstr+truncstr+'__ck_mat')
             dou.save_npa(bk_mat, fdstr+truncstr+'__bk_mat')
 
-        obs_bk = np.dot(xok, ck_mat.T)
-
-        sysmatk_inv = np.linalg.inv(np.eye(ak_mat.shape[1]) - DT*(ak_mat -
-                                    np.dot(np.dot(xok, ck_mat.T), ck_mat) -
-                                    np.dot(bk_mat, np.dot(bk_mat.T, xck))))
-
         def fv_tmdp_redoutpfb(time=None, curvel=None, memory=None,
                               linvel=None,
                               ipsysk_mat_inv=None,
                               obs_bk=None, cts=None,
+                              obs_ck=None,
                               b_mat=None, c_mat=None,
                               xck=None, bk_mat=None,
                               **kw):
@@ -506,6 +501,8 @@ def lqgbt(problemname='drivencavity',
                 of the state estimate
             obs_bk : (K,NU) nparray
                 input matrix in the observer
+            obs_ck : (NY,K) nparray
+                output matrix in the observer
             cts : real
                 time step length
             b_mat : (N,NU) sparse matrix
@@ -530,11 +527,16 @@ def lqgbt(problemname='drivencavity',
             buk = cts*np.dot(obs_bk,
                              lau.mm_dnssps(c_mat, (curvel-linvel)))
             xk_old = np.dot(ipsysk_mat_inv, xk_old + buk)
-            #         cts*np.dot(obs_bk,
-            #                 lau.mm_dnssps(c_mat, (curvel-linvel))))
             memory['xk_old'] = xk_old
-            actua = -lau.mm_dnssps(b_mat,
-                                   np.dot(bk_mat.T, np.dot(xck, xk_old)))
+
+            if bk_mat is not None and xck is not None:
+                actua = -lau.mm_dnssps(b_mat,
+                                       np.dot(bk_mat.T, np.dot(xck, xk_old)))
+            elif obs_ck is not None:
+                actua = -lau.mm_dnssps(b_mat, np.dot(obs_ck, xk_old))
+            else:
+                raise UserWarning('no observation matrix provided')
+
             if np.mod(np.int(time/DT), np.int(tE/DT)/100) == 0:
                 print('\nnorm of deviation: {0}'.
                       format(np.linalg.norm(curvel-linvel)))
@@ -542,9 +544,37 @@ def lqgbt(problemname='drivencavity',
                       format(np.linalg.norm(actua)))
             return actua, memory
 
-        fv_rofb_dict = dict(cts=DT, linvel=v_ss_nse, b_mat=b_mat,
-                            c_mat=c_mat_reg, obs_bk=obs_bk, bk_mat=bk_mat,
-                            ipsysk_mat_inv=sysmatk_inv, xck=xck)
+        if robit:
+            # as in Breiten/Kunisch '14: Compensator for Monodomain Eqns
+            muvals = svs[:tl.shape[1]]
+            robmrgsqrd = (robmrgnfac/np.sqrt(1+muvals[0]**2))**2
+            Lambdar = np.diag(muvals)  # in these coords: Lr = xok = xck
+            Fr = np.diag(((1-robmrgsqrd)*muvals) /
+                         (1-robmrgsqrd-robmrgsqrd*muvals**2))
+            robobsrv_akmat = ak_mat \
+                - np.dot(bk_mat, np.dot(bk_mat.T, Lambdar)) \
+                - 1./(1-robmrgsqrd)*np.dot(np.dot(Fr, ck_mat.T), ck_mat)
+            robobsrv_ckmat = 1./(1-robmrgsqrd)*np.dot(bk_mat.T, Lambdar)
+            robobsrv_bkmat = np.dot(Fr, ck_mat.T)
+            robobsrv_sysmatk_inv = \
+                np.linalg.inv(np.eye(ak_mat.shape[1]) - DT*robobsrv_akmat)
+            fv_rofb_dict = dict(cts=DT, linvel=v_ss_nse, b_mat=b_mat,
+                                c_mat=c_mat_reg,
+                                obs_bk=robobsrv_bkmat,
+                                obs_ck=robobsrv_ckmat,
+                                ipsysk_mat_inv=robobsrv_sysmatk_inv)
+            # import ipdb; ipdb.set_trace()
+            print('gonna use robustified output feedback:')
+            print('with robust margin: {0}'.format(np.sqrt(robmrgsqrd)))
+
+        else:
+            obs_bk = np.dot(xok, ck_mat.T)
+            sysmatk_inv = np.linalg.inv(np.eye(ak_mat.shape[1]) - DT*(ak_mat -
+                                        np.dot(np.dot(xok, ck_mat.T), ck_mat) -
+                                        np.dot(bk_mat, np.dot(bk_mat.T, xck))))
+            fv_rofb_dict = dict(cts=DT, linvel=v_ss_nse, b_mat=b_mat,
+                                c_mat=c_mat_reg, obs_bk=obs_bk, bk_mat=bk_mat,
+                                ipsysk_mat_inv=sysmatk_inv, xck=xck)
 
         fv_tmdp = fv_tmdp_redoutpfb
         fv_tmdp_params = fv_rofb_dict
@@ -583,10 +613,15 @@ def lqgbt(problemname='drivencavity',
     yscomplist = cou.extract_output(strdict=dictofvelstrs, tmesh=trange,
                                     c_mat=c_mat, load_data=dou.load_npa)
 
+    if robit:
+        robitstr = '_robmgnfac{0}'.format(robmrgnfac)
+    else:
+        robitstr = ''
+
     dou.save_output_json(dict(tmesh=trange.tolist(), outsig=yscomplist),
                          fstring=fdstr + truncstr + '{0}'.format(closed_loop) +
                          't0{0}tE{1}Nts{2}'.format(t0, tE, Nts) +
-                         'inipert{0}'.format(perturbpara))
+                         'inipert{0}'.format(perturbpara) + robitstr)
 
     dou.plot_outp_sig(tmesh=trange, outsig=yscomplist)
     # import matplotlib.pyplot as plt
