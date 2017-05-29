@@ -18,8 +18,8 @@ NU, NY = 3, 3
 # to what extend we perturb the initial value
 perturbpara = 1e-6
 # whether we use a perturbed system
-trytofail = False
 trytofail = True
+trytofail = False
 ttf_npcrdstps = 6
 # whether to robustify the observer
 robit = False

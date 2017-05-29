@@ -430,7 +430,8 @@ def lqgbt(problemname='drivencavity',
 
             actua = -lau.comp_uvz_spdns(tb_mat, tbxm_mat, curvel-linv)
             if np.mod(np.int(time/DT), np.int(tE/DT)/100) == 0:
-                print('\nnorm of deviation: {0}'.
+                print('time: {0}-{1}'.format(time, tE))
+                print('norm of deviation: {0}'.
                       format(np.linalg.norm(curvel-linv)))
                 print('norm of actuation: {0}'.
                       format(np.linalg.norm(actua)))
@@ -538,7 +539,9 @@ def lqgbt(problemname='drivencavity',
                 raise UserWarning('no observation matrix provided')
 
             if np.mod(np.int(time/DT), np.int(tE/DT)/100) == 0:
-                print('\nnorm of deviation: {0}'.
+
+                print('\ntime(end time): {0}({1})'.format(time, tE))
+                print('norm of deviation: {0}'.
                       format(np.linalg.norm(curvel-linvel)))
                 print('norm of actuation: {0}'.
                       format(np.linalg.norm(actua)))
@@ -600,6 +603,8 @@ def lqgbt(problemname='drivencavity',
                    fv_tmdp_params=fv_tmdp_params,
                    fv_tmdp_memory=fv_tmdp_memory,
                    return_dictofvelstrs=True)
+    if closed_loop == 'red_output_fb':
+        soldict.update(dict(verbose=False))
 
     outstr = truncstr + '{0}'.format(closed_loop) \
         + 't0{0}tE{1}Nts{2}N{3}Re{4}'.format(t0, tE, Nts, N, Re)
