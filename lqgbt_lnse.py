@@ -430,7 +430,7 @@ def lqgbt(problemname='drivencavity',
 
             actua = -lau.comp_uvz_spdns(tb_mat, tbxm_mat, curvel-linv)
             if np.mod(np.int(time/DT), np.int(tE/DT)/100) == 0:
-                print('time: {0}-{1}'.format(time, tE))
+                print('time: {0:.4f}-{1}'.format(time, tE))
                 print('norm of deviation: {0}'.
                       format(np.linalg.norm(curvel-linv)))
                 print('norm of actuation: {0}'.
@@ -538,12 +538,12 @@ def lqgbt(problemname='drivencavity',
             else:
                 raise UserWarning('no observation matrix provided')
 
-            if np.mod(np.int(time/DT), np.int(tE/DT)/100) == 0:
+            if np.int(np.mod(np.int(time/DT), np.int(tE/DT)/100)) == 0:
 
-                print('\ntime(end time): {0}({1})'.format(time, tE))
-                print('norm of deviation: {0}'.
+                print('\ntime(end time): {0:.2f}({1})'.format(time, tE))
+                print('norm of deviation: {0:.4e}'.
                       format(np.linalg.norm(curvel-linvel)))
-                print('norm of actuation: {0}'.
+                print('norm of actuation: {0:.4e}'.
                       format(np.linalg.norm(actua)))
             return actua, memory
 

@@ -1,6 +1,9 @@
 import lqgbt_lnse
 # import sys
 import datetime
+import sys
+import getopt
+import numpy as np
 
 # to compute stabilizing initial values for higher Re numbers
 # relist = [5.0e1, 1.0e2]
@@ -32,8 +35,43 @@ closed_loop = None
 closed_loop = 'red_output_fb'
 # number of time steps -- also define the lag in the control application
 scaletest = 1.
-t0, tE, Nts = 0.0, scaletest*12.0, scaletest*1*2.4e3+1
+if cyldim <= 3:  # coarser grids -- larger timesteps
+    baseNts = 1.8e3+1
+if cyldim == 4:
+    baseNts = 2.4e3+1
 
+# get command line input and overwrite standard paramters if necessary
+options, rest = getopt.getopt(sys.argv[1:], '',
+                              ['robit=',
+                               'ttf_npcrdstps=',
+                               'robmrgnfac=',
+                               'scaletest=',
+                               'iniperturb='])
+for opt, arg in options:
+    if opt == '--robit':
+        robit = np.bool(arg)
+    elif opt == '--ttf_npcrdstps':
+        ttf_npcrdstps = int(arg)
+    elif opt == '--robmrgnfac':
+        robmrgnfac = np.float(arg)
+    elif opt == '--iniperturb':
+        perturbpara = np.float(arg)
+    elif opt == '--scaletest':
+        scaletest = np.float(arg)
+
+t0, tE, Nts = 0.0, scaletest*12.0, scaletest*baseNts
+
+# print reynolds number and discretization lvl
+infostring = ('Re           = {0}'.format(relist) +
+              '\ncyldim       = {0}'.format(cyldim) +
+              '\nclosed_loop  = {0}'.format(closed_loop) +
+              '\nini_perturb  = {0}'.format(perturbpara) +
+              '\nobs_perturb  = {0}'.format(trytofail) +
+              '\nttf_npcrdstps= {0}'.format(ttf_npcrdstps) +
+              '\nt0, tE, Nts  = {0}, {1}, {2}\n'.format(t0, tE, Nts)
+              )
+
+print(infostring)
 nwtn_adi_dict = dict(adi_max_steps=300,  # 450,
                      adi_newZ_reltol=1e-7,
                      nwtn_max_steps=30,
@@ -73,3 +111,4 @@ for ctrunc in trunclist:
                          robit=robit, robmrgnfac=robmrgnfac,
                          closed_loop=closed_loop,
                          perturbpara=perturbpara)
+print(infostring)
