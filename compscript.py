@@ -48,7 +48,8 @@ options, rest = getopt.getopt(sys.argv[1:], '',
                                'max_re_only='])
 for opt, arg in options:
     if opt == '--robit':
-        robit = np.bool(arg)
+        robit = int(arg)
+        robit = np.bool(robit)
     elif opt == '--ttf_npcrdstps':
         ttf_npcrdstps = int(arg)
     elif opt == '--robmrgnfac':
@@ -67,21 +68,25 @@ for opt, arg in options:
         elif np.int(arg) == 2:
                 closed_loop = 'full_output_fb'
     elif opt == '--max_re_only':
-            max_re_only = np.bool(arg)
+            max_re_only = int(arg)
+            max_re_only = np.bool(max_re_only)
 
+print('max_re_only={0}'.format(max_re_only))
 if max_re_only:
     relist = relist[-2:]
 
 t0, tE, Nts = 0.0, scaletest*12.0, scaletest*baseNts
 
 # print reynolds number and discretization lvl
-infostring = ('Re           = {0}'.format(relist) +
-              '\ncyldim       = {0}'.format(cyldim) +
-              '\nclosed_loop  = {0}'.format(closed_loop) +
-              '\nini_perturb  = {0}'.format(perturbpara) +
-              '\nobs_perturb  = {0}'.format(trytofail) +
-              '\nttf_npcrdstps= {0}'.format(ttf_npcrdstps) +
-              '\nt0, tE, Nts  = {0}, {1}, {2}\n'.format(t0, tE, Nts)
+infostring = ('Re              = {0}'.format(relist) +
+              '\ncyldim         = {0}'.format(cyldim) +
+              '\nclosed_loop    = {0}'.format(closed_loop) +
+              '\nini_perturb    = {0}'.format(perturbpara) +
+              '\nobs_perturb    = {0}'.format(trytofail) +
+              '\nrobustification= {0}'.format(robit) +
+              '\nrob margin fac = {0}'.format(robmrgnfac) +
+              '\nttf_npcrdstps  = {0}'.format(ttf_npcrdstps) +
+              '\nt0, tE, Nts    = {0}, {1}, {2}\n'.format(t0, tE, Nts)
               )
 
 print(infostring)
