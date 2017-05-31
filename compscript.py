@@ -44,8 +44,8 @@ options, rest = getopt.getopt(sys.argv[1:], '',
                                'robmrgnfac=',
                                'scaletest=',
                                'iniperturb=',
-							   'closed_loop=',
-							   'max_re_only='])
+                               'closed_loop=',
+                               'max_re_only='])
 for opt, arg in options:
     if opt == '--robit':
         robit = np.bool(arg)
@@ -57,20 +57,20 @@ for opt, arg in options:
         perturbpara = np.float(arg)
     elif opt == '--scaletest':
         scaletest = np.float(arg)
-	elif opt == '--closed_loop':
-		if np.int(arg) == -1:
-			closed_loop = None
-		elif np.int(arg) == 0:
-			closed_loop = False
-		elif np.int(arg) == 1:
-			closed_loop = 'red_output_fb'
-		elif np.int(arg) == 2:
-			closed_loop = 'full_output_fb'
-	elif opt == '--max_re_only':
-		max_re_only = np.bool(arg):
+    elif opt == '--closed_loop':
+        if np.int(arg) == -1:
+                closed_loop = None
+        elif np.int(arg) == 0:
+                closed_loop = False
+        elif np.int(arg) == 1:
+                closed_loop = 'red_output_fb'
+        elif np.int(arg) == 2:
+                closed_loop = 'full_output_fb'
+    elif opt == '--max_re_only':
+            max_re_only = np.bool(arg)
 
 if max_re_only:
-	relist = relist[-2:]
+    relist = relist[-2:]
 
 t0, tE, Nts = 0.0, scaletest*12.0, scaletest*baseNts
 
