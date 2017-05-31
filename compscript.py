@@ -6,11 +6,8 @@ import getopt
 import numpy as np
 
 # to compute stabilizing initial values for higher Re numbers
-# relist = [5.0e1, 1.0e2]
-# relist = [None, 5.0e1, 1.0e2]
-relist = [1.1e2, 1.25e2]
-# relist = [1.1e2, 1.2e2]
-# relist = [1.0e2, 1.5e2]
+relist = [None, 5.0e1, 1.0e2, 1.15e2, 1.25e2]
+max_re_only = True  # consider only the last Re for the simu
 
 # mesh parameter for the cylinder meshes
 cyldim = 3
@@ -25,8 +22,8 @@ trytofail = True
 trytofail = False
 ttf_npcrdstps = 6
 # whether to robustify the observer
-robit = False
 robit = True
+robit = False
 robmrgnfac = 0.1
 # closed loop def
 closed_loop = False
@@ -46,7 +43,9 @@ options, rest = getopt.getopt(sys.argv[1:], '',
                                'ttf_npcrdstps=',
                                'robmrgnfac=',
                                'scaletest=',
-                               'iniperturb='])
+                               'iniperturb=',
+							   'closed_loop=',
+							   'max_re_only='])
 for opt, arg in options:
     if opt == '--robit':
         robit = np.bool(arg)
@@ -58,6 +57,20 @@ for opt, arg in options:
         perturbpara = np.float(arg)
     elif opt == '--scaletest':
         scaletest = np.float(arg)
+	elif opt == '--closed_loop':
+		if np.int(arg) == -1:
+			closed_loop = None
+		elif np.int(arg) == 0:
+			closed_loop = False
+		elif np.int(arg) == 1:
+			closed_loop = 'red_output_fb'
+		elif np.int(arg) == 2:
+			closed_loop = 'full_output_fb'
+	elif opt == '--max_re_only':
+		max_re_only = np.bool(arg):
+
+if max_re_only:
+	relist = relist[-2:]
 
 t0, tE, Nts = 0.0, scaletest*12.0, scaletest*baseNts
 
