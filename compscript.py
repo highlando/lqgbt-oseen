@@ -40,6 +40,7 @@ if cyldim == 4:
 # get command line input and overwrite standard paramters if necessary
 options, rest = getopt.getopt(sys.argv[1:], '',
                               ['robit=',
+                               'obsperturb=',
                                'ttf_npcrdstps=',
                                'robmrgnfac=',
                                'scaletest=',
@@ -50,6 +51,9 @@ for opt, arg in options:
     if opt == '--robit':
         robit = int(arg)
         robit = np.bool(robit)
+    elif opt == '--obsperturb':
+        trytofail = int(arg)
+        trytofail = np.bool(arg)
     elif opt == '--ttf_npcrdstps':
         ttf_npcrdstps = int(arg)
     elif opt == '--robmrgnfac':
