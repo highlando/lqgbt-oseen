@@ -18,13 +18,13 @@ NU, NY = 3, 3
 # to what extend we perturb the initial value
 perturbpara = 1e-6
 # whether we use a perturbed system
-trytofail = False
 trytofail = True
+trytofail = False
 # closed loop def
 closed_loop = False
-closed_loop = 'red_output_fb'
 closed_loop = 'full_state_fb'
 closed_loop = None
+closed_loop = 'red_output_fb'
 # number of time steps -- also define the lag in the control application
 scaletest = 1.5
 t0, tE, Nts = 0.0, scaletest*12.0, scaletest*1*2.4e3+1
