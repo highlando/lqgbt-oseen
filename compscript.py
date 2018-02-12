@@ -6,7 +6,7 @@ import getopt
 import numpy as np
 
 # to compute stabilizing initial values for higher Re numbers
-relist = [None, 5.0e1, 1.0e2, 1.15e2, 1.25e2]
+relist = [None, 5.0e1, 1.0e2, 1.15e2, 1.25e2, 1.35e2]
 max_re_only = True  # consider only the last Re for the simu
 
 # mesh parameter for the cylinder meshes
