@@ -155,13 +155,6 @@ def lqgbt(problemname='drivencavity',
 
     fdstr = get_fdstr(Re)
 
-    soldict = stokesmatsc  # containing A, J, JT
-    soldict.update(femp)  # adding V, Q, invinds, diribcs
-    # soldict.update(rhsd_vfrc)  # adding fvc, fpr
-    soldict.update(fv=rhsd_stbc['fv']+rhsd_vfrc['fvc'],
-                   fp=rhsd_stbc['fp']+rhsd_vfrc['fpr'],
-                   N=N, nu=nu, data_prfx=fdstr)
-
 #
 # Prepare for control
 #
@@ -331,14 +324,15 @@ def lqgbt(problemname='drivencavity',
                 except IOError:
                     if pymess and not plain_bt:
                         zwo = pru.\
-                            pymess_dae2_cnt_riccati(mmat=mmat.T, amat=f_mat.T,
+                            pymess_dae2_cnt_riccati(mmat=mmat.T,
+                                                    amat=f_mat_gramians.T,
                                                     jmat=stokesmatsc['J'],
                                                     bmat=c_mat_reg.T,
                                                     wmat=b_mat_reg,
                                                     z0=zinio,
                                                     **pymess_dict)['zfac']
                     else:
-                        zwo = get_gramians(mmat=mmat.T, amat=f_mat.T,
+                        zwo = get_gramians(mmat=mmat.T, amat=f_mat_gramians.T,
                                            jmat=stokesmatsc['J'],
                                            bmat=c_mat_reg.T,
                                            wmat=b_mat_reg,
@@ -413,8 +407,6 @@ def lqgbt(problemname='drivencavity',
             nrhs = np.linalg.norm(np.dot(zwo.T, zwo))
             print 'sqrd f-norm of rhs', nrhs**2
 
-        import ipdb; ipdb.set_trace()
-
         print 'computing the left and right transformations' + \
             ' and saving to:\n' + fdstr + '__tr/__tl' + truncstr
 
@@ -488,7 +480,7 @@ def lqgbt(problemname='drivencavity',
         mtxb = pru.get_mTzzTtb(stokesmatsc['M'].T, zwc, b_mat)
 
         def fv_tmdp_fullstatefb(time=None, curvel=None,
-                                linv=None, tb_mat=None, btxm_mat=None, **kw):
+                                linv=None, tb_mat=None, tbxm_mat=None, **kw):
             """realizes a full state static feedback as a function
 
             that can be passed to a solution routine for the
@@ -504,7 +496,7 @@ def lqgbt(problemname='drivencavity',
                 linearization point for the linear model
             tb_mat : (N,K) nparray
                 input matrix containing the input weighting
-            btxm_mat : (N,K) nparray
+            tbxm_mat : (N,K) nparray
                 `b_mat.T * gain * mass`
 
             Returns
@@ -557,6 +549,13 @@ def lqgbt(problemname='drivencavity',
             dou.save_npa(ak_mat, fdstr+truncstr+'__ak_mat')
             dou.save_npa(ck_mat, fdstr+truncstr+'__ck_mat')
             dou.save_npa(bk_mat, fdstr+truncstr+'__bk_mat')
+
+        obs_bk = np.dot(xok, ck_mat.T)
+        DT = (tE - t0)/(Nts-1)
+
+        sysmatk_inv = np.linalg.inv(np.eye(ak_mat.shape[1]) - DT*(ak_mat -
+                                    np.dot(np.dot(xok, ck_mat.T), ck_mat) -
+                                    np.dot(bk_mat, np.dot(bk_mat.T, xck))))
 
         def fv_tmdp_redoutpfb(time=None, curvel=None, memory=None,
                               linvel=None,
@@ -683,7 +682,7 @@ def lqgbt(problemname='drivencavity',
                          'inipert{0}'.format(perturbpara) + robitstr)
 
     if plotit:
-		dou.plot_outp_sig(tmesh=trange, outsig=yscomplist)
+        dou.plot_outp_sig(tmesh=trange, outsig=yscomplist)
     # import matplotlib.pyplot as plt
     # plt.plot(trange, yscomplist)
     # plt.show(block=False)

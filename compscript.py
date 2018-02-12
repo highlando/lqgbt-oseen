@@ -79,6 +79,7 @@ for ctrunc in trunclist:
                          nwtn_adi_dict=nwtn_adi_dict,
                          paraoutput=False, multiproc=True,
                          comp_freqresp=False, comp_stepresp=False,
+                         pymess=pymess, pymess_dict=pymess_dict,
                          # closed_loop='red_output_fb',
                          # closed_loop=None,
                          trytofail=trytofail, ttf_npcrdstps=ttf_npcrdstps,
