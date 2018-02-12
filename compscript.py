@@ -82,7 +82,7 @@ if max_re_only:
 t0, tE, Nts = 0.0, scaletest*12.0, scaletest*baseNts
 
 # print reynolds number and discretization lvl
-infostring = ('Re              = {0}'.format(relist) +
+infostring = ('Re             = {0}'.format(relist) +
               '\ncyldim         = {0}'.format(cyldim) +
               '\nclosed_loop    = {0}'.format(closed_loop) +
               '\nini_perturb    = {0}'.format(perturbpara) +
@@ -125,7 +125,7 @@ for ctrunc in trunclist:
                          trunc_lqgbtcv=ctrunc,
                          t0=t0, tE=tE, Nts=Nts,
                          nwtn_adi_dict=nwtn_adi_dict,
-                         paraoutput=False, multiproc=False,
+                         paraoutput=False, multiproc=True,
                          comp_freqresp=False, comp_stepresp=False,
                          # closed_loop='red_output_fb',
                          # closed_loop=None,
