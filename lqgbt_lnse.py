@@ -50,7 +50,9 @@ def lqgbt(problemname='drivencavity',
           pymess_dict=None,
           comp_freqresp=False, comp_stepresp='nonlinear',
           closed_loop=False, multiproc=False,
-          perturbpara=1e-3):
+          perturbpara=1e-3,
+          trytofail=False, ttf_npcrdstps=3,
+          robit=False, robmrgnfac=0.5):
     """Main routine for LQGBT
 
     Parameters
@@ -147,14 +149,31 @@ def lqgbt(problemname='drivencavity',
     else:
         contsetupstr = 'NV{0}NU{1}NY{2}'.format(NV, NU, NY)
 
+    def get_fdstr(Re):
+        return ddir + problemname + '_Re{0}_'.format(Re) + \
+            contsetupstr + prbstr
+
+    fdstr = get_fdstr(Re)
+
+    soldict = stokesmatsc  # containing A, J, JT
+    soldict.update(femp)  # adding V, Q, invinds, diribcs
+    # soldict.update(rhsd_vfrc)  # adding fvc, fpr
+    soldict.update(fv=rhsd_stbc['fv']+rhsd_vfrc['fvc'],
+                   fp=rhsd_stbc['fp']+rhsd_vfrc['fpr'],
+                   N=N, nu=nu, data_prfx=fdstr)
+
+#
+# Prepare for control
+#
+
     # get the control and observation operators
     if not bccontrol:
         try:
             b_mat = dou.load_spa(ddir + contsetupstr + '__b_mat')
             u_masmat = dou.load_spa(ddir + contsetupstr + '__u_masmat')
-            print 'loaded `b_mat`'
+            print('loaded `b_mat`')
         except IOError:
-            print 'computing `b_mat`...'
+            print('computing `b_mat`...')
             b_mat, u_masmat = cou.get_inp_opa(cdcoo=femp['cdcoo'], V=femp['V'],
                                               NU=NU, xcomp=femp['uspacedep'])
             dou.save_spa(b_mat, ddir + contsetupstr + '__b_mat')
@@ -171,9 +190,9 @@ def lqgbt(problemname='drivencavity',
     try:
         mc_mat = dou.load_spa(ddir + contsetupstr + '__mc_mat')
         y_masmat = dou.load_spa(ddir + contsetupstr + '__y_masmat')
-        print 'loaded `c_mat`'
+        print('loaded `c_mat` from' + ddir + contsetupstr + '...')
     except IOError:
-        print 'computing `c_mat`...'
+        print('computing `c_mat`...')
         mc_mat, y_masmat = cou.get_mout_opa(odcoo=femp['odcoo'],
                                             V=femp['V'], NY=NY)
         dou.save_spa(mc_mat, ddir + contsetupstr + '__mc_mat')
@@ -215,6 +234,7 @@ def lqgbt(problemname='drivencavity',
     v_ss_nse, list_norm_nwtnupd = snu.\
         solve_steadystate_nse(vel_pcrd_stps=npcrdstps,
                               clearprvdata=debug, **soldict)
+
     (convc_mat, rhs_con,
      rhsv_conbc) = snu.get_v_conv_conts(prev_v=v_ss_nse, invinds=invinds,
                                         V=femp['V'], diribcs=femp['diribcs'])
@@ -222,6 +242,25 @@ def lqgbt(problemname='drivencavity',
     f_mat = - stokesmatsc['A'] - convc_mat
     # the robin term `arob` has been added before
     mmat = stokesmatsc['M']
+
+    # MAF -- need to change the convc_mat, i.e. we need another v_ss_nse
+    # MAF -- need to change the f_mat, i.e. we need another convc_mat
+    if trytofail:
+        v_ss_nse_MAF, _ = snu.\
+            solve_steadystate_nse(vel_pcrd_stps=ttf_npcrdstps, vel_nwtn_stps=0,
+                                  vel_pcrd_tol=1e-15,
+                                  clearprvdata=True, **soldict)
+        diffv = v_ss_nse - v_ss_nse_MAF
+        convc_mat_MAF, _, _ = \
+            snu.get_v_conv_conts(prev_v=v_ss_nse_MAF, invinds=invinds,
+                                 V=femp['V'], diribcs=femp['diribcs'])
+        relnormdiffv = np.sqrt(np.dot(diffv.T, mmat*diffv) /
+                               np.dot(v_ss_nse.T, mmat*v_ss_nse))
+        print('relative difference to linearization: {0}'.format(relnormdiffv))
+        f_mat_gramians = - stokesmatsc['A'] - convc_mat_MAF
+        fdstr = fdstr + '_MAF_ttfnpcrds{0}'.format(ttf_npcrdstps)
+    else:
+        f_mat_gramians = f_mat
 
     # ssv_rhs = rhsv_conbc + rhsv_conbc + rhsd_vfrc['fvc'] + rhsd_stbc['fv']
     def get_fdstr(Re):
@@ -246,25 +285,37 @@ def lqgbt(problemname='drivencavity',
     try:
         tl = dou.load_npa(fdstr + '__tl' + truncstr)
         tr = dou.load_npa(fdstr + '__tr' + truncstr)
-        print 'loaded the left and right transformations: \n' + \
-            fdstr + '__tl/__tr' + truncstr
+        print(('loaded the left and right transformations: \n' +
+               fdstr + '__tl/__tr' + truncstr))
+        if robit:
+            svs = dou.load_npa(fdstr + '__svs')
+
     except IOError:
-        print 'computing the left and right transformations' + \
-            ' and saving to: \n' + fdstr + '__tl/__tr' + truncstr
+        print(('computing the left and right transformations' +
+               ' and saving to: \n' + fdstr + '__tl/__tr' + truncstr))
 
         try:
             zwc = dou.load_npa(fdstr + '__zwc')
             zwo = dou.load_npa(fdstr + '__zwo')
-            print 'loaded factor of the Gramians: \n\t' + \
-                fdstr + '__zwc/__zwo'
+            print(('loaded factor of the Gramians: \n\t' +
+                   fdstr + '__zwc/__zwo'))
         except IOError:
             zinic, zinio = None, None
             if use_ric_ini is not None:
-                fdstr = get_fdstr(use_ric_ini)
+                if trytofail:
+                    try:
+                        fdstrini = get_fdstr(Re)
+                        zinic = dou.load_npa(fdstrini + '__zwc')
+                        zinio = dou.load_npa(fdstrini + '__zwo')
+                    except IOError:
+                        fdstrini = get_fdstr(use_ric_ini)
+                else:
+                    fdstrini = get_fdstr(use_ric_ini)
+
                 try:
-                    zinic = dou.load_npa(fdstr + '__zwc')
-                    zinio = dou.load_npa(fdstr + '__zwo')
-                    print 'Initialize Newton ADI by zwc/zwo from ' + fdstr
+                    zinic = dou.load_npa(fdstrini + '__zwc')
+                    zinio = dou.load_npa(fdstrini + '__zwo')
+                    print('Initialize Newton ADI by zwc/zwo from ' + fdstrini)
                 except IOError:
                     raise UserWarning('No initial guess with Re={0}'.
                                       format(use_ric_ini))
@@ -320,28 +371,17 @@ def lqgbt(problemname='drivencavity',
             if multiproc:
                 import multiprocessing
 
-                print '\n ### multithread start - ' +\
-                    'output might be intermangled'
+                print('\n ### multithread start - output maybe intermangled')
                 p1 = multiprocessing.Process(target=compobsg)
                 p2 = multiprocessing.Process(target=compcong)
                 p1.start()
                 p2.start()
                 p1.join()
                 p2.join()
-                print '### multithread end'
+                print('### multithread end')
 
             else:
                 compobsg()
-                # try:
-                #     zwo = dou.load_npa(fdstr + '__zwo')
-                #     print 'at least __zwo is there'
-                # except IOError:
-                #     zwo = get_gramians(mmat=mmat.T, amat=f_mat.T,
-                #                        jmat=stokesmatsc['J'],
-                #                        bmat=c_mat_reg.T, wmat=b_mat,
-                #                        nwtn_adi_dict=nap,
-                #                        z0=zinio)['zfac']
-                #     dou.save_npa(zwo, fdstr + '__zwo')
                 compcong()
 
             zwc = dou.load_npa(fdstr + '__zwc')
@@ -384,9 +424,14 @@ def lqgbt(problemname='drivencavity',
                                   trunck={'threshh': trunc_lqgbtcv})
         dou.save_npa(tl, fdstr + '__tl' + truncstr)
         dou.save_npa(tr, fdstr + '__tr' + truncstr)
+        dou.save_npa(svs, fdstr + '__svs')
 
-    print 'NV = {0}, NP = {2}, k = {1}'.\
-        format(tl.shape[0], tl.shape[1], stokesmatsc['J'].shape[0])
+    print(('NV = {0}, NP = {2}, k = {1}'.format(tl.shape[0], tl.shape[1],
+                                                stokesmatsc['J'].shape[0])))
+    # import matplotlib.pyplot as plt
+    # plt.semilogy(svs)
+    # import ipdb; ipdb.set_trace()
+    # plt.show()
 
     if comp_freqresp:
         btu.compare_freqresp(mmat=stokesmatsc['M'], amat=f_mat,
@@ -432,13 +477,13 @@ def lqgbt(problemname='drivencavity',
 
 # compute the regulated system
     trange = np.linspace(t0, tE, Nts)
+    DT = (tE - t0)/(Nts-1)
 
     if closed_loop is False:
         return
 
     elif closed_loop == 'full_state_fb':
         zwc = dou.load_npa(fdstr + '__zwc')
-        zwo = dou.load_npa(fdstr + '__zwo')
 
         mtxb = pru.get_mTzzTtb(stokesmatsc['M'].T, zwc, b_mat)
 
@@ -470,10 +515,13 @@ def lqgbt(problemname='drivencavity',
                 dummy `{}` for consistency
             """
 
-            actua = -lau.comp_uvz_spdns(tb_mat, btxm_mat, curvel-linv)
-            # actua = 0*curvel
-            print '\nnorm of deviation', np.linalg.norm(curvel-linv)
-            # print 'norm of actuation {0}'.format(np.linalg.norm(actua))
+            actua = -lau.comp_uvz_spdns(tb_mat, tbxm_mat, curvel-linv)
+            if np.mod(np.int(time/DT), np.int(tE/DT)/100) == 0:
+                print('time: {0:.4f}-{1}'.format(time, tE))
+                print('norm of deviation: {0}'.
+                      format(np.linalg.norm(curvel-linv)))
+                print('norm of actuation: {0}'.
+                      format(np.linalg.norm(actua)))
             return actua, {}
 
         tmdp_fsfb_dict = dict(linv=v_ss_nse, tb_mat=b_mat*Rmo,
@@ -491,10 +539,11 @@ def lqgbt(problemname='drivencavity',
             ck_mat = dou.load_npa(fdstr+truncstr+'__ck_mat')
             bk_mat = dou.load_npa(fdstr+truncstr+'__bk_mat')
         except IOError:
-            print 'couldn"t load the red system - compute it'
+            print('couldn"t load the red system - compute it')
             zwc = dou.load_npa(fdstr + '__zwc')
             zwo = dou.load_npa(fdstr + '__zwo')
 
+            # MAF -- need to change the f_mat
             ak_mat = np.dot(tl.T, f_mat*tr)
             ck_mat = lau.mm_dnssps(c_mat_reg, tr)
             bk_mat = lau.mm_dnssps(tl.T, b_mat)
@@ -508,13 +557,6 @@ def lqgbt(problemname='drivencavity',
             dou.save_npa(ak_mat, fdstr+truncstr+'__ak_mat')
             dou.save_npa(ck_mat, fdstr+truncstr+'__ck_mat')
             dou.save_npa(bk_mat, fdstr+truncstr+'__bk_mat')
-
-        obs_bk = np.dot(xok, ck_mat.T)
-        DT = (tE - t0)/(Nts-1)
-
-        sysmatk_inv = np.linalg.inv(np.eye(ak_mat.shape[1]) - DT*(ak_mat -
-                                    np.dot(np.dot(xok, ck_mat.T), ck_mat) -
-                                    np.dot(bk_mat, np.dot(bk_mat.T, xck))))
 
         def fv_tmdp_redoutpfb(time=None, curvel=None, memory=None,
                               linvel=None,
@@ -547,6 +589,8 @@ def lqgbt(problemname='drivencavity',
                 of the state estimate
             obs_bk : (K,NU) nparray
                 input matrix in the observer
+            obs_ck : (NY,K) nparray
+                output matrix in the observer
             cts : real
                 time step length
             b_mat : (N,NU) sparse matrix
@@ -573,8 +617,6 @@ def lqgbt(problemname='drivencavity',
             buk = cts*np.dot(obs_bk,
                              lau.mm_dnssps(c_mat, (curvel-linvel)))
             xk_old = np.dot(ipsysk_mat_inv, xk_old + buk)
-            #         cts*np.dot(obs_bk,
-            #                 lau.mm_dnssps(c_mat, (curvel-linvel))))
             memory['xk_old'] = xk_old
             actua = -lau.mm_dnssps(b_mat*Rmo,
                                    np.dot(bk_mat.T, np.dot(xck, xk_old)))
@@ -612,6 +654,8 @@ def lqgbt(problemname='drivencavity',
                    fv_tmdp_params=fv_tmdp_params,
                    fv_tmdp_memory=fv_tmdp_memory,
                    return_dictofvelstrs=True)
+    if closed_loop == 'red_output_fb':
+        soldict.update(dict(verbose=False))
 
     if closed_loop == 'red_output_fb':
         soldict.update(dict(verbose=False))
@@ -628,10 +672,15 @@ def lqgbt(problemname='drivencavity',
     yscomplist = cou.extract_output(strdict=dictofvelstrs, tmesh=trange,
                                     c_mat=c_mat, load_data=dou.load_npa)
 
+    if robit:
+        robitstr = '_robmgnfac{0}'.format(robmrgnfac)
+    else:
+        robitstr = ''
+
     dou.save_output_json(dict(tmesh=trange.tolist(), outsig=yscomplist),
                          fstring=fdstr + truncstr + '{0}'.format(closed_loop) +
                          't0{0}tE{1}Nts{2}'.format(t0, tE, Nts) +
-                         'inipert{0}'.format(perturbpara))
+                         'inipert{0}'.format(perturbpara) + robitstr)
 
     if plotit:
 		dou.plot_outp_sig(tmesh=trange, outsig=yscomplist)

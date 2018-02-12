@@ -3,32 +3,48 @@ import numpy as np
 import lqgbt_lnse
 # import sys
 import datetime
+import sys
+import getopt
+import numpy as np
 
 # to compute stabilizing initial values for higher Re numbers
-relist = [None, 5.0e1]  # , 1.0e2, 1.1e2]  # , 1.5e2]
-pymess = False
 pymess = True
+pymess = False
+relist = [None, 5.0e1, 1.0e2, 1.15e2, 1.25e2, 1.35e2]
+max_re_only = True  # consider only the last Re for the simu
 
 # the input regularization parameter
 gamma = 1.  # e5
 # mesh parameter for the cylinder meshes
-cyldim = 2
 # whether to do bccontrol or distributed
 bccontrol = True
 palpha = 1e-5  # parameter for the Robin penalization
+cyldim = 3
 # where to truncate the LQGBT characteristic values
-trunclist = [1e-3]  # , 1e-3, 1e-2, 1e-1, 1e-0]
+trunclist = [1e-4]  # , 1e-3, 1e-2, 1e-1, 1e-0]
 # dimension of in and output spaces
 NU, NY = 3, 3
 # to what extend we perturb the initial value
 perturbpara = 1e-6
+# whether we use a perturbed system
+trytofail = True
+trytofail = False
+ttf_npcrdstps = 6
+# whether to robustify the observer
+robit = True
+robit = False
+robmrgnfac = 0.1
 # closed loop def
-closed_loop = False  # 'red_output_fb'  # None, 'red_output_fb'
+closed_loop = False
+closed_loop = 'full_state_fb'
+closed_loop = None
+closed_loop = 'red_output_fb'
 # number of time steps -- also define the lag in the control application
 scaletest = 0.6  # for 1. we simulate till 12.
 t0, tE, Nts = 0.0, scaletest*12.0, np.int(scaletest*1*2.4e3+1)
 
-nwtn_adi_dict = dict(adi_max_steps=450,
+print(infostring)
+nwtn_adi_dict = dict(adi_max_steps=300,  # 450,
                      adi_newZ_reltol=1e-7,
                      nwtn_max_steps=30,
                      nwtn_upd_reltol=1e-10,
@@ -46,35 +62,27 @@ logstr = 'logs/log_cyldim{0}NU{1}NY{2}gamma{3}'.format(cyldim, NU, NY, gamma) +\
     'Re{2}to{3}kappa{0}to{1}eps{4}'.format(trunclist[0], trunclist[-1],
                                            relist[0], relist[-1], perturbpara)
 
-if bccontrol:
-    logstr = logstr + '_bccontrol_palpha{0}'.format(palpha)
+# print 'log goes ' + logstr
+# print 'how about \ntail -f '+logstr
+# sys.stdout = open(logstr, 'a', 0)
+print(('{0}'*10 + '\n log started at {1} \n' + '{0}'*10).
+      format('X', str(datetime.datetime.now())))
 
-# import dolfin_navier_scipy.data_output_utils as dou
-# dou.logtofile(logstr=logstr)
-
-print('{0}'*10 + '\n log started at {1} \n' + '{0}'*10).\
-    format('X', str(datetime.datetime.now()))
-
-datadict = dict(problemname='cylinderwake', N=cyldim,
-		bccontrol=bccontrol, palpha=palpha,
-		gamma=gamma, NU=NU, NY=NY,
-		t0=t0, tE=tE, Nts=Nts,
-        pymess=pymess,
-		nwtn_adi_dict=nwtn_adi_dict,
-		plotit=False,
-		paraoutput=True, multiproc=True, comp_freqresp=False,
-		plain_bt=False, comp_stepresp=False, closed_loop=False,
-		perturbpara=perturbpara)
-
-# ## compute the projections
 for ctrunc in trunclist:
     for cre in range(1, len(relist)):
-        datadict.update(dict(use_ric_ini=relist[cre-1],
-                             Re=relist[cre], trunc_lqgbtcv=ctrunc))
-        lqgbt_lnse.lqgbt(**datadict)
-
-# ## do the simulation(s)
-for ctrunc in trunclist:
-    datadict.update(dict(use_ric_ini=relist[-2], closed_loop=closed_loop,
-		         Re=relist[-1], trunc_lqgbtcv=ctrunc))
-    lqgbt_lnse.lqgbt(**datadict)
+        lqgbt_lnse.lqgbt(problemname='cylinderwake', N=cyldim,
+                         use_ric_ini=relist[cre-1],
+                         NU=NU, NY=NY,
+                         Re=relist[cre], plain_bt=False,
+                         trunc_lqgbtcv=ctrunc,
+                         t0=t0, tE=tE, Nts=Nts,
+                         nwtn_adi_dict=nwtn_adi_dict,
+                         paraoutput=False, multiproc=True,
+                         comp_freqresp=False, comp_stepresp=False,
+                         # closed_loop='red_output_fb',
+                         # closed_loop=None,
+                         trytofail=trytofail, ttf_npcrdstps=ttf_npcrdstps,
+                         robit=robit, robmrgnfac=robmrgnfac,
+                         closed_loop=closed_loop,
+                         perturbpara=perturbpara)
+print(infostring)
