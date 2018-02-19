@@ -109,9 +109,9 @@ def lqgbt(problemname='drivencavity',
 
     typprb = 'BT' if plain_bt else 'LQG-BT'
 
-    print '\n ### We solve the {0} problem for the {1} at Re={2} ###\n'.\
-        format(typprb, problemname, Re)
-    print ' ### The control is weighted with Gamma={0}'.format(gamma)
+    print('\n ### We solve the {0} problem for the {1} at Re={2} ###\n'.\
+        format(typprb, problemname, Re))
+    print(' ### The control is weighted with Gamma={0}'.format(gamma))
 
     if nwtn_adi_dict is not None:
         nap = nwtn_adi_dict
@@ -145,7 +145,7 @@ def lqgbt(problemname='drivencavity',
         stokesmatsc['A'] = stokesmatsc['A'] + 1./palpha*stokesmatsc['Arob']
         b_mat = 1./palpha*stokesmatsc['Brob']
         u_masmat = sps.eye(b_mat.shape[1], format='csr')
-        print ' ### Robin-type boundary control palpha={0}'.format(palpha)
+        print(' ### Robin-type boundary control palpha={0}'.format(palpha))
     else:
         contsetupstr = 'NV{0}NU{1}NY{2}'.format(NV, NU, NY)
 
@@ -183,7 +183,7 @@ def lqgbt(problemname='drivencavity',
     try:
         mc_mat = dou.load_spa(ddir + contsetupstr + '__mc_mat')
         y_masmat = dou.load_spa(ddir + contsetupstr + '__y_masmat')
-        print('loaded `c_mat` from' + ddir + contsetupstr + '...')
+        print(('loaded `c_mat` from' + ddir + contsetupstr + '...'))
     except IOError:
         print('computing `c_mat`...')
         mc_mat, y_masmat = cou.get_mout_opa(odcoo=femp['odcoo'],
@@ -249,7 +249,7 @@ def lqgbt(problemname='drivencavity',
                                  V=femp['V'], diribcs=femp['diribcs'])
         relnormdiffv = np.sqrt(np.dot(diffv.T, mmat*diffv) /
                                np.dot(v_ss_nse.T, mmat*v_ss_nse))
-        print('relative difference to linearization: {0}'.format(relnormdiffv))
+        print(('relative difference to linearization: {0}'.format(relnormdiffv)))
         f_mat_gramians = - stokesmatsc['A'] - convc_mat_MAF
         fdstr = fdstr + '_MAF_ttfnpcrds{0}'.format(ttf_npcrdstps)
     else:
@@ -308,19 +308,19 @@ def lqgbt(problemname='drivencavity',
                 try:
                     zinic = dou.load_npa(fdstrini + '__zwc')
                     zinio = dou.load_npa(fdstrini + '__zwo')
-                    print('Initialize Newton ADI by zwc/zwo from ' + fdstrini)
+                    print(('Initialize Newton ADI by zwc/zwo from ' + fdstrini))
                 except IOError:
                     raise UserWarning('No initial guess with Re={0}'.
                                       format(use_ric_ini))
 
             fdstr = get_fdstr(Re)
-            print 'computing factors of Gramians: \n\t' + \
-                fdstr + '__zwc/__zwo'
+            print('computing factors of Gramians: \n\t' + \
+                fdstr + '__zwc/__zwo')
 
             def compobsg():
                 try:
                     zwo = dou.load_npa(fdstr + '__zwo')
-                    print 'yeyeyeah, __zwo is there'
+                    print('yeyeyeah, __zwo is there')
                 except IOError:
                     if pymess and not plain_bt:
                         zwo = pru.\
@@ -344,7 +344,7 @@ def lqgbt(problemname='drivencavity',
             def compcong():
                 try:
                     zwc = dou.load_npa(fdstr + '__zwc')
-                    print 'yeyeyeah, __zwc is there'
+                    print('yeyeyeah, __zwc is there')
                 except IOError:
                     if pymess and not plain_bt:
                         zwc = pru.\
@@ -391,9 +391,9 @@ def lqgbt(problemname='drivencavity',
                                         jmat=stokesmatsc['J'],
                                         wmat=c_mat_reg.T,
                                         umat=umat, vmat=vmat)
-            print 'sqrd Residual of cont-Riccati: ', res
+            print('sqrd Residual of cont-Riccati: ', res)
             nrhs = np.linalg.norm(np.dot(zwc.T, zwc))
-            print 'sqrd f-norm of rhs', nrhs**2
+            print('sqrd f-norm of rhs', nrhs**2)
 
             # check the obsv Ric residual
             umat = 0.5*c_mat.T
@@ -403,12 +403,12 @@ def lqgbt(problemname='drivencavity',
                                         jmat=stokesmatsc['J'],
                                         wmat=b_mat,
                                         umat=umat, vmat=vmat)
-            print 'sqrd Residual of obsv-Riccati: ', res
+            print('sqrd Residual of obsv-Riccati: ', res)
             nrhs = np.linalg.norm(np.dot(zwo.T, zwo))
-            print 'sqrd f-norm of rhs', nrhs**2
+            print('sqrd f-norm of rhs', nrhs**2)
 
-        print 'computing the left and right transformations' + \
-            ' and saving to:\n' + fdstr + '__tr/__tl' + truncstr
+        print('computing the left and right transformations' + \
+            ' and saving to:\n' + fdstr + '__tr/__tl' + truncstr)
 
         tl, tr = btu.\
             compute_lrbt_transfos(zfc=zwc, zfo=zwo,
@@ -509,11 +509,11 @@ def lqgbt(problemname='drivencavity',
 
             actua = -lau.comp_uvz_spdns(tb_mat, tbxm_mat, curvel-linv)
             if np.mod(np.int(time/DT), np.int(tE/DT)/100) == 0:
-                print('time: {0:.4f}-{1}'.format(time, tE))
-                print('norm of deviation: {0}'.
-                      format(np.linalg.norm(curvel-linv)))
-                print('norm of actuation: {0}'.
-                      format(np.linalg.norm(actua)))
+                print(('time: {0:.4f}-{1}'.format(time, tE)))
+                print(('norm of deviation: {0}'.
+                      format(np.linalg.norm(curvel-linv))))
+                print(('norm of actuation: {0}'.
+                      format(np.linalg.norm(actua))))
             return actua, {}
 
         tmdp_fsfb_dict = dict(linv=v_ss_nse, tb_mat=b_mat*Rmo,
@@ -620,9 +620,9 @@ def lqgbt(problemname='drivencavity',
             actua = -lau.mm_dnssps(b_mat*Rmo,
                                    np.dot(bk_mat.T, np.dot(xck, xk_old)))
             if np.mod(np.int(time/DT), np.int(tE/DT)/100) == 0:
-                print('time now: {0}, end time: {1}'.format(time, tE))
-                print '\nnorm of deviation', np.linalg.norm(curvel-linvel)
-                print 'norm of actuation {0}'.format(np.linalg.norm(actua))
+                print(('time now: {0}, end time: {1}'.format(time, tE)))
+                print('\nnorm of deviation', np.linalg.norm(curvel-linvel))
+                print('norm of actuation {0}'.format(np.linalg.norm(actua)))
             return actua, memory
 
         fv_rofb_dict = dict(cts=DT, linvel=v_ss_nse, b_mat=b_mat, Rmo=Rmo,
