@@ -109,8 +109,8 @@ def lqgbt(problemname='drivencavity',
 
     typprb = 'BT' if plain_bt else 'LQG-BT'
 
-    print('\n ### We solve the {0} problem for the {1} at Re={2} ###\n'.\
-        format(typprb, problemname, Re))
+    print('\n ### We solve the {0} problem for the {1} at Re={2} ###\n'.
+          format(typprb, problemname, Re))
     print(' ### The control is weighted with Gamma={0}'.format(gamma))
 
     if nwtn_adi_dict is not None:
@@ -249,7 +249,8 @@ def lqgbt(problemname='drivencavity',
                                  V=femp['V'], diribcs=femp['diribcs'])
         relnormdiffv = np.sqrt(np.dot(diffv.T, mmat*diffv) /
                                np.dot(v_ss_nse.T, mmat*v_ss_nse))
-        print(('relative difference to linearization: {0}'.format(relnormdiffv)))
+        print('relative difference to linearization: {0}'.
+              format(relnormdiffv))
         f_mat_gramians = - stokesmatsc['A'] - convc_mat_MAF
         fdstr = fdstr + '_MAF_ttfnpcrds{0}'.format(ttf_npcrdstps)
     else:
@@ -308,14 +309,13 @@ def lqgbt(problemname='drivencavity',
                 try:
                     zinic = dou.load_npa(fdstrini + '__zwc')
                     zinio = dou.load_npa(fdstrini + '__zwo')
-                    print(('Initialize Newton ADI by zwc/zwo from ' + fdstrini))
+                    print('Initialize Newton ADI by zwc/zwo from ' + fdstrini)
                 except IOError:
                     raise UserWarning('No initial guess with Re={0}'.
                                       format(use_ric_ini))
 
             fdstr = get_fdstr(Re)
-            print('computing factors of Gramians: \n\t' + \
-                fdstr + '__zwc/__zwo')
+            print('computing factors of Grams: \n\t' + fdstr + '__zwc/__zwo')
 
             def compobsg():
                 try:
@@ -407,8 +407,8 @@ def lqgbt(problemname='drivencavity',
             nrhs = np.linalg.norm(np.dot(zwo.T, zwo))
             print('sqrd f-norm of rhs', nrhs**2)
 
-        print('computing the left and right transformations' + \
-            ' and saving to:\n' + fdstr + '__tr/__tl' + truncstr)
+        print('computing the left and right transformations' +
+              ' and saving to:\n' + fdstr + '__tr/__tl' + truncstr)
 
         tl, tr = btu.\
             compute_lrbt_transfos(zfc=zwc, zfo=zwo,
