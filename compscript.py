@@ -5,7 +5,6 @@ import lqgbt_lnse
 import datetime
 import sys
 import getopt
-import numpy as np
 
 # to compute stabilizing initial values for higher Re numbers
 pymess = True
