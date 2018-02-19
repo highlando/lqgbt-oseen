@@ -9,7 +9,7 @@ import getopt
 # to compute stabilizing initial values for higher Re numbers
 pymess = True
 pymess = False
-relist = [None, 5.0e1, 1.0e2, 1.15e2, 1.25e2, 1.35e2]
+relist = [None, 5.0e1, 1.0e2, 1.15e2, 1.25e2, 1.35e2, 1.45e2]
 max_re_only = True  # consider only the last Re for the simu
 
 # the input regularization parameter
@@ -40,7 +40,65 @@ closed_loop = None
 closed_loop = 'red_output_fb'
 # number of time steps -- also define the lag in the control application
 scaletest = 0.6  # for 1. we simulate till 12.
-t0, tE, Nts = 0.0, scaletest*12.0, np.int(scaletest*1*2.4e3+1)
+t0, tE, baseNts = 0.0, scaletest*12.0, np.int(scaletest*1*2.4e3+1)
+
+# get command line input and overwrite standard paramters if necessary
+options, rest = getopt.getopt(sys.argv[1:], '',
+                              ['robit=',
+                               'obsperturb=',
+                               'ttf_npcrdstps=',
+                               'robmrgnfac=',
+                               'scaletest=',
+                               'iniperturb=',
+                               'closed_loop=',
+                               'max_re_only='])
+for opt, arg in options:
+    if opt == '--robit':
+        robit = int(arg)
+        robit = np.bool(robit)
+    elif opt == '--obsperturb':
+        trytofail = int(arg)
+        trytofail = np.bool(arg)
+    elif opt == '--ttf_npcrdstps':
+        ttf_npcrdstps = int(arg)
+    elif opt == '--robmrgnfac':
+        robmrgnfac = np.float(arg)
+    elif opt == '--iniperturb':
+        perturbpara = np.float(arg)
+    elif opt == '--scaletest':
+        scaletest = np.float(arg)
+    elif opt == '--closed_loop':
+        if np.int(arg) == -1:
+                closed_loop = None
+        elif np.int(arg) == 0:
+                closed_loop = False
+        elif np.int(arg) == 1:
+                closed_loop = 'red_output_fb'
+        elif np.int(arg) == 2:
+                closed_loop = 'full_output_fb'
+    elif opt == '--max_re_only':
+            max_re_only = int(arg)
+            max_re_only = np.bool(max_re_only)
+
+print('max_re_only={0}'.format(max_re_only))
+if max_re_only:
+    relist = relist[-2:]
+
+t0, tE, Nts = 0.0, scaletest*12.0, scaletest*baseNts
+
+# print reynolds number and discretization lvl
+infostring = ('Re             = {0}'.format(relist) +
+              '\ncyldim         = {0}'.format(cyldim) +
+              '\nclosed_loop    = {0}'.format(closed_loop) +
+              '\nini_perturb    = {0}'.format(perturbpara) +
+              '\nobs_perturb    = {0}'.format(trytofail) +
+              '\nrobustification= {0}'.format(robit) +
+              '\nrob margin fac = {0}'.format(robmrgnfac) +
+              '\nttf_npcrdstps  = {0}'.format(ttf_npcrdstps) +
+              '\nt0, tE, Nts    = {0}, {1}, {2}\n'.format(t0, tE, Nts)
+              )
+
+print(infostring)
 
 print(infostring)
 nwtn_adi_dict = dict(adi_max_steps=300,  # 450,
