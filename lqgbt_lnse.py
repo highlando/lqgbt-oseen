@@ -383,6 +383,7 @@ def lqgbt(problemname='drivencavity',
 
         checktheres = True
         if checktheres:
+            print('checking the Riccati residuals....')
             # check the cont Ric residual
             umat = 0.5*b_mat*Rmo
             vmat = np.dot(np.dot(b_mat.T, zwc), zwc.T)*mmat
@@ -392,11 +393,12 @@ def lqgbt(problemname='drivencavity',
                                         wmat=c_mat_reg.T,
                                         umat=umat, vmat=vmat)
             print('sqrd Residual of cont-Riccati: ', res)
-            nrhs = np.linalg.norm(np.dot(zwc.T, zwc))
-            print('sqrd f-norm of rhs', nrhs**2)
+            ctc = np.dot(c_mat_reg, c_mat_reg.T)
+            nrhs = (ctc * ctc).sum(-1).sum()
+            print('sqrd f-norm of rhs=C.T*C: ', nrhs**2)
 
             # check the obsv Ric residual
-            umat = 0.5*c_mat.T
+            umat = 0.5*c_mat_reg.T
             vmat = np.dot(np.dot(c_mat_reg, zwo), zwo.T)*mmat
             res = pru.\
                 comp_proj_lyap_res_norm(zwo, amat=f_mat.T, mmat=mmat.T,
@@ -404,13 +406,17 @@ def lqgbt(problemname='drivencavity',
                                         wmat=b_mat,
                                         umat=umat, vmat=vmat)
             print('sqrd Residual of obsv-Riccati: ', res)
-            nrhs = np.linalg.norm(np.dot(zwo.T, zwo))
-            print('sqrd f-norm of rhs', nrhs**2)
+
+            btb = np.dot(b_mat.T, b_mat)
+            nrhs = (btb * btb).sum(-1).sum()
+            print('sqrd f-norm of rhs=B*B.T: ', nrhs**2)
+            print('... done with checking the Riccati residuals!')
 
         print('computing the left and right transformations' +
               ' and saving to:\n' + fdstr + '__tr/__tl' + truncstr)
+        print('... done! - computing the left and right transformations')
 
-        tl, tr = btu.\
+        tl, tr, svs = btu.\
             compute_lrbt_transfos(zfc=zwc, zfo=zwo,
                                   mmat=stokesmatsc['M'],
                                   trunck={'threshh': trunc_lqgbtcv})
