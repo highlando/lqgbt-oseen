@@ -15,6 +15,12 @@ import distr_control_fenics.cont_obs_utils as cou
 # dolfin.parameters.linear_algebra_backend = 'uBLAS'
 debug = False
 
+checktheres = True  # whether to check the Riccati Residuals
+checktheres = False
+
+startwstokes = True
+switchonsfb = 1.5
+
 
 def nwtn_adi_params():
     """
@@ -381,7 +387,6 @@ def lqgbt(problemname='drivencavity',
             zwc = dou.load_npa(fdstr + '__zwc')
             zwo = dou.load_npa(fdstr + '__zwo')
 
-        checktheres = True
         if checktheres:
             print('checking the Riccati residuals....')
             # check the cont Ric residual
@@ -485,8 +490,14 @@ def lqgbt(problemname='drivencavity',
 
         mtxb = pru.get_mTzzTtb(stokesmatsc['M'].T, zwc, b_mat)
 
+        dimu = b_mat.shape[1]
+        zerou = np.zeros((dimu, 1))
+        if switchonsfb > 0:
+            print('the feedback will switched on at ' +
+                  't={0:.4f}'.format(switchonsfb))
+
         def fv_tmdp_fullstatefb(time=None, curvel=None,
-                                linv=None, tb_mat=None, tbxm_mat=None, **kw):
+                                linv=None, tb_mat=None, btxm_mat=None, **kw):
             """realizes a full state static feedback as a function
 
             that can be passed to a solution routine for the
@@ -502,7 +513,7 @@ def lqgbt(problemname='drivencavity',
                 linearization point for the linear model
             tb_mat : (N,K) nparray
                 input matrix containing the input weighting
-            tbxm_mat : (N,K) nparray
+            btxm_mat : (N,K) nparray
                 `b_mat.T * gain * mass`
 
             Returns
@@ -513,14 +524,17 @@ def lqgbt(problemname='drivencavity',
                 dummy `{}` for consistency
             """
 
-            actua = -lau.comp_uvz_spdns(tb_mat, tbxm_mat, curvel-linv)
-            if np.mod(np.int(time/DT), np.int(tE/DT)/100) == 0:
-                print(('time: {0:.4f}-{1}'.format(time, tE)))
-                print(('norm of deviation: {0}'.
-                      format(np.linalg.norm(curvel-linv))))
-                print(('norm of actuation: {0}'.
-                      format(np.linalg.norm(actua))))
-            return actua, {}
+            if time < switchonsfb:
+                return tb_mat.dot(zerou), {}
+            else:
+                actua = -lau.comp_uvz_spdns(tb_mat, btxm_mat, curvel-linv)
+                # if np.mod(np.int(time/DT), np.int(tE/DT)/100) == 0:
+                #     print(('time: {0:.4f}-{1}'.format(time, tE)))
+                #     print(('norm of deviation: {0}'.
+                #           format(np.linalg.norm(curvel-linv))))
+                #     print(('norm of actuation: {0}'.
+                #           format(np.linalg.norm(actua))))
+                return actua, {}
 
         tmdp_fsfb_dict = dict(linv=v_ss_nse, tb_mat=b_mat*Rmo,
                               btxm_mat=mtxb.T)
@@ -665,6 +679,10 @@ def lqgbt(problemname='drivencavity',
     if closed_loop == 'red_output_fb':
         soldict.update(dict(verbose=False))
 
+    if startwstokes:
+        print('we start with Stokes -- `perturbpara` is not considered')
+        soldict.update(dict(iniv=None, start_ssstokes=True))
+
     outstr = truncstr + '{0}'.format(closed_loop) \
         + 't0{0}tE{1}Nts{2}N{3}Re{4}'.format(t0, tE, Nts, N, Re)
     if paraoutput:
@@ -684,7 +702,8 @@ def lqgbt(problemname='drivencavity',
 
     dou.save_output_json(dict(tmesh=trange.tolist(), outsig=yscomplist),
                          fstring=fdstr + truncstr + '{0}'.format(closed_loop) +
-                         't0{0}tE{1}Nts{2}'.format(t0, tE, Nts) +
+                         't0{0:.4f}tE{1:.4f}Nts{2}'.format(t0, tE,
+                                                           np.int(Nts)) +
                          'inipert{0}'.format(perturbpara) + robitstr)
 
     if plotit:
