@@ -18,8 +18,7 @@ debug = False
 checktheres = True  # whether to check the Riccati Residuals
 checktheres = False
 
-startwstokes = True
-switchonsfb = 1.5
+switchonsfb = 0  # 1.5
 
 
 def nwtn_adi_params():
@@ -54,6 +53,7 @@ def lqgbt(problemname='drivencavity',
           trunc_lqgbtcv=1e-6,
           nwtn_adi_dict=None,
           pymess_dict=None,
+          whichinival='sstate',
           comp_freqresp=False, comp_stepresp='nonlinear',
           closed_loop=False, multiproc=False,
           perturbpara=1e-3,
@@ -218,7 +218,8 @@ def lqgbt(problemname='drivencavity',
 #
 
     # compute the uncontrolled steady state NSE solution for the linearization
-    soldict = stokesmatsc  # containing A, J, JT
+    soldict = {}
+    soldict.update(stokesmatsc)  # containing A, J, JT
     soldict.update(femp)  # adding V, Q, invinds, diribcs
     # soldict.update(rhsd_vfrc)  # adding fvc, fpr
     veldatastr = ddir + problemname + '_Re{0}'
@@ -487,7 +488,6 @@ def lqgbt(problemname='drivencavity',
 
     elif closed_loop == 'full_state_fb':
         zwc = dou.load_npa(fdstr + '__zwc')
-
         mtxb = pru.get_mTzzTtb(stokesmatsc['M'].T, zwc, b_mat)
 
         dimu = b_mat.shape[1]
@@ -653,6 +653,8 @@ def lqgbt(problemname='drivencavity',
         fv_tmdp_params = fv_rofb_dict
         fv_tmdp_memory = dict(xk_old=np.zeros((tl.shape[1], 1)))
 
+        soldict.update(dict(verbose=False))
+
     else:
         fv_tmdp = None
         fv_tmdp_params = {}
@@ -673,15 +675,38 @@ def lqgbt(problemname='drivencavity',
                    fv_tmdp_params=fv_tmdp_params,
                    fv_tmdp_memory=fv_tmdp_memory,
                    return_dictofvelstrs=True)
-    if closed_loop == 'red_output_fb':
-        soldict.update(dict(verbose=False))
 
-    if closed_loop == 'red_output_fb':
-        soldict.update(dict(verbose=False))
-
-    if startwstokes:
+    if whichinival == 'sstokes':
         print('we start with Stokes -- `perturbpara` is not considered')
         soldict.update(dict(iniv=None, start_ssstokes=True))
+    elif whichinival == 'sstate+d':
+        soldict.update(dict(iniv=v_ss_nse + reg_pertubini))
+    elif whichinival == 'sstokes++':
+        tpp = 2.
+        lctrng = (trange[trange < tpp]).tolist()
+        lctrng.append(tpp)
+
+        stksppdtstr = fdstr + 't0{0:.1f}tE{1:.4f}Nts{2}'.\
+            format(t0, tpp, len(lctrng)) + '__stokesppvel'
+        try:
+            sstokspp = dou.load_npa(stksppdtstr)
+            print('loaded `stokespp({0})` for inival'.format(tpp))
+        except IOError:
+            print('solving for `stokespp({0})` as inival'.format(tpp))
+            inivsoldict = {}
+            inivsoldict.update(stokesmatsc)  # containing A, J, JT
+            inivsoldict.update(femp)  # adding V, Q, invinds, diribcs
+            inivsoldict.update(fv=rhsd_stbc['fv']+rhsd_vfrc['fvc'],
+                               fp=rhsd_stbc['fp']+rhsd_vfrc['fpr'],
+                               N=N, nu=nu, data_prfx=veldatastr)
+            inivsoldict.update(trange=np.array(lctrng),
+                               iniv=None, start_ssstokes=True,
+                               comp_nonl_semexp=True,
+                               return_dictofvelstrs=True)
+            dcvlstrs = snu.solve_nse(**inivsoldict)
+            sstokspp = dou.load_npa(dcvlstrs[tpp])
+            dou.save_npa(sstokspp, stksppdtstr)
+        soldict.update(dict(iniv=sstokspp))
 
     outstr = truncstr + '{0}'.format(closed_loop) \
         + 't0{0}tE{1}Nts{2}N{3}Re{4}'.format(t0, tE, Nts, N, Re)
