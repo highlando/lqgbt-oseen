@@ -9,7 +9,7 @@ import getopt
 # to compute stabilizing initial values for higher Re numbers
 pymess = True
 pymess = False
-relist = [None, 5.0e1, 7.5e1, 8.8e1, 9.5e1]  # 1.0e2]
+relist = [None, 2.0e1]  # 5.0e1, 7.5e1, 8.8e1, 9.5e1]  # 1.0e2]
 # relist = [None, 5.0e1, 1.0e2, 1.075e2, 1.11e2]
 # , 1.15e2]  # , 1.25e2]  # , 1.35e2]  # , 1.45e2]
 max_re_only = False
@@ -21,7 +21,7 @@ gamma = 1.  # e5
 # whether to do bccontrol or distributed
 bccontrol = True
 palpha = 1e-5  # parameter for the Robin penalization
-cyldim = 3
+cyldim = 2
 # where to truncate the LQGBT characteristic values
 trunclist = [1e-4]  # , 1e-3, 1e-2, 1e-1, 1e-0]
 # dimension of in and output spaces
@@ -38,9 +38,9 @@ robit = False
 robmrgnfac = 0.1
 # closed loop def
 closed_loop = False
-closed_loop = 'red_output_fb'
 closed_loop = None
 closed_loop = 'full_state_fb'
+closed_loop = 'red_output_fb'
 # what inival
 whichinival = 'sstokes'  # steady state Stokes solution
 whichinival = 'sstate+d'  # sstate plus perturbation

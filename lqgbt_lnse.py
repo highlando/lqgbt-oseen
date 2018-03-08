@@ -12,6 +12,8 @@ import sadptprj_riclyap_adi.bal_trunc_utils as btu
 
 import distr_control_fenics.cont_obs_utils as cou
 
+import nse_riccont_utils as nru
+
 # dolfin.parameters.linear_algebra_backend = 'uBLAS'
 debug = False
 
@@ -242,6 +244,7 @@ def lqgbt(problemname='drivencavity',
     f_mat = - stokesmatsc['A'] - convc_mat
     # the robin term `arob` has been added before
     mmat = stokesmatsc['M']
+    jmat = stokesmatsc['J']
 
     # MAF -- need to change the convc_mat, i.e. we need another v_ss_nse
     # MAF -- need to change the f_mat, i.e. we need another convc_mat
@@ -357,13 +360,13 @@ def lqgbt(problemname='drivencavity',
                         zwc = pru.\
                             pymess_dae2_cnt_riccati(mmat=mmat, amat=f_mat,
                                                     jmat=stokesmatsc['J'],
-                                                    bmat=b_mat*Rmhalf,
+                                                    bmat=b_mat_reg*Rmhalf,
                                                     wmat=c_mat_reg.T, z0=zinic,
                                                     **pymess_dict)['zfac']
                     else:
                         zwc = get_gramians(mmat=mmat, amat=f_mat,
                                            jmat=stokesmatsc['J'],
-                                           bmat=b_mat*Rmhalf, wmat=c_mat_reg.T,
+                                           bmat=b_mat_reg*Rmhalf, wmat=c_mat_reg.T,
                                            nwtn_adi_dict=nap,
                                            z0=zinic)['zfac']
                     dou.save_npa(zwc, fdstr + '__zwc')
@@ -558,7 +561,7 @@ def lqgbt(problemname='drivencavity',
             # MAF -- need to change the f_mat
             ak_mat = np.dot(tl.T, f_mat*tr)
             ck_mat = lau.mm_dnssps(c_mat_reg, tr)
-            bk_mat = lau.mm_dnssps(tl.T, b_mat)
+            bk_mat = lau.mm_dnssps(tl.T, b_mat_reg)
 
             tltm, trtm = tl.T*stokesmatsc['M'], tr.T*stokesmatsc['M']
             xok = np.dot(np.dot(tltm, zwo), np.dot(zwo.T, tltm.T))
@@ -572,6 +575,30 @@ def lqgbt(problemname='drivencavity',
 
         obs_bk = np.dot(xok, ck_mat.T)
         DT = (tE - t0)/(Nts-1)
+        cmpricfacpars = dict(multiproc=True, nwtn_adi_dict=nwtn_adi_dict)
+        cmprlprjpars = dict(trunc_lqgbtcv=trunc_lqgbtcv)
+
+        ak_matt, bk_matt, ck_matt, xokt, xckt = \
+            nru.get_prj_model(truncstr=truncstr, fdstr=fdstr+'testit',
+                              abconly=False,
+                              mmat=mmat, fmat=f_mat_gramians, jmat=jmat,
+                              bmat=b_mat_reg, cmat=c_mat_reg,
+                              cmpricfacpars=cmpricfacpars,
+                              Rmhalf=Rmhalf,
+                              cmprlprjpars=cmprlprjpars)
+
+        print('ako - akt = {0}'.format(np.linalg.norm(ak_mat - ak_matt)))
+        print('bko - bkt = {0}'.format(np.linalg.norm(bk_mat - bk_matt)))
+        print('cko - ckt = {0}'.format(np.linalg.norm(ck_mat - ck_matt)))
+        print('xoko - xokt = {0}'.format(np.linalg.norm(xok - xokt)))
+        print('xcko - xckt = {0}'.format(np.linalg.norm(xck - xckt)))
+        zwo = dou.load_npa(fdstr + '__zwo')
+        zwc = dou.load_npa(fdstr + '__zwc')
+        zwot = dou.load_npa(fdstr + 'testit' + '__zwo')
+        zwct = dou.load_npa(fdstr + 'testit' + '__zwc')
+        print('zwo - zwot = {0}'.format(np.linalg.norm(zwo - zwot)))
+        print('zwc - zwct = {0}'.format(np.linalg.norm(zwc - zwct)))
+        import ipdb; ipdb.set_trace()
 
         sysmatk_inv = np.linalg.inv(np.eye(ak_mat.shape[1]) - DT*(ak_mat -
                                     np.dot(np.dot(xok, ck_mat.T), ck_mat) -

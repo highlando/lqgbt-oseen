@@ -5,12 +5,18 @@ import dolfin_navier_scipy.data_output_utils as dou
 import sadptprj_riclyap_adi.proj_ric_utils as pru
 import sadptprj_riclyap_adi.bal_trunc_utils as btu
 
+__all__ = ['get_ric_facs',
+           'get_rl_projections',
+           'get_prj_model']
+
 pymess = False
 pymess_dict = {}
 plain_bt = False
+debug = True
 
 
-def get_ric_facs(fmat=None, mmat=None, jmat=None, bmat=None, cmat=None,
+def get_ric_facs(fmat=None, mmat=None, jmat=None,
+                 bmat=None, cmat=None,
                  Rmhalf=None, Rmo=None,
                  ric_ini_str=None, fdstr=None,
                  nwtn_adi_dict=None,
@@ -112,42 +118,101 @@ def get_ric_facs(fmat=None, mmat=None, jmat=None, bmat=None, cmat=None,
     return zwc, zwo
 
 
-def get_rl_projections(mmat=None, fmat=None, jmat=None, bmat=None, cmat=None,
-                       trunc_lqgbtcv=1e-6,
+def get_rl_projections(fdstr=None, truncstr=None,
+                       zwc=None, zwo=None,
+                       fmat=None, mmat=None, jmat=None,
+                       bmat=None, cmat=None,
                        Rmhalf=None, Rmo=None,
-                       Re=None, fdstr=None, truncstr=None, robit=False,
-                       trytofail=False, get_fdstr=None, use_ric_ini=None,
-                       nwtn_adi_dict=None, multiproc=False, checktheres=False):
+                       cmpricfacpars={},
+                       trunc_lqgbtcv=None):
+
     try:
-        tl = dou.load_npa(fdstr + '__tl' + truncstr)
-        tr = dou.load_npa(fdstr + '__tr' + truncstr)
+        if debug:
+            raise IOError
+        tl = dou.load_npa(fdstr + truncstr + '__tl')
+        tr = dou.load_npa(fdstr + truncstr + '__tr')
         print(('loaded the left and right transformations: \n' +
-               fdstr + '__tl/__tr' + truncstr))
-        if robit:
-            svs = dou.load_npa(fdstr + '__svs')
+               fdstr + truncstr + '__tl/__tr'))
+        # if robit:
+        #     svs = dou.load_npa(fdstr + '__svs')
 
     except IOError:
         print(('computing the left and right transformations' +
-               ' and saving to: \n' + fdstr + '__tl/__tr' + truncstr))
+               ' and saving to: \n' + fdstr + truncstr + '__tl/__tr'))
+        if zwc is None or zwo is None:
+            zwc, zwo = get_ric_facs(fdstr=fdstr,
+                                    fmat=fmat, mmat=mmat, jmat=jmat,
+                                    cmat=cmat, bmat=bmat,
+                                    Rmhalf=Rmhalf, Rmo=Rmo,
+                                    **cmpricfacpars)
+        tl, tr, svs = btu.\
+            compute_lrbt_transfos(zfc=zwc, zfo=zwo,
+                                  mmat=mmat,
+                                  trunck={'threshh': trunc_lqgbtcv})
+        dou.save_npa(tl, fdstr + truncstr + '__tl')
+        dou.save_npa(tr, fdstr + truncstr + '__tr')
+        dou.save_npa(svs, fdstr + '__svs')
+        print('... done! - computing the left and right transformations')
 
+    return tl, tr
+
+
+def get_prj_model(truncstr=None, fdstr=None,
+                  matsdict={},
+                  abconly=False,
+                  mmat=None, fmat=None, jmat=None, bmat=None, cmat=None,
+                  zwo=None, zwc=None,
+                  Rmhalf=None, Rmo=None,
+                  cmpricfacpars={}, cmprlprjpars={}):
+
+    try:
+        if debug:
+            raise IOError
+        ak_mat = dou.load_npa(fdstr+truncstr+'__ak_mat')
+        ck_mat = dou.load_npa(fdstr+truncstr+'__ck_mat')
+        bk_mat = dou.load_npa(fdstr+truncstr+'__bk_mat')
+
+    except IOError:
+        print('couldn"t load the red model - gonna compute it')
+
+        tl, tr = get_rl_projections(fdstr=fdstr, truncstr=truncstr,
+                                    zwc=zwc, zwo=zwo,
+                                    fmat=fmat, mmat=mmat, jmat=jmat,
+                                    cmat=cmat, bmat=bmat,
+                                    Rmhalf=Rmhalf, Rmo=Rmo,
+                                    cmpricfacpars=cmpricfacpars,
+                                    **cmprlprjpars)
+
+        ak_mat = np.dot(tl.T, fmat*tr)
+        ck_mat = cmat.dot(tr)
+        bk_mat = tl.T.dot(bmat)
+        dou.save_npa(ak_mat, fdstr+truncstr+'__ak_mat')
+        dou.save_npa(ck_mat, fdstr+truncstr+'__ck_mat')
+        dou.save_npa(bk_mat, fdstr+truncstr+'__bk_mat')
+
+    if abconly:
+        return ak_mat, bk_mat, ck_mat
+
+    else:
         try:
-            zwc = dou.load_npa(fdstr + '__zwc')
-            zwo = dou.load_npa(fdstr + '__zwo')
-            print(('loaded factor of the Gramians: \n\t' +
-                   fdstr + '__zwc/__zwo'))
+            xok = dou.load_npa(fdstr+truncstr+'__xok')
+            xck = dou.load_npa(fdstr+truncstr+'__xck')
         except IOError:
+            if zwo is None and zwc is None:
+                zwc, zwo = get_ric_facs(fdstr=fdstr,
+                                        fmat=fmat, mmat=mmat, jmat=jmat,
+                                        cmat=cmat, bmat=bmat,
+                                        Rmhalf=Rmhalf, Rmo=Rmo,
+                                        **cmpricfacpars)
 
-            print('computing the left and right transformations' +
-                  ' and saving to:\n' + fdstr + '__tr/__tl' + truncstr)
-            print('... done! - computing the left and right transformations')
+            tl, tr = get_rl_projections(fdstr=fdstr, truncstr=truncstr,
+                                        zwc=zwc, zwo=zwo,
+                                        **cmprlprjpars)
 
-            tl, tr, svs = btu.\
-                compute_lrbt_transfos(zfc=zwc, zfo=zwo,
-                                      mmat=mmat,
-                                      trunck={'threshh': trunc_lqgbtcv})
-            dou.save_npa(tl, fdstr + '__tl' + truncstr)
-            dou.save_npa(tr, fdstr + '__tr' + truncstr)
-            dou.save_npa(svs, fdstr + '__svs')
+            tltm, trtm = tl.T*mmat, tr.T*mmat
+            xok = np.dot(np.dot(tltm, zwo), np.dot(zwo.T, tltm.T))
+            xck = np.dot(np.dot(trtm, zwc), np.dot(zwc.T, trtm.T))
+            dou.save_npa(xok, fdstr+truncstr+'__xok')
+            dou.save_npa(xck, fdstr+truncstr+'__xck')
 
-    print(('NV = {0}, NP = {2}, k = {1}'.format(tl.shape[0], tl.shape[1],
-                                                jmat.shape[0])))
+        return ak_mat, bk_mat, ck_mat, xok, xck
