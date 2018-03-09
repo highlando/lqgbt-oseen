@@ -277,7 +277,12 @@ def lqgbt(problemname='drivencavity',
 #
     Rmo, Rmhalf = 1./gamma, 1./np.sqrt(gamma)
 
+    truncstr = '__lqgbtcv{0}'.format(trunc_lqgbtcv)
+    cmpricfacpars = dict(multiproc=True, nwtn_adi_dict=nwtn_adi_dict)
+    cmprlprjpars = dict(trunc_lqgbtcv=trunc_lqgbtcv)
+
     if plain_bt:
+        print('`plain_bt` -- this is not maintained anymore -- good luck')
         get_gramians = pru.solve_proj_lyap_stein
     else:
         get_gramians = pru.proj_alg_ric_newtonadi
@@ -366,7 +371,8 @@ def lqgbt(problemname='drivencavity',
                     else:
                         zwc = get_gramians(mmat=mmat, amat=f_mat,
                                            jmat=stokesmatsc['J'],
-                                           bmat=b_mat_reg*Rmhalf, wmat=c_mat_reg.T,
+                                           bmat=b_mat_reg*Rmhalf,
+                                           wmat=c_mat_reg.T,
                                            nwtn_adi_dict=nap,
                                            z0=zinic)['zfac']
                     dou.save_npa(zwc, fdstr + '__zwc')
@@ -547,39 +553,35 @@ def lqgbt(problemname='drivencavity',
         fv_tmdp_memory = None
 
     elif closed_loop == 'red_output_fb':
-        try:
-            xok = dou.load_npa(fdstr+truncstr+'__xok')
-            xck = dou.load_npa(fdstr+truncstr+'__xck')
-            ak_mat = dou.load_npa(fdstr+truncstr+'__ak_mat')
-            ck_mat = dou.load_npa(fdstr+truncstr+'__ck_mat')
-            bk_mat = dou.load_npa(fdstr+truncstr+'__bk_mat')
-        except IOError:
-            print('couldn"t load the red system - compute it')
-            zwc = dou.load_npa(fdstr + '__zwc')
-            zwo = dou.load_npa(fdstr + '__zwo')
+        # try:
+        #     xok = dou.load_npa(fdstr+truncstr+'__xok')
+        #     xck = dou.load_npa(fdstr+truncstr+'__xck')
+        #     ak_mat = dou.load_npa(fdstr+truncstr+'__ak_mat')
+        #     ck_mat = dou.load_npa(fdstr+truncstr+'__ck_mat')
+        #     bk_mat = dou.load_npa(fdstr+truncstr+'__bk_mat')
+        # except IOError:
+        #     print('couldn"t load the red system - compute it')
+        #     zwc = dou.load_npa(fdstr + '__zwc')
+        #     zwo = dou.load_npa(fdstr + '__zwo')
+        #     # MAF -- need to change the f_mat
+        #     ak_mat = np.dot(tl.T, f_mat*tr)
+        #     ck_mat = lau.mm_dnssps(c_mat_reg, tr)
+        #     bk_mat = lau.mm_dnssps(tl.T, b_mat_reg)
+        #     tltm, trtm = tl.T*stokesmatsc['M'], tr.T*stokesmatsc['M']
+        #     xok = np.dot(np.dot(tltm, zwo), np.dot(zwo.T, tltm.T))
+        #     xck = np.dot(np.dot(trtm, zwc), np.dot(zwc.T, trtm.T))
+        #     dou.save_npa(xok, fdstr+truncstr+'__xok')
+        #     dou.save_npa(xck, fdstr+truncstr+'__xck')
+        #     dou.save_npa(ak_mat, fdstr+truncstr+'__ak_mat')
+        #     dou.save_npa(ck_mat, fdstr+truncstr+'__ck_mat')
+        #     dou.save_npa(bk_mat, fdstr+truncstr+'__bk_mat')
 
-            # MAF -- need to change the f_mat
-            ak_mat = np.dot(tl.T, f_mat*tr)
-            ck_mat = lau.mm_dnssps(c_mat_reg, tr)
-            bk_mat = lau.mm_dnssps(tl.T, b_mat_reg)
-
-            tltm, trtm = tl.T*stokesmatsc['M'], tr.T*stokesmatsc['M']
-            xok = np.dot(np.dot(tltm, zwo), np.dot(zwo.T, tltm.T))
-            xck = np.dot(np.dot(trtm, zwc), np.dot(zwc.T, trtm.T))
-
-            dou.save_npa(xok, fdstr+truncstr+'__xok')
-            dou.save_npa(xck, fdstr+truncstr+'__xck')
-            dou.save_npa(ak_mat, fdstr+truncstr+'__ak_mat')
-            dou.save_npa(ck_mat, fdstr+truncstr+'__ck_mat')
-            dou.save_npa(bk_mat, fdstr+truncstr+'__bk_mat')
-
-        obs_bk = np.dot(xok, ck_mat.T)
         DT = (tE - t0)/(Nts-1)
         cmpricfacpars = dict(multiproc=True, nwtn_adi_dict=nwtn_adi_dict)
         cmprlprjpars = dict(trunc_lqgbtcv=trunc_lqgbtcv)
 
-        ak_matt, bk_matt, ck_matt, xokt, xckt = \
-            nru.get_prj_model(truncstr=truncstr, fdstr=fdstr+'testit',
+        ak_mat, bk_mat, ck_mat, xok, xck = \
+            nru.get_prj_model(truncstr=truncstr, fdstr=fdstr,
                               abconly=False,
                               mmat=mmat, fmat=f_mat_gramians, jmat=jmat,
                               bmat=b_mat_reg, cmat=c_mat_reg,
@@ -587,18 +589,19 @@ def lqgbt(problemname='drivencavity',
                               Rmhalf=Rmhalf,
                               cmprlprjpars=cmprlprjpars)
 
-        print('ako - akt = {0}'.format(np.linalg.norm(ak_mat - ak_matt)))
-        print('bko - bkt = {0}'.format(np.linalg.norm(bk_mat - bk_matt)))
-        print('cko - ckt = {0}'.format(np.linalg.norm(ck_mat - ck_matt)))
-        print('xoko - xokt = {0}'.format(np.linalg.norm(xok - xokt)))
-        print('xcko - xckt = {0}'.format(np.linalg.norm(xck - xckt)))
-        zwo = dou.load_npa(fdstr + '__zwo')
-        zwc = dou.load_npa(fdstr + '__zwc')
-        zwot = dou.load_npa(fdstr + 'testit' + '__zwo')
-        zwct = dou.load_npa(fdstr + 'testit' + '__zwc')
-        print('zwo - zwot = {0}'.format(np.linalg.norm(zwo - zwot)))
-        print('zwc - zwct = {0}'.format(np.linalg.norm(zwc - zwct)))
-        import ipdb; ipdb.set_trace()
+        # print('ako - akt = {0}'.format(np.linalg.norm(ak_mat - ak_matt)))
+        # print('bko - bkt = {0}'.format(np.linalg.norm(bk_mat - bk_matt)))
+        # print('cko - ckt = {0}'.format(np.linalg.norm(ck_mat - ck_matt)))
+        # print('xoko - xokt = {0}'.format(np.linalg.norm(xok - xokt)))
+        # print('xcko - xckt = {0}'.format(np.linalg.norm(xck - xckt)))
+        # zwo = dou.load_npa(fdstr + '__zwo')
+        # zwc = dou.load_npa(fdstr + '__zwc')
+        # zwot = dou.load_npa(fdstr + 'testit' + '__zwo')
+        # zwct = dou.load_npa(fdstr + 'testit' + '__zwc')
+        # print('zwo - zwot = {0}'.format(np.linalg.norm(zwo - zwot)))
+        # print('zwc - zwct = {0}'.format(np.linalg.norm(zwc - zwct)))
+        # import ipdb; ipdb.set_trace()
+        obs_bk = np.dot(xok, ck_mat.T)
 
         sysmatk_inv = np.linalg.inv(np.eye(ak_mat.shape[1]) - DT*(ak_mat -
                                     np.dot(np.dot(xok, ck_mat.T), ck_mat) -

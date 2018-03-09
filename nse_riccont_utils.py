@@ -145,10 +145,16 @@ def get_rl_projections(fdstr=None, truncstr=None,
                                     cmat=cmat, bmat=bmat,
                                     Rmhalf=Rmhalf, Rmo=Rmo,
                                     **cmpricfacpars)
+        # print('norm zwc/zwo = {0}/{1}'.format(np.linalg.norm(zwc),
+        #                                       np.linalg.norm(zwo)))
+        # print('truncing at {0}:'.format(trunc_lqgbtcv))
         tl, tr, svs = btu.\
             compute_lrbt_transfos(zfc=zwc, zfo=zwo,
                                   mmat=mmat,
                                   trunck={'threshh': trunc_lqgbtcv})
+        # tls = tl.shape
+        # print('shape of tl: [{0}, {1}]'.format(tls[0], tls[1]))
+        # print(svs)
         dou.save_npa(tl, fdstr + truncstr + '__tl')
         dou.save_npa(tr, fdstr + truncstr + '__tr')
         dou.save_npa(svs, fdstr + '__svs')
@@ -195,6 +201,8 @@ def get_prj_model(truncstr=None, fdstr=None,
 
     else:
         try:
+            if debug:
+                raise IOError
             xok = dou.load_npa(fdstr+truncstr+'__xok')
             xck = dou.load_npa(fdstr+truncstr+'__xck')
         except IOError:
@@ -206,6 +214,7 @@ def get_prj_model(truncstr=None, fdstr=None,
                                         **cmpricfacpars)
 
             tl, tr = get_rl_projections(fdstr=fdstr, truncstr=truncstr,
+                                        mmat=mmat,
                                         zwc=zwc, zwo=zwo,
                                         **cmprlprjpars)
 
