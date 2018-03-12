@@ -9,7 +9,7 @@ import getopt
 # to compute stabilizing initial values for higher Re numbers
 pymess = True
 pymess = False
-relist = [None, 2.0e1, 5.0e1, 7.5e1, 8.8e1]  # , 9.5e1]  # 1.0e2]
+relist = [None, 2.0e1, 5.0e1, 7.5e1, 8.8e1, 9.9e1, 1.15e2, 1.25e2]  # 1.01e2]
 # relist = [None, 5.0e1, 1.0e2, 1.075e2, 1.11e2]
 # , 1.15e2]  # , 1.25e2]  # , 1.35e2]  # , 1.45e2]
 max_re_only = False
@@ -46,7 +46,7 @@ whichinival = 'sstokes'  # steady state Stokes solution
 whichinival = 'sstokes++'  # a developed state starting from sstokes
 whichinival = 'sstate+d'  # sstate plus perturbation
 # number of time steps -- also define the lag in the control application
-scaletest = 1.  # .2  # 0.6  # for 1. we simulate till 12.
+scaletest = .8  # 0.6  # for 1. we simulate till 12.
 baset0, basetE, baseNts = 0.0, 12.0, 2.4e3+1
 t0, tE, Nts = 0.0, scaletest*basetE, np.int(scaletest*baseNts)
 

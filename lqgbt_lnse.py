@@ -14,7 +14,6 @@ import distr_control_fenics.cont_obs_utils as cou
 
 import nse_riccont_utils as nru
 
-# dolfin.parameters.linear_algebra_backend = 'uBLAS'
 debug = False
 
 checktheres = True  # whether to check the Riccati Residuals
@@ -121,10 +120,6 @@ def lqgbt(problemname='drivencavity',
           format(typprb, problemname, Re))
     print(' ### The control is weighted with Gamma={0}'.format(gamma))
 
-    if nwtn_adi_dict is not None:
-        nap = nwtn_adi_dict
-    else:
-        nap = nwtn_adi_params()['nwtn_adi_dict']
     # output
     ddir = 'data/'
     try:
@@ -158,10 +153,11 @@ def lqgbt(problemname='drivencavity',
         contsetupstr = 'NV{0}NU{1}NY{2}'.format(NV, NU, NY)
 
     def get_fdstr(Re):
-        return ddir + problemname + '_Re{0}_'.format(Re) + \
+        return ddir + problemname + '_Re{0}_gamma{1}_'.format(Re, gamma) + \
             contsetupstr + prbstr
 
     fdstr = get_fdstr(Re)
+    fdstrini = get_fdstr(use_ric_ini) if use_ric_ini is not None else None
 
 #
 # Prepare for control
@@ -266,191 +262,34 @@ def lqgbt(problemname='drivencavity',
     else:
         f_mat_gramians = f_mat
 
-    # ssv_rhs = rhsv_conbc + rhsv_conbc + rhsd_vfrc['fvc'] + rhsd_stbc['fv']
-    def get_fdstr(Re):
-        return ddir + problemname + '_Re{0}_gamma{1}_'.format(Re, gamma) + \
-            contsetupstr + prbstr
-
-    fdstr = get_fdstr(Re)
 #
 # ### Compute or get the Gramians
 #
     Rmo, Rmhalf = 1./gamma, 1./np.sqrt(gamma)
 
     truncstr = '__lqgbtcv{0}'.format(trunc_lqgbtcv)
-    cmpricfacpars = dict(multiproc=True, nwtn_adi_dict=nwtn_adi_dict)
+    cmpricfacpars = dict(multiproc=multiproc, nwtn_adi_dict=nwtn_adi_dict,
+                         ric_ini_str=fdstrini)
     cmprlprjpars = dict(trunc_lqgbtcv=trunc_lqgbtcv)
 
     if plain_bt:
         print('`plain_bt` -- this is not maintained anymore -- good luck')
-        get_gramians = pru.solve_proj_lyap_stein
-    else:
-        get_gramians = pru.proj_alg_ric_newtonadi
-        # if pymess:
-        #     get_gramians = pru.pymess_dae2_cnt_riccati
-        # else:
-
-    truncstr = '__lqgbtcv{0}'.format(trunc_lqgbtcv)
-    try:
-        tl = dou.load_npa(fdstr + '__tl' + truncstr)
-        tr = dou.load_npa(fdstr + '__tr' + truncstr)
-        print(('loaded the left and right transformations: \n' +
-               fdstr + '__tl/__tr' + truncstr))
-        if robit:
-            svs = dou.load_npa(fdstr + '__svs')
-
-    except IOError:
-        print(('computing the left and right transformations' +
-               ' and saving to: \n' + fdstr + '__tl/__tr' + truncstr))
-
-        try:
-            zwc = dou.load_npa(fdstr + '__zwc')
-            zwo = dou.load_npa(fdstr + '__zwo')
-            print(('loaded factor of the Gramians: \n\t' +
-                   fdstr + '__zwc/__zwo'))
-        except IOError:
-            zinic, zinio = None, None
-            if use_ric_ini is not None:
-                if trytofail:
-                    try:
-                        fdstrini = get_fdstr(Re)
-                        zinic = dou.load_npa(fdstrini + '__zwc')
-                        zinio = dou.load_npa(fdstrini + '__zwo')
-                    except IOError:
-                        fdstrini = get_fdstr(use_ric_ini)
-                else:
-                    fdstrini = get_fdstr(use_ric_ini)
-
-                try:
-                    zinic = dou.load_npa(fdstrini + '__zwc')
-                    zinio = dou.load_npa(fdstrini + '__zwo')
-                    print('Initialize Newton ADI by zwc/zwo from ' + fdstrini)
-                except IOError:
-                    raise UserWarning('No initial guess with Re={0}'.
-                                      format(use_ric_ini))
-
-            fdstr = get_fdstr(Re)
-            print('computing factors of Grams: \n\t' + fdstr + '__zwc/__zwo')
-
-            def compobsg():
-                try:
-                    zwo = dou.load_npa(fdstr + '__zwo')
-                    print('yeyeyeah, __zwo is there')
-                except IOError:
-                    if pymess and not plain_bt:
-                        zwo = pru.\
-                            pymess_dae2_cnt_riccati(mmat=mmat.T,
-                                                    amat=f_mat_gramians.T,
-                                                    jmat=stokesmatsc['J'],
-                                                    bmat=c_mat_reg.T,
-                                                    wmat=b_mat_reg,
-                                                    z0=zinio,
-                                                    **pymess_dict)['zfac']
-                    else:
-                        zwo = get_gramians(mmat=mmat.T, amat=f_mat_gramians.T,
-                                           jmat=stokesmatsc['J'],
-                                           bmat=c_mat_reg.T,
-                                           wmat=b_mat_reg,
-                                           nwtn_adi_dict=nap,
-                                           z0=zinio)['zfac']
-                    dou.save_npa(zwo, fdstr + '__zwo')
-                return
-
-            def compcong():
-                try:
-                    zwc = dou.load_npa(fdstr + '__zwc')
-                    print('yeyeyeah, __zwc is there')
-                except IOError:
-                    if pymess and not plain_bt:
-                        zwc = pru.\
-                            pymess_dae2_cnt_riccati(mmat=mmat, amat=f_mat,
-                                                    jmat=stokesmatsc['J'],
-                                                    bmat=b_mat_reg*Rmhalf,
-                                                    wmat=c_mat_reg.T, z0=zinic,
-                                                    **pymess_dict)['zfac']
-                    else:
-                        zwc = get_gramians(mmat=mmat, amat=f_mat,
-                                           jmat=stokesmatsc['J'],
-                                           bmat=b_mat_reg*Rmhalf,
-                                           wmat=c_mat_reg.T,
-                                           nwtn_adi_dict=nap,
-                                           z0=zinic)['zfac']
-                    dou.save_npa(zwc, fdstr + '__zwc')
-                return
-
-            if multiproc:
-                import multiprocessing
-
-                print('\n ### multithread start - output maybe intermangled')
-                p1 = multiprocessing.Process(target=compobsg)
-                p2 = multiprocessing.Process(target=compcong)
-                p1.start()
-                p2.start()
-                p1.join()
-                p2.join()
-                print('### multithread end')
-
-            else:
-                compobsg()
-                compcong()
-
-            zwc = dou.load_npa(fdstr + '__zwc')
-            zwo = dou.load_npa(fdstr + '__zwo')
-
-        if checktheres:
-            print('checking the Riccati residuals....')
-            # check the cont Ric residual
-            umat = 0.5*b_mat*Rmo
-            vmat = np.dot(np.dot(b_mat.T, zwc), zwc.T)*mmat
-            res = pru.\
-                comp_proj_lyap_res_norm(zwc, amat=f_mat, mmat=mmat,
-                                        jmat=stokesmatsc['J'],
-                                        wmat=c_mat_reg.T,
-                                        umat=umat, vmat=vmat)
-            print('sqrd Residual of cont-Riccati: ', res)
-            ctc = np.dot(c_mat_reg, c_mat_reg.T)
-            nrhs = (ctc * ctc).sum(-1).sum()
-            print('sqrd f-norm of rhs=C.T*C: ', nrhs**2)
-
-            # check the obsv Ric residual
-            umat = 0.5*c_mat_reg.T
-            vmat = np.dot(np.dot(c_mat_reg, zwo), zwo.T)*mmat
-            res = pru.\
-                comp_proj_lyap_res_norm(zwo, amat=f_mat.T, mmat=mmat.T,
-                                        jmat=stokesmatsc['J'],
-                                        wmat=b_mat,
-                                        umat=umat, vmat=vmat)
-            print('sqrd Residual of obsv-Riccati: ', res)
-
-            btb = np.dot(b_mat.T, b_mat)
-            nrhs = (btb * btb).sum(-1).sum()
-            print('sqrd f-norm of rhs=B*B.T: ', nrhs**2)
-            print('... done with checking the Riccati residuals!')
-
-        print('computing the left and right transformations' +
-              ' and saving to:\n' + fdstr + '__tr/__tl' + truncstr)
-        print('... done! - computing the left and right transformations')
-
-        tl, tr, svs = btu.\
-            compute_lrbt_transfos(zfc=zwc, zfo=zwo,
-                                  mmat=stokesmatsc['M'],
-                                  trunck={'threshh': trunc_lqgbtcv})
-        dou.save_npa(tl, fdstr + '__tl' + truncstr)
-        dou.save_npa(tr, fdstr + '__tr' + truncstr)
-        dou.save_npa(svs, fdstr + '__svs')
-
-    print(('NV = {0}, NP = {2}, k = {1}'.format(tl.shape[0], tl.shape[1],
-                                                stokesmatsc['J'].shape[0])))
-    # import matplotlib.pyplot as plt
-    # plt.semilogy(svs)
-    # import ipdb; ipdb.set_trace()
-    # plt.show()
+        # get_gramians = pru.solve_proj_lyap_stein
+    # else:
+    #     get_gramians = pru.proj_alg_ric_newtonadi
 
     if comp_freqresp:
+        tl, tr = nru.get_rl_projections(fdstr=fdstr, truncstr=truncstr,
+                                        fmat=f_mat_gramians, mmat=mmat,
+                                        jmat=jmat,
+                                        bmat=b_mat_reg, cmat=c_mat_reg,
+                                        Rmhalf=Rmhalf,
+                                        cmpricfacpars=cmpricfacpars,
+                                        trunc_lqgbtcv=trunc_lqgbtcv)
         btu.compare_freqresp(mmat=stokesmatsc['M'], amat=f_mat,
                              jmat=stokesmatsc['J'], bmat=b_mat,
                              cmat=c_mat, tr=tr, tl=tl,
-                             plot=True, datastr=fdstr + '__tl' + truncstr)
+                             plot=True, datastr=fdstr + truncstr + '__tl')
 
     if comp_stepresp is not False:
         if comp_stepresp == 'nonlinear':
@@ -473,11 +312,6 @@ def lqgbt(problemname='drivencavity',
             return cou.extract_output(strdict=dictofvelstrs, tmesh=trange,
                                       c_mat=cmat, load_data=dou.load_npa)
 
-    # differences in the initial vector
-    # print np.dot(c_mat_reg, v_ss_nse)
-    # print np.dot(np.dot(c_mat_reg, tr),
-    #              np.dot(tl.T, stokesmatsc['M']*v_ss_nse))
-
         jsonstr = fdstr + stp_rsp_dtpr + '_Nred{0}_t0tENts{1}{2}{3}.json'.\
             format(tl.shape[1], t0, tE, Nts)
         btu.compare_stepresp(tmesh=np.linspace(t0, tE, Nts),
@@ -496,8 +330,14 @@ def lqgbt(problemname='drivencavity',
         return
 
     elif closed_loop == 'full_state_fb':
-        zwc = dou.load_npa(fdstr + '__zwc')
-        mtxb = pru.get_mTzzTtb(stokesmatsc['M'].T, zwc, b_mat)
+        zwc = nru.get_ric_facs(fdstr=fdstr,
+                               fmat=f_mat_gramians, mmat=mmat,
+                               jmat=jmat, bmat=b_mat_reg, cmat=c_mat_reg,
+                               ric_ini_str=fdstrini, Rmhalf=Rmhalf,
+                               nwtn_adi_dict=nwtn_adi_dict, zwconly=True,
+                               multiproc=multiproc, pymess=False,
+                               checktheres=False)
+        mtxb = pru.get_mTzzTtb(stokesmatsc['M'].T, zwc, b_mat_reg)
 
         dimu = b_mat.shape[1]
         zerou = np.zeros((dimu, 1))
@@ -537,12 +377,6 @@ def lqgbt(problemname='drivencavity',
                 return tb_mat.dot(zerou), {}
             else:
                 actua = -lau.comp_uvz_spdns(tb_mat, btxm_mat, curvel-linv)
-                # if np.mod(np.int(time/DT), np.int(tE/DT)/100) == 0:
-                #     print(('time: {0:.4f}-{1}'.format(time, tE)))
-                #     print(('norm of deviation: {0}'.
-                #           format(np.linalg.norm(curvel-linv))))
-                #     print(('norm of actuation: {0}'.
-                #           format(np.linalg.norm(actua))))
                 return actua, {}
 
         tmdp_fsfb_dict = dict(linv=v_ss_nse, tb_mat=b_mat*Rmo,
@@ -553,34 +387,9 @@ def lqgbt(problemname='drivencavity',
         fv_tmdp_memory = None
 
     elif closed_loop == 'red_output_fb':
-        # try:
-        #     xok = dou.load_npa(fdstr+truncstr+'__xok')
-        #     xck = dou.load_npa(fdstr+truncstr+'__xck')
-        #     ak_mat = dou.load_npa(fdstr+truncstr+'__ak_mat')
-        #     ck_mat = dou.load_npa(fdstr+truncstr+'__ck_mat')
-        #     bk_mat = dou.load_npa(fdstr+truncstr+'__bk_mat')
-        # except IOError:
-        #     print('couldn"t load the red system - compute it')
-        #     zwc = dou.load_npa(fdstr + '__zwc')
-        #     zwo = dou.load_npa(fdstr + '__zwo')
-        #     # MAF -- need to change the f_mat
-        #     ak_mat = np.dot(tl.T, f_mat*tr)
-        #     ck_mat = lau.mm_dnssps(c_mat_reg, tr)
-        #     bk_mat = lau.mm_dnssps(tl.T, b_mat_reg)
-        #     tltm, trtm = tl.T*stokesmatsc['M'], tr.T*stokesmatsc['M']
-        #     xok = np.dot(np.dot(tltm, zwo), np.dot(zwo.T, tltm.T))
-        #     xck = np.dot(np.dot(trtm, zwc), np.dot(zwc.T, trtm.T))
-        #     dou.save_npa(xok, fdstr+truncstr+'__xok')
-        #     dou.save_npa(xck, fdstr+truncstr+'__xck')
-        #     dou.save_npa(ak_mat, fdstr+truncstr+'__ak_mat')
-        #     dou.save_npa(ck_mat, fdstr+truncstr+'__ck_mat')
-        #     dou.save_npa(bk_mat, fdstr+truncstr+'__bk_mat')
-
         DT = (tE - t0)/(Nts-1)
-        cmpricfacpars = dict(multiproc=True, nwtn_adi_dict=nwtn_adi_dict)
-        cmprlprjpars = dict(trunc_lqgbtcv=trunc_lqgbtcv)
 
-        ak_mat, bk_mat, ck_mat, xok, xck = \
+        ak_mat, bk_mat, ck_mat, xok, xck, tl, tr = \
             nru.get_prj_model(truncstr=truncstr, fdstr=fdstr,
                               abconly=False,
                               mmat=mmat, fmat=f_mat_gramians, jmat=jmat,
@@ -589,18 +398,6 @@ def lqgbt(problemname='drivencavity',
                               Rmhalf=Rmhalf,
                               cmprlprjpars=cmprlprjpars)
 
-        # print('ako - akt = {0}'.format(np.linalg.norm(ak_mat - ak_matt)))
-        # print('bko - bkt = {0}'.format(np.linalg.norm(bk_mat - bk_matt)))
-        # print('cko - ckt = {0}'.format(np.linalg.norm(ck_mat - ck_matt)))
-        # print('xoko - xokt = {0}'.format(np.linalg.norm(xok - xokt)))
-        # print('xcko - xckt = {0}'.format(np.linalg.norm(xck - xckt)))
-        # zwo = dou.load_npa(fdstr + '__zwo')
-        # zwc = dou.load_npa(fdstr + '__zwc')
-        # zwot = dou.load_npa(fdstr + 'testit' + '__zwo')
-        # zwct = dou.load_npa(fdstr + 'testit' + '__zwc')
-        # print('zwo - zwot = {0}'.format(np.linalg.norm(zwo - zwot)))
-        # print('zwc - zwct = {0}'.format(np.linalg.norm(zwc - zwct)))
-        # import ipdb; ipdb.set_trace()
         obs_bk = np.dot(xok, ck_mat.T)
 
         sysmatk_inv = np.linalg.inv(np.eye(ak_mat.shape[1]) - DT*(ak_mat -

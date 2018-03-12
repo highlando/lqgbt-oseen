@@ -20,6 +20,7 @@ def get_ric_facs(fmat=None, mmat=None, jmat=None,
                  Rmhalf=None, Rmo=None,
                  ric_ini_str=None, fdstr=None,
                  nwtn_adi_dict=None,
+                 zwconly=False,
                  multiproc=False, pymess=False, checktheres=False):
 
     if pymess:
@@ -33,7 +34,8 @@ def get_ric_facs(fmat=None, mmat=None, jmat=None,
     if ric_ini_str is not None:
         try:
             zinic = dou.load_npa(ric_ini_str + '__zwc')
-            zinio = dou.load_npa(ric_ini_str + '__zwo')
+            if not zwconly:
+                zinio = dou.load_npa(ric_ini_str + '__zwo')
             print('Initialize Newton ADI by zwc/zwo from ' + ric_ini_str)
         except IOError:
             raise UserWarning('No data at `{0}` (for init of Ric solves)'.
@@ -42,6 +44,9 @@ def get_ric_facs(fmat=None, mmat=None, jmat=None,
     print('computing factors of Grams: \n\t' + fdstr + '__zwc/__zwo')
 
     def compobsg():
+        if zwconly:
+            print('we only compute zwc')
+            return
         try:
             zwo = dou.load_npa(fdstr + '__zwo')
             print('yeyeyeah, __zwo is there')
@@ -83,7 +88,8 @@ def get_ric_facs(fmat=None, mmat=None, jmat=None,
         compcong()
 
     zwc = dou.load_npa(fdstr + '__zwc')
-    zwo = dou.load_npa(fdstr + '__zwo')
+    if not zwconly:
+        zwo = dou.load_npa(fdstr + '__zwo')
 
     if checktheres:
         print('checking the Riccati residuals....')
@@ -115,7 +121,10 @@ def get_ric_facs(fmat=None, mmat=None, jmat=None,
         print('sqrd f-norm of rhs=B*B.T: ', nrhs**2)
         print('... done with checking the Riccati residuals!')
 
-    return zwc, zwo
+    if zwconly:
+        return zwc
+    else:
+        return zwc, zwo
 
 
 def get_rl_projections(fdstr=None, truncstr=None,
@@ -145,16 +154,10 @@ def get_rl_projections(fdstr=None, truncstr=None,
                                     cmat=cmat, bmat=bmat,
                                     Rmhalf=Rmhalf, Rmo=Rmo,
                                     **cmpricfacpars)
-        # print('norm zwc/zwo = {0}/{1}'.format(np.linalg.norm(zwc),
-        #                                       np.linalg.norm(zwo)))
-        # print('truncing at {0}:'.format(trunc_lqgbtcv))
         tl, tr, svs = btu.\
             compute_lrbt_transfos(zfc=zwc, zfo=zwo,
                                   mmat=mmat,
                                   trunck={'threshh': trunc_lqgbtcv})
-        # tls = tl.shape
-        # print('shape of tl: [{0}, {1}]'.format(tls[0], tls[1]))
-        # print(svs)
         dou.save_npa(tl, fdstr + truncstr + '__tl')
         dou.save_npa(tr, fdstr + truncstr + '__tr')
         dou.save_npa(svs, fdstr + '__svs')
@@ -169,7 +172,19 @@ def get_prj_model(truncstr=None, fdstr=None,
                   mmat=None, fmat=None, jmat=None, bmat=None, cmat=None,
                   zwo=None, zwc=None,
                   Rmhalf=None, Rmo=None,
+                  return_tltr=True,
                   cmpricfacpars={}, cmprlprjpars={}):
+
+    tltristhere = False
+    if return_tltr:
+        tl, tr = get_rl_projections(fdstr=fdstr, truncstr=truncstr,
+                                    zwc=zwc, zwo=zwo,
+                                    fmat=fmat, mmat=mmat, jmat=jmat,
+                                    cmat=cmat, bmat=bmat,
+                                    Rmhalf=Rmhalf, Rmo=Rmo,
+                                    cmpricfacpars=cmpricfacpars,
+                                    **cmprlprjpars)
+        tltristhere = True
 
     try:
         if debug:
@@ -181,13 +196,17 @@ def get_prj_model(truncstr=None, fdstr=None,
     except IOError:
         print('couldn"t load the red model - gonna compute it')
 
-        tl, tr = get_rl_projections(fdstr=fdstr, truncstr=truncstr,
-                                    zwc=zwc, zwo=zwo,
-                                    fmat=fmat, mmat=mmat, jmat=jmat,
-                                    cmat=cmat, bmat=bmat,
-                                    Rmhalf=Rmhalf, Rmo=Rmo,
-                                    cmpricfacpars=cmpricfacpars,
-                                    **cmprlprjpars)
+        if tltristhere:
+            pass
+        else:
+            tl, tr = get_rl_projections(fdstr=fdstr, truncstr=truncstr,
+                                        zwc=zwc, zwo=zwo,
+                                        fmat=fmat, mmat=mmat, jmat=jmat,
+                                        cmat=cmat, bmat=bmat,
+                                        Rmhalf=Rmhalf, Rmo=Rmo,
+                                        cmpricfacpars=cmpricfacpars,
+                                        **cmprlprjpars)
+            tltristhere = True
 
         ak_mat = np.dot(tl.T, fmat*tr)
         ck_mat = cmat.dot(tr)
@@ -213,10 +232,14 @@ def get_prj_model(truncstr=None, fdstr=None,
                                         Rmhalf=Rmhalf, Rmo=Rmo,
                                         **cmpricfacpars)
 
-            tl, tr = get_rl_projections(fdstr=fdstr, truncstr=truncstr,
-                                        mmat=mmat,
-                                        zwc=zwc, zwo=zwo,
-                                        **cmprlprjpars)
+            if tltristhere:
+                pass
+            else:
+                tl, tr = get_rl_projections(fdstr=fdstr, truncstr=truncstr,
+                                            mmat=mmat,
+                                            zwc=zwc, zwo=zwo,
+                                            **cmprlprjpars)
+                tltristhere = True
 
             tltm, trtm = tl.T*mmat, tr.T*mmat
             xok = np.dot(np.dot(tltm, zwo), np.dot(zwo.T, tltm.T))
@@ -224,4 +247,8 @@ def get_prj_model(truncstr=None, fdstr=None,
             dou.save_npa(xok, fdstr+truncstr+'__xok')
             dou.save_npa(xck, fdstr+truncstr+'__xck')
 
-        return ak_mat, bk_mat, ck_mat, xok, xck
+        if return_tltr:
+            return ak_mat, bk_mat, ck_mat, xok, xck, tl, tr
+
+        else:
+            return ak_mat, bk_mat, ck_mat, xok, xck
