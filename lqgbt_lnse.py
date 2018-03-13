@@ -13,6 +13,7 @@ import sadptprj_riclyap_adi.bal_trunc_utils as btu
 import distr_control_fenics.cont_obs_utils as cou
 
 import nse_riccont_utils as nru
+import nse_extlin_utils as neu
 
 debug = False
 
@@ -55,6 +56,7 @@ def lqgbt(problemname='drivencavity',
           nwtn_adi_dict=None,
           pymess_dict=None,
           whichinival='sstate',
+          tpp=2.,  # time to add on Stokes inival for `sstokes++`
           comp_freqresp=False, comp_stepresp='nonlinear',
           closed_loop=False, multiproc=False,
           perturbpara=1e-3,
@@ -152,9 +154,12 @@ def lqgbt(problemname='drivencavity',
     else:
         contsetupstr = 'NV{0}NU{1}NY{2}'.format(NV, NU, NY)
 
+    inivstr = whichinival if not whichinival == 'sstokes++' \
+        else 'sstokes++{0}'.format(tpp)
+
     def get_fdstr(Re):
         return ddir + problemname + '_Re{0}_gamma{1}_'.format(Re, gamma) + \
-            contsetupstr + prbstr
+            contsetupstr + prbstr + inivstr
 
     fdstr = get_fdstr(Re)
     fdstrini = get_fdstr(use_ric_ini) if use_ric_ini is not None else None
@@ -240,6 +245,7 @@ def lqgbt(problemname='drivencavity',
     f_mat = - stokesmatsc['A'] - convc_mat
     # the robin term `arob` has been added before
     mmat = stokesmatsc['M']
+    amat = stokesmatsc['A']
     jmat = stokesmatsc['J']
 
     # MAF -- need to change the convc_mat, i.e. we need another v_ss_nse
@@ -482,19 +488,55 @@ def lqgbt(problemname='drivencavity',
 
         soldict.update(dict(verbose=False))
 
+    elif closed_loop == 'red_sdre_feedback':
+
+        get_cur_sdccoeff = neu.get_get_cur_extlin(vinf=v_ss_nse, amat=amat,
+                                                  **femp)
+
+        def sdre_feedback(curvel=None, memory=None,
+                          sdre_ric_ini=None,
+                          updtthrsh=None, time=None, **kw):
+            ''' function for the SDRE feedback
+
+            Parameters
+            ---
+            use_ric_ini : string, optional
+                path to a stabilizing initial guess
+            '''
+
+            curfmat = get_cur_sdccoeff(vcur=curvel)
+            if memory['pzero'] is None:
+                sdrefdstr = fdstr + '_SDREini'
+                czwc = nru.\
+                    get_ric_facs(fdstr=sdrefdstr, fmat=-curfmat, mmat=mmat,
+                                 jmat=jmat,
+                                 bmat=b_mat_reg, cmat=c_mat_reg,
+                                 ric_ini_str=fdstrini,
+                                 Rmhalf=Rmhalf, nwtn_adi_dict=nwtn_adi_dict,
+                                 zwconly=True, multiproc=multiproc)
+                import ipdb; ipdb.set_trace()
+
+        fv_sdre_dict = dict(updtthrsh=.9, sdre_ric_ini=fdstr)
+
+        fv_tmdp = fv_tmdp_redoutpfb
+        fv_tmdp_params = fv_sdre_dict
+        fv_tmdp_memory = dict(pzero=None)
+
+        # 1. prelims
+        #    * func:get Riccati Grams at current state
+        #    * get reduced model (func: Ak(vdelta(t)))
+        # 2. func: sdre_fblaw
+        #    compute E -- solve sylvester
+        #    reset Grams and Ak, Bk, etc
+        pass
+
     else:
         fv_tmdp = None
         fv_tmdp_params = {}
         fv_tmdp_memory = {}
 
-    perturbini = perturbpara*np.ones((NV, 1))
-    reg_pertubini = lau.app_prj_via_sadpnt(amat=stokesmatsc['M'],
-                                           jmat=stokesmatsc['J'],
-                                           rhsv=perturbini)
-
     soldict.update(fv_stbc=rhsd_stbc['fv'],
                    trange=trange,
-                   iniv=v_ss_nse + reg_pertubini,
                    lin_vel_point=None,
                    clearprvdata=True, data_prfx=fdstr + truncstr,
                    fv_tmdp=fv_tmdp,
@@ -507,9 +549,12 @@ def lqgbt(problemname='drivencavity',
         print('we start with Stokes -- `perturbpara` is not considered')
         soldict.update(dict(iniv=None, start_ssstokes=True))
     elif whichinival == 'sstate+d':
+        perturbini = perturbpara*np.ones((NV, 1))
+        reg_pertubini = lau.app_prj_via_sadpnt(amat=stokesmatsc['M'],
+                                               jmat=stokesmatsc['J'],
+                                               rhsv=perturbini)
         soldict.update(dict(iniv=v_ss_nse + reg_pertubini))
     elif whichinival == 'sstokes++':
-        tpp = 2.
         lctrng = (trange[trange < tpp]).tolist()
         lctrng.append(tpp)
 
