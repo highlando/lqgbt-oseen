@@ -1,4 +1,6 @@
 import numpy as np
+import numpy.linalg as npla
+import scipy.linalg as spla
 
 import dolfin_navier_scipy.data_output_utils as dou
 
@@ -12,7 +14,7 @@ __all__ = ['get_ric_facs',
 pymess = False
 pymess_dict = {}
 plain_bt = False
-debug = True
+debug = False
 
 
 def get_ric_facs(fmat=None, mmat=None, jmat=None,
@@ -171,12 +173,17 @@ def get_prj_model(truncstr=None, fdstr=None,
                   abconly=False,
                   mmat=None, fmat=None, jmat=None, bmat=None, cmat=None,
                   zwo=None, zwc=None,
+                  tl=None, tr=None,
                   Rmhalf=None, Rmo=None,
                   return_tltr=True,
                   cmpricfacpars={}, cmprlprjpars={}):
 
-    tltristhere = False
-    if return_tltr:
+    if tl is None or tr is None:
+        tltristhere = False
+    else:
+        tltristhere = True
+
+    if not tltristhere and return_tltr:
         tl, tr = get_rl_projections(fdstr=fdstr, truncstr=truncstr,
                                     zwc=zwc, zwo=zwo,
                                     fmat=fmat, mmat=mmat, jmat=jmat,
@@ -252,3 +259,31 @@ def get_prj_model(truncstr=None, fdstr=None,
 
         else:
             return ak_mat, bk_mat, ck_mat, xok, xck
+
+
+def get_sdrefb_upd(amat, t, fbtype=None, wnrm=2,
+                   B=None, R=None, Q=None, maxeps=None,
+                   baseA=None, baseZ=None, baseP=None, maxfac=None, **kwargs):
+    if fbtype == 'sylvupdfb' or fbtype == 'singsylvupd':
+        deltaA = amat - baseA
+        epsP = spla.solve_sylvester(amat, -baseZ, -deltaA)
+        eps = npla.norm(epsP, ord=wnrm)
+        print('|amat - baseA|: {0} -- |E|: {1}'.format(npla.norm(deltaA), eps))
+        if maxeps is not None:
+            if eps < maxeps:
+                opepsPinv = npla.inv(epsP+np.eye(epsP.shape[0]))
+                return baseP.dot(opepsPinv), True
+        elif maxfac is not None:
+            if (1+eps)/(1-eps) < maxfac and eps < 1:
+                opepsPinv = npla.inv(epsP+np.eye(epsP.shape[0]))
+                return baseP.dot(opepsPinv), True
+
+    # otherwise: eps too large
+    # otherwise: (SDRE feedback or `eps` too large already)
+    # curX = spla.solve_continuous_are(amat, B, Q, R)
+    # if fbtype == 'sylvupdfb' or fbtype == 'singsylvupd':
+    #     logger.debug('in `get_fb_dict`: t={0}: eps={1} too large, switch!'.
+    #                  format(t, eps))
+    # else:
+    #     logger.debug('t={0}: computed the SDRE feedback')
+    return None, False

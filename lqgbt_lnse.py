@@ -22,6 +22,9 @@ checktheres = False
 
 switchonsfb = 0  # 1.5
 
+# TODO: clear distinction of target state, linearization point, initial value
+# TODO: maybe redefine: by now we need to use -fmat all the time (but +ak_mat)
+
 
 def nwtn_adi_params():
     """
@@ -147,19 +150,24 @@ def lqgbt(problemname='drivencavity',
     if bccontrol:
         import scipy.sparse as sps
         contsetupstr = 'NV{0}_bcc_NY{1}_palpha{2}'.format(NV, NY, palpha)
+        shortcontsetupstr = '{0}{1}{2}'.format(NV, NY, np.int(np.log2(palpha)))
         stokesmatsc['A'] = stokesmatsc['A'] + 1./palpha*stokesmatsc['Arob']
         b_mat = 1./palpha*stokesmatsc['Brob']
         u_masmat = sps.eye(b_mat.shape[1], format='csr')
         print(' ### Robin-type boundary control palpha={0}'.format(palpha))
     else:
         contsetupstr = 'NV{0}NU{1}NY{2}'.format(NV, NU, NY)
+        shortcontsetupstr = '{0}{1}{2}'.format(NV, NU, NY)
 
-    inivstr = whichinival if not whichinival == 'sstokes++' \
-        else 'sstokes++{0}'.format(tpp)
+    inivstr = '_' + whichinival if not whichinival == 'sstokes++' \
+        else '_sstokes++{0}'.format(tpp)
 
-    def get_fdstr(Re):
+    def get_fdstr(Re, short=False):
+        if short:
+            return ddir + 'cw' + '{0}{1}_'.format(Re, gamma) + \
+                shortcontsetupstr
         return ddir + problemname + '_Re{0}_gamma{1}_'.format(Re, gamma) + \
-            contsetupstr + prbstr + inivstr
+            contsetupstr + prbstr
 
     fdstr = get_fdstr(Re)
     fdstrini = get_fdstr(use_ric_ini) if use_ric_ini is not None else None
@@ -225,7 +233,7 @@ def lqgbt(problemname='drivencavity',
     soldict.update(stokesmatsc)  # containing A, J, JT
     soldict.update(femp)  # adding V, Q, invinds, diribcs
     # soldict.update(rhsd_vfrc)  # adding fvc, fpr
-    veldatastr = ddir + problemname + '_Re{0}'
+    veldatastr = ddir + problemname + '_Re{0}'.format(Re)
     if bccontrol:
         veldatastr = veldatastr + '__bcc_palpha{0}'.format(palpha)
 
@@ -273,7 +281,13 @@ def lqgbt(problemname='drivencavity',
 #
     Rmo, Rmhalf = 1./gamma, 1./np.sqrt(gamma)
 
-    truncstr = '__lqgbtcv{0}'.format(trunc_lqgbtcv)
+    if closed_loop == 'red_output_fb' or closed_loop == 'red_sdre_fb':
+        truncstr = '__lqgbtcv{0}'.format(trunc_lqgbtcv)
+        shorttruncstr = '{0}'.format(trunc_lqgbtcv)
+    else:
+        truncstr = '_'
+        shorttruncstr = '_'
+
     cmpricfacpars = dict(multiproc=multiproc, nwtn_adi_dict=nwtn_adi_dict,
                          ric_ini_str=fdstrini)
     cmprlprjpars = dict(trunc_lqgbtcv=trunc_lqgbtcv)
@@ -336,6 +350,7 @@ def lqgbt(problemname='drivencavity',
         return
 
     elif closed_loop == 'full_state_fb':
+        shortclstr = 'fsfb'
         zwc = nru.get_ric_facs(fdstr=fdstr,
                                fmat=f_mat_gramians, mmat=mmat,
                                jmat=jmat, bmat=b_mat_reg, cmat=c_mat_reg,
@@ -343,6 +358,7 @@ def lqgbt(problemname='drivencavity',
                                nwtn_adi_dict=nwtn_adi_dict, zwconly=True,
                                multiproc=multiproc, pymess=False,
                                checktheres=False)
+
         mtxb = pru.get_mTzzTtb(stokesmatsc['M'].T, zwc, b_mat_reg)
 
         dimu = b_mat.shape[1]
@@ -393,6 +409,7 @@ def lqgbt(problemname='drivencavity',
         fv_tmdp_memory = None
 
     elif closed_loop == 'red_output_fb':
+        shortclstr = 'rofb'
         DT = (tE - t0)/(Nts-1)
 
         ak_mat, bk_mat, ck_mat, xok, xck, tl, tr = \
@@ -488,13 +505,40 @@ def lqgbt(problemname='drivencavity',
 
         soldict.update(dict(verbose=False))
 
-    elif closed_loop == 'red_sdre_feedback':
+    elif closed_loop == 'red_sdre_fb':
+        shortclstr = 'rdsdrfb'
 
-        get_cur_sdccoeff = neu.get_get_cur_extlin(vinf=v_ss_nse, amat=amat,
+        sdcpicard = 1.
+        vinf = v_ss_nse
+        get_cur_sdccoeff = neu.get_get_cur_extlin(vinf=vinf, amat=amat,
+                                                  picrdvsnwtn=sdcpicard,
                                                   **femp)
+        sdre_ric_ini = fdstr
+        cmpricfacpars.update(ric_ini_str=sdre_ric_ini)
+
+        def solve_sdre(curfmat, memory=None, eps=None, time=None):
+            if memory['basePk'] is None:  # initialization
+                sdrefdstr = fdstr + inivstr + '_SDREini'
+            else:
+                sdrefdstr = (fdstr + inivstr +
+                             '_SDREeps{0}t{1:.2e}'.format(eps, time))
+            ak_mat, cur_bk, _, _, cxck, cur_tl, cur_tr = \
+                nru.get_prj_model(truncstr=truncstr, fdstr=sdrefdstr,
+                                  mmat=mmat, fmat=-curfmat, jmat=jmat,
+                                  bmat=b_mat_reg, cmat=c_mat_reg,
+                                  Rmhalf=Rmhalf,
+                                  cmpricfacpars=cmpricfacpars,
+                                  cmprlprjpars=cmprlprjpars)
+            cmpricfacpars.update(ric_ini_str=sdrefdstr)
+            baseGain = cur_bk.T.dot(cxck)
+            memory.update(baseAk=ak_mat)
+            memory.update(basePk=cxck, baseGain=baseGain)
+            memory.update(baseZk=ak_mat - cur_bk.dot(baseGain))
+            memory.update(cur_bk=cur_bk)
+            memory.update(cur_tl=cur_tl, cur_tr=cur_tr)
+            return
 
         def sdre_feedback(curvel=None, memory=None,
-                          sdre_ric_ini=None,
                           updtthrsh=None, time=None, **kw):
             ''' function for the SDRE feedback
 
@@ -505,22 +549,70 @@ def lqgbt(problemname='drivencavity',
             '''
 
             curfmat = get_cur_sdccoeff(vcur=curvel)
-            if memory['pzero'] is None:
-                sdrefdstr = fdstr + '_SDREini'
-                czwc = nru.\
-                    get_ric_facs(fdstr=sdrefdstr, fmat=-curfmat, mmat=mmat,
-                                 jmat=jmat,
-                                 bmat=b_mat_reg, cmat=c_mat_reg,
-                                 ric_ini_str=fdstrini,
-                                 Rmhalf=Rmhalf, nwtn_adi_dict=nwtn_adi_dict,
-                                 zwconly=True, multiproc=multiproc)
-                import ipdb; ipdb.set_trace()
 
-        fv_sdre_dict = dict(updtthrsh=.9, sdre_ric_ini=fdstr)
+            if memory['basePk'] is None:  # initialization
+                memory.update(basev=curvel)
+                solve_sdre(curfmat, memory=memory)
 
-        fv_tmdp = fv_tmdp_redoutpfb
+                redvdiff = memory['cur_tl'].T.dot(mmat*(curvel-vinf))
+                actua = -b_mat_reg.dot(memory['baseGain'].dot(redvdiff))
+                return actua, memory
+
+                # sdrefdstr = sdre_ric_ini  # TODO: debugging here
+                # czwc, czwo = nru.\
+                #     get_ric_facs(fdstr=sdrefdstr, fmat=-curfmat, mmat=mmat,
+                #                  jmat=jmat,
+                #                  bmat=b_mat_reg, cmat=c_mat_reg,
+                #                  ric_ini_str=sdre_ric_ini,
+                #                  Rmhalf=Rmhalf, nwtn_adi_dict=nwtn_adi_dict,
+                #                  zwconly=False, multiproc=multiproc)
+
+            # ## updated sdre feedback
+            cur_tr = memory['cur_tr']
+            cur_tl = memory['cur_tl']
+            curak = -cur_tl.T.dot(curfmat.dot(cur_tr))
+            # print('norm Ak: {0}'.format(np.linalg.norm(curak)))
+            # print('diff: `akbase-aknow`: {0}'.
+            #       format(np.linalg.norm(curak-memory['baseAk'])))
+            redvdiff = memory['cur_tl'].T.dot(mmat*(curvel-vinf))
+            # print('diff: `curv-linv`: {0}'.format(np.linalg.norm(redvdiff)))
+            pupd, elteps = nru.\
+                get_sdrefb_upd(curak, time, fbtype='sylvupdfb', wnrm=2,
+                               baseA=memory['baseAk'], baseZ=memory['baseZk'],
+                               baseP=memory['basePk'],
+                               maxfac=None, maxeps=updtthrsh)
+
+            if elteps:  # E less than eps
+                updGain = memory['cur_bk'].T.dot(pupd)
+                redvdiff = memory['cur_tl'].T.dot(mmat*(curvel-vinf))
+                actua = -b_mat_reg.dot(updGain.dot(redvdiff))
+                return actua, memory
+
+            else:
+                memory.update(basev=curvel)
+                solve_sdre(curfmat, memory=memory, eps=updtthrsh, time=time)
+                redvdiff = memory['cur_tl'].T.dot(mmat*(curvel-vinf))
+                actua = -b_mat_reg.dot(memory['baseGain'].dot(redvdiff))
+                return actua, memory
+
+            # zwc = memory['czwc']
+
+            # btxm_mat = pru.get_mTzzTtb(stokesmatsc['M'].T, zwc, b_mat_reg).T
+            # actua = -lau.comp_uvz_spdns(b_mat_reg, btxm_mat, curvel-vinf)
+            # actua = -lau.comp_uvz_spdns(b_mat_reg, cur_f,
+            #                             cur_tl.T.dot(mmat*(curvel-vinf)))
+            # diffv = curvel-vinf
+            # rldiffv = cur_tr.dot(cur_tr.T.dot(mmat*(diffv)))
+            # nrmrldiffv = np.linalg.norm(rldiffv)
+            # print('norm of prj/lfd veldiff: {0}'.format(nrmrldiffv))
+            # import ipdb; ipdb.set_trace()
+            return actua, memory
+
+        fv_sdre_dict = dict(updtthrsh=.9)
+
+        fv_tmdp = sdre_feedback
         fv_tmdp_params = fv_sdre_dict
-        fv_tmdp_memory = dict(pzero=None)
+        fv_tmdp_memory = dict(basePk=None)
 
         # 1. prelims
         #    * func:get Riccati Grams at current state
@@ -534,11 +626,12 @@ def lqgbt(problemname='drivencavity',
         fv_tmdp = None
         fv_tmdp_params = {}
         fv_tmdp_memory = {}
+        shortclstr = '_'
 
     soldict.update(fv_stbc=rhsd_stbc['fv'],
                    trange=trange,
                    lin_vel_point=None,
-                   clearprvdata=True, data_prfx=fdstr + truncstr,
+                   clearprvdata=True,
                    fv_tmdp=fv_tmdp,
                    comp_nonl_semexp=True,
                    fv_tmdp_params=fv_tmdp_params,
@@ -548,12 +641,14 @@ def lqgbt(problemname='drivencavity',
     if whichinival == 'sstokes':
         print('we start with Stokes -- `perturbpara` is not considered')
         soldict.update(dict(iniv=None, start_ssstokes=True))
+        shortinivstr = 'sks'
     elif whichinival == 'sstate+d':
         perturbini = perturbpara*np.ones((NV, 1))
         reg_pertubini = lau.app_prj_via_sadpnt(amat=stokesmatsc['M'],
                                                jmat=stokesmatsc['J'],
                                                rhsv=perturbini)
         soldict.update(dict(iniv=v_ss_nse + reg_pertubini))
+        shortinivstr = 'ssd'
     elif whichinival == 'sstokes++':
         lctrng = (trange[trange < tpp]).tolist()
         lctrng.append(tpp)
@@ -579,6 +674,7 @@ def lqgbt(problemname='drivencavity',
             sstokspp = dou.load_npa(dcvlstrs[tpp])
             dou.save_npa(sstokspp, stksppdtstr)
         soldict.update(dict(iniv=sstokspp))
+        shortinivstr = 'sk{0}'.format(tpp)
 
     outstr = truncstr + '{0}'.format(closed_loop) \
         + 't0{0}tE{1}Nts{2}N{3}Re{4}'.format(t0, tE, Nts, N, Re)
@@ -587,6 +683,9 @@ def lqgbt(problemname='drivencavity',
                        vfileprfx='results/vel_'+outstr,
                        pfileprfx='results/p_'+outstr)
 
+    shortstring = (get_fdstr(Re, short=True) + shortcontsetupstr +
+                   shortclstr + shorttruncstr + shortinivstr)
+    soldict.update(data_prfx=shortstring)
     dictofvelstrs = snu.solve_nse(**soldict)
 
     yscomplist = cou.extract_output(strdict=dictofvelstrs, tmesh=trange,
