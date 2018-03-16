@@ -215,7 +215,7 @@ def get_prj_model(truncstr=None, fdstr=None,
                                         **cmprlprjpars)
             tltristhere = True
 
-        ak_mat = np.dot(tl.T, fmat*tr)
+        ak_mat = np.dot(tl.T, fmat.dot(tr))
         ck_mat = cmat.dot(tr)
         bk_mat = tl.T.dot(bmat)
         dou.save_npa(ak_mat, fdstr+truncstr+'__ak_mat')
@@ -268,7 +268,8 @@ def get_sdrefb_upd(amat, t, fbtype=None, wnrm=2,
         deltaA = amat - baseA
         epsP = spla.solve_sylvester(amat, -baseZ, -deltaA)
         eps = npla.norm(epsP, ord=wnrm)
-        print('|amat - baseA|: {0} -- |E|: {1}'.format(npla.norm(deltaA), eps))
+        print('|amat - baseA|: {0} -- |E|: {1}'.
+              format(npla.norm(deltaA, ord=wnrm), eps))
         if maxeps is not None:
             if eps < maxeps:
                 opepsPinv = npla.inv(epsP+np.eye(epsP.shape[0]))

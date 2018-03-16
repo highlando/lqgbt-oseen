@@ -59,7 +59,7 @@ def lqgbt(problemname='drivencavity',
           nwtn_adi_dict=None,
           pymess_dict=None,
           whichinival='sstate',
-          tpp=2.,  # time to add on Stokes inival for `sstokes++`
+          tpp=5.,  # time to add on Stokes inival for `sstokes++`
           comp_freqresp=False, comp_stepresp='nonlinear',
           closed_loop=False, multiproc=False,
           perturbpara=1e-3,
@@ -548,10 +548,14 @@ def lqgbt(problemname='drivencavity',
                 path to a stabilizing initial guess
             '''
 
+            norm = np.linalg.norm
+            print('time: {0}, |v|: {1}'.format(time, norm(curvel)))
+            print('time: {0}, |vinf|: {1}'.format(time, norm(vinf)))
             curfmat = get_cur_sdccoeff(vcur=curvel)
 
             if memory['basePk'] is None:  # initialization
-                memory.update(basev=curvel)
+                savethev = np.copy(curvel)
+                memory.update(basev=savethev)
                 solve_sdre(curfmat, memory=memory)
 
                 redvdiff = memory['cur_tl'].T.dot(mmat*(curvel-vinf))
@@ -575,7 +579,7 @@ def lqgbt(problemname='drivencavity',
             # print('diff: `akbase-aknow`: {0}'.
             #       format(np.linalg.norm(curak-memory['baseAk'])))
             redvdiff = memory['cur_tl'].T.dot(mmat*(curvel-vinf))
-            # print('diff: `curv-linv`: {0}'.format(np.linalg.norm(redvdiff)))
+            print('diff: `curv-linv`: {0}'.format(np.linalg.norm(redvdiff)))
             pupd, elteps = nru.\
                 get_sdrefb_upd(curak, time, fbtype='sylvupdfb', wnrm=2,
                                baseA=memory['baseAk'], baseZ=memory['baseZk'],
@@ -589,7 +593,19 @@ def lqgbt(problemname='drivencavity',
                 return actua, memory
 
             else:
-                memory.update(basev=curvel)
+                tl = memory['cur_tl']
+                tr = memory['cur_tr']
+                prvvel = memory['basev']
+                prvfmat = get_cur_sdccoeff(vcur=prvvel)
+                prvak = -tl.T.dot(prvfmat.dot(tr))
+                basak = memory['baseAk']
+                print('|prv Ak|: {0}'.format(norm(prvak)))
+                print('|cur Ak|: {0}'.format(norm(curak)))
+                print('|bas Ak|: {0}'.format(norm(basak)))
+
+                savethev = np.copy(curvel)
+                memory.update(basev=savethev)
+                # memory.update(basev=curvel)
                 solve_sdre(curfmat, memory=memory, eps=updtthrsh, time=time)
                 redvdiff = memory['cur_tl'].T.dot(mmat*(curvel-vinf))
                 actua = -b_mat_reg.dot(memory['baseGain'].dot(redvdiff))
