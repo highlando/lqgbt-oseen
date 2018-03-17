@@ -580,6 +580,7 @@ def lqgbt(problemname='drivencavity',
             #       format(np.linalg.norm(curak-memory['baseAk'])))
             redvdiff = memory['cur_tl'].T.dot(mmat*(curvel-vinf))
             print('diff: `curv-linv`: {0}'.format(np.linalg.norm(redvdiff)))
+            print('|basegain|: {0}'.format(np.linalg.norm(memory['baseGain'])))
             pupd, elteps = nru.\
                 get_sdrefb_upd(curak, time, fbtype='sylvupdfb', wnrm=2,
                                baseA=memory['baseAk'], baseZ=memory['baseZk'],
@@ -636,7 +637,63 @@ def lqgbt(problemname='drivencavity',
         # 2. func: sdre_fblaw
         #    compute E -- solve sylvester
         #    reset Grams and Ak, Bk, etc
-        pass
+
+    elif closed_loop == 'redmod_sdre_fb':
+        shortclstr = 'rdmdsdrfb'
+
+        _, bk_mat, ck_mat, _, _, basetl, basetr = \
+            nru.get_prj_model(truncstr=truncstr, fdstr=fdstr,
+                              mmat=mmat, fmat=f_mat_gramians, jmat=jmat,
+                              bmat=b_mat_reg, cmat=c_mat_reg,
+                              cmpricfacpars=cmpricfacpars,
+                              Rmhalf=Rmhalf,
+                              cmprlprjpars=cmprlprjpars)
+        cktck = ck_mat.T.dot(ck_mat)
+
+        sdcpicard = 1.
+        vinf = v_ss_nse
+        get_cur_sdccoeff = neu.get_get_cur_extlin(vinf=vinf, amat=amat,
+                                                  picrdvsnwtn=sdcpicard,
+                                                  **femp)
+
+        sdre_ric_ini = fdstr
+        cmpricfacpars.update(ric_ini_str=sdre_ric_ini)
+
+        def redsdre_feedback(curvel=None, memory=None,
+                             updtthrsh=None, time=None, **kw):
+            ''' function for the SDRE feedback
+
+            '''
+
+            norm = np.linalg.norm
+            print('time: {0}, |v|: {1}'.format(time, norm(curvel)))
+            print('time: {0}, |vinf|: {1}'.format(time, norm(vinf)))
+            curfmat = get_cur_sdccoeff(vcur=curvel)
+            curak = -basetl.T.dot(curfmat.dot(basetr))
+            redvdiff = basetl.T.dot(mmat*(curvel-vinf))
+            print('diff: `curv-linv`: {0}'.format(np.linalg.norm(redvdiff)))
+
+            pupd, elteps = nru.\
+                get_sdrefb_upd(curak, time, fbtype='sylvupdfb', wnrm=2,
+                               baseA=memory['baseAk'], baseZ=memory['baseZk'],
+                               baseP=memory['basePk'],
+                               B=bk_mat, Q=cktck,
+                               R=Rmo*np.eye(bk_mat.shape[1]),
+                               maxfac=None, maxeps=updtthrsh)
+
+            actua = -b_mat_reg.dot(bk_mat.T.dot(pupd.dot(redvdiff)))
+
+            if not elteps:
+                baseZk = curak - bk_mat.dot(bk_mat.T.dot(pupd))
+                memory.update(dict(basePk=pupd, baseAk=curak, baseZk=baseZk))
+
+            return actua, memory
+
+        fv_sdre_dict = dict(updtthrsh=.9)
+
+        fv_tmdp = redsdre_feedback
+        fv_tmdp_params = fv_sdre_dict
+        fv_tmdp_memory = dict(basePk=None, baseAk=None, baseZk=None)
 
     else:
         fv_tmdp = None

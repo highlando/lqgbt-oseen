@@ -9,7 +9,7 @@ import getopt
 # to compute stabilizing initial values for higher Re numbers
 pymess = True
 pymess = False
-relist = [5.0e1, 7.5e1, 9.0e1]
+relist = [None, 5.0e1]  # , 7.5e1, 9.0e1]
 # , 1.15e2, 1.25e2]  # 1.01e2]
 # relist = [None, 5.0e1, 1.0e2, 1.075e2, 1.11e2]
 # , 1.15e2]  # , 1.25e2]  # , 1.35e2]  # , 1.45e2]
@@ -43,6 +43,7 @@ closed_loop = 'full_state_fb'
 closed_loop = 'red_output_fb'
 closed_loop = None
 closed_loop = 'red_sdre_fb'
+closed_loop = 'redmod_sdre_fb'
 # what inival
 whichinival = 'sstokes'  # steady state Stokes solution
 whichinival = 'sstate+d'  # sstate plus perturbation
@@ -151,6 +152,7 @@ for ctrunc in trunclist:
                          pymess=pymess, pymess_dict=pymess_dict,
                          # closed_loop='red_output_fb',
                          # closed_loop=None,
+                         plotit=False,
                          whichinival=whichinival,
                          trytofail=trytofail, ttf_npcrdstps=ttf_npcrdstps,
                          robit=robit, robmrgnfac=robmrgnfac,

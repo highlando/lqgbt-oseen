@@ -265,26 +265,26 @@ def get_sdrefb_upd(amat, t, fbtype=None, wnrm=2,
                    B=None, R=None, Q=None, maxeps=None,
                    baseA=None, baseZ=None, baseP=None, maxfac=None, **kwargs):
     if fbtype == 'sylvupdfb' or fbtype == 'singsylvupd':
-        deltaA = amat - baseA
-        epsP = spla.solve_sylvester(amat, -baseZ, -deltaA)
-        eps = npla.norm(epsP, ord=wnrm)
-        print('|amat - baseA|: {0} -- |E|: {1}'.
-              format(npla.norm(deltaA, ord=wnrm), eps))
-        if maxeps is not None:
-            if eps < maxeps:
-                opepsPinv = npla.inv(epsP+np.eye(epsP.shape[0]))
-                return baseP.dot(opepsPinv), True
-        elif maxfac is not None:
-            if (1+eps)/(1-eps) < maxfac and eps < 1:
-                opepsPinv = npla.inv(epsP+np.eye(epsP.shape[0]))
-                return baseP.dot(opepsPinv), True
+        if baseP is not None:
+            deltaA = amat - baseA
+            epsP = spla.solve_sylvester(amat, -baseZ, -deltaA)
+            eps = npla.norm(epsP, ord=wnrm)
+            print('|amat - baseA|: {0} -- |E|: {1}'.
+                  format(npla.norm(deltaA, ord=wnrm), eps))
+            if maxeps is not None:
+                if eps < maxeps:
+                    opepsPinv = npla.inv(epsP+np.eye(epsP.shape[0]))
+                    return baseP.dot(opepsPinv), True
+            elif maxfac is not None:
+                if (1+eps)/(1-eps) < maxfac and eps < 1:
+                    opepsPinv = npla.inv(epsP+np.eye(epsP.shape[0]))
+                    return baseP.dot(opepsPinv), True
 
-    # otherwise: eps too large
     # otherwise: (SDRE feedback or `eps` too large already)
-    # curX = spla.solve_continuous_are(amat, B, Q, R)
+    curX = spla.solve_continuous_are(amat, B, Q, R)
     # if fbtype == 'sylvupdfb' or fbtype == 'singsylvupd':
     #     logger.debug('in `get_fb_dict`: t={0}: eps={1} too large, switch!'.
     #                  format(t, eps))
     # else:
     #     logger.debug('t={0}: computed the SDRE feedback')
-    return None, False
+    return curX, False
