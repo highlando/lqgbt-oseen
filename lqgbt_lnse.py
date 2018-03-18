@@ -641,9 +641,9 @@ def lqgbt(problemname='drivencavity',
     elif closed_loop == 'redmod_sdre_fb':
         shortclstr = 'rdmdsdrfb'
 
-        _, bk_mat, ck_mat, _, _, basetl, basetr = \
+        ak_mat, bk_mat, ck_mat, _, _, basetl, basetr = \
             nru.get_prj_model(truncstr=truncstr, fdstr=fdstr,
-                              mmat=mmat, fmat=f_mat_gramians, jmat=jmat,
+                              mmat=mmat, fmat=-f_mat_gramians, jmat=jmat,
                               bmat=b_mat_reg, cmat=c_mat_reg,
                               cmpricfacpars=cmpricfacpars,
                               Rmhalf=Rmhalf,
@@ -666,12 +666,14 @@ def lqgbt(problemname='drivencavity',
             '''
 
             norm = np.linalg.norm
-            print('time: {0}, |v|: {1}'.format(time, norm(curvel)))
-            print('time: {0}, |vinf|: {1}'.format(time, norm(vinf)))
+            # print('time: {0}, |v|: {1}'.format(time, norm(curvel)))
+            # print('time: {0}, |vinf|: {1}'.format(time, norm(vinf)))
             curfmat = get_cur_sdccoeff(vcur=curvel)
             curak = -basetl.T.dot(curfmat.dot(basetr))
             redvdiff = basetl.T.dot(mmat*(curvel-vinf))
-            print('diff: `curv-linv`: {0}'.format(np.linalg.norm(redvdiff)))
+
+            print('time: {0:.5f} -- reddiff: `curv-linv`: {1}'.
+                  format(time, norm(redvdiff)))
 
             pupd, elteps = nru.\
                 get_sdrefb_upd(curak, time, fbtype='sylvupdfb', wnrm=2,
@@ -686,6 +688,16 @@ def lqgbt(problemname='drivencavity',
             if not elteps:
                 baseZk = curak - bk_mat.dot(bk_mat.T.dot(pupd))
                 memory.update(dict(basePk=pupd, baseAk=curak, baseZk=baseZk))
+
+            if time > 0.006:
+                prvvel = memory['prevvel']
+                difftopv = prvvel - curvel
+                difff = get_cur_sdccoeff(vcur=curvel) - \
+                    get_cur_sdccoeff(vcur=prvvel)
+                diffak = -basetl.T.dot(difff.dot(basetr))
+                ndiffak = norm(diffak)
+                import ipdb; ipdb.set_trace()
+            memory.update(prevvel=curvel)
 
             return actua, memory
 
@@ -748,6 +760,57 @@ def lqgbt(problemname='drivencavity',
             dou.save_npa(sstokspp, stksppdtstr)
         soldict.update(dict(iniv=sstokspp))
         shortinivstr = 'sk{0}'.format(tpp)
+
+    checkdaredmod = True
+    checkdaredmod = False
+    if checkdaredmod:
+        import spacetime_galerkin_pod.gen_pod_utils as gpu
+        # akm = basetl.T.dot(amat*basetr)
+        # nk = basetl.shape[1]
+
+        redmod = False
+        redmod = True
+        if redmod:
+            curiniv = basetl.T.dot(mmat*(soldict['iniv']-vinf))
+            nk = basetr.shape[1]
+
+            def rednonl(vvec, t):
+                inflv = basetr.dot(vvec.reshape((nk, 1)))
+                curcoeff = get_cur_sdccoeff(vdelta=inflv)
+                returval = basetl.T.dot(curcoeff.dot(inflv))
+                return returval.flatten()
+            curnonl = rednonl
+            tstrunstr = 'testdaredmod'
+            mmatforlsoda = None
+            tstc = ck_mat
+
+        else:
+            curiniv = soldict['iniv'] - vinf
+            NV = mmat.shape[0]
+
+            def fulnonl(vvec, t):
+                curcoeff = get_cur_sdccoeff(vvec.reshape((NV, 1)))
+                apconv = curcoeff.dot(vvec.reshape((NV, 1)))
+                prjapc = lau.app_prj_via_sadpnt(amat=mmat, jmat=jmat,
+                                                rhsv=apconv)
+                return prjapc.flatten()
+            mmatforlsoda = mmat
+            curnonl = fulnonl
+            tstrunstr = 'testdafulmod'
+            tstc = c_mat
+
+        print('doing the `lsoda` integration...')
+        tstsol = gpu.time_int_semil(tmesh=trange, A=None, M=mmatforlsoda,
+                                    nfunc=curnonl, iniv=curiniv)
+
+        print('done with the `lsoda` integration!')
+        outptlst = []
+        for kline in range(tstsol.shape[0]):
+            # outptlst.append((ck_mat.dot(redsol[k, :])).tolist())
+            outptlst.append((tstc.dot(tstsol[kline, :])).tolist())
+        dou.save_output_json(dict(tmesh=trange.tolist(), outsig=outptlst),
+                             fstring=tstrunstr)
+        import ipdb; ipdb.set_trace()
 
     outstr = truncstr + '{0}'.format(closed_loop) \
         + 't0{0}tE{1}Nts{2}N{3}Re{4}'.format(t0, tE, Nts, N, Re)

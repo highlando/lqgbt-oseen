@@ -9,7 +9,7 @@ import getopt
 # to compute stabilizing initial values for higher Re numbers
 pymess = True
 pymess = False
-relist = [None, 5.0e1]  # , 7.5e1, 9.0e1]
+relist = [None, 5.0e1]  # , 7.5e1]  # , 9.0e1]
 # , 1.15e2, 1.25e2]  # 1.01e2]
 # relist = [None, 5.0e1, 1.0e2, 1.075e2, 1.11e2]
 # , 1.15e2]  # , 1.25e2]  # , 1.35e2]  # , 1.45e2]
@@ -24,7 +24,7 @@ bccontrol = True
 palpha = 1e-5  # parameter for the Robin penalization
 cyldim = 2
 # where to truncate the LQGBT characteristic values
-trunclist = [1e-5]  # , 1e-3, 1e-2, 1e-1, 1e-0]
+trunclist = [1e-8]  # , 1e-3, 1e-2, 1e-1, 1e-0]
 # dimension of in and output spaces
 NU, NY = 3, 3
 # to what extend we perturb the initial value

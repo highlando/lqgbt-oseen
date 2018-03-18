@@ -1,3 +1,4 @@
+import numpy as np
 import dolfin_navier_scipy.stokes_navier_utils as snu
 
 
@@ -15,6 +16,11 @@ def get_get_cur_extlin(vinf=None, V=None, diribcs=None, invinds=None,
     use_ric_ini : string, optional
         path to a stabilizing initial guess
     '''
+
+    convc_mat, vinablavi, _ = \
+        snu.get_v_conv_conts(prev_v=vinf, invinds=invinds,
+                             retparts=False,
+                             V=V, diribcs=diribcs)
 
     def get_cur_extlin(vcur=None, vdelta=None):
         ''' compute the current extended linearization
@@ -46,15 +52,20 @@ def get_get_cur_extlin(vinf=None, V=None, diribcs=None, invinds=None,
         if vdelta is None:
             vdelta = vcur - vinf
 
-        convc_mat, _, _ = \
-            snu.get_v_conv_conts(prev_v=vinf, invinds=invinds,
-                                 retparts=False,
-                                 V=V, diribcs=diribcs)
+        fullnv = V.dim()
+        vdpbc = np.zeros((fullnv, 1))  # vdelta has zero bcs
+        vdpbc[invinds] = vdelta
+        delta_convmats, vdnablavd, _ = \
+            snu.get_v_conv_conts(prev_v=vdpbc, invinds=invinds,
+                                 retparts=True, zerodiribcs=True,
+                                 V=V, diribcs=None)
 
-        delta_convmats, _, _ = \
-            snu.get_v_conv_conts(prev_v=vdelta, invinds=invinds,
-                                 retparts=True,
-                                 V=V, diribcs=diribcs)
+        # testing to see the effect of the zero dirichlets...
+        # tstdelta_convmats, tstvdnablavd, tstrhs = \
+        #     snu.get_v_conv_conts(prev_v=vdelta, invinds=invinds,
+        #                          retparts=True,
+        #                          V=V, diribcs=diribcs)
+
         # delta_convmats[0] -- Picard part
         # delta_convmats[1] -- Anti Picard (Newton minus Picard)
         # one may think of convex combining both parts
