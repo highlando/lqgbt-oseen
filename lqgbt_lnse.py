@@ -683,12 +683,6 @@ def lqgbt(problemname='drivencavity',
                                R=Rmo*np.eye(bk_mat.shape[1]),
                                maxfac=None, maxeps=updtthrsh)
 
-            actua = -b_mat_reg.dot(bk_mat.T.dot(pupd.dot(redvdiff)))
-
-            if not elteps:
-                baseZk = curak - bk_mat.dot(bk_mat.T.dot(pupd))
-                memory.update(dict(basePk=pupd, baseAk=curak, baseZk=baseZk))
-
             if time > 0.006:
                 prvvel = memory['prevvel']
                 difftopv = prvvel - curvel
@@ -697,6 +691,13 @@ def lqgbt(problemname='drivencavity',
                 diffak = -basetl.T.dot(difff.dot(basetr))
                 ndiffak = norm(diffak)
                 import ipdb; ipdb.set_trace()
+
+            actua = -b_mat_reg.dot(bk_mat.T.dot(pupd.dot(redvdiff)))
+
+            if not elteps:
+                baseZk = curak - bk_mat.dot(bk_mat.T.dot(pupd))
+                memory.update(dict(basePk=pupd, baseAk=curak, baseZk=baseZk))
+
             memory.update(prevvel=curvel)
 
             return actua, memory

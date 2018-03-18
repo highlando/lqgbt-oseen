@@ -281,10 +281,10 @@ def get_sdrefb_upd(amat, t, fbtype=None, wnrm=2,
                     return baseP.dot(opepsPinv), True
 
     # otherwise: (SDRE feedback or `eps` too large already)
-    curX = spla.solve_continuous_are(amat, B, Q, R)
+    # curX = spla.solve_continuous_are(amat, B, Q, R)
     # if fbtype == 'sylvupdfb' or fbtype == 'singsylvupd':
     #     logger.debug('in `get_fb_dict`: t={0}: eps={1} too large, switch!'.
     #                  format(t, eps))
     # else:
     #     logger.debug('t={0}: computed the SDRE feedback')
-    return curX, False
+    return None, False
