@@ -305,6 +305,7 @@ def lqgbt(problemname='drivencavity',
                                         bmat=b_mat_reg, cmat=c_mat_reg,
                                         Rmhalf=Rmhalf,
                                         cmpricfacpars=cmpricfacpars,
+                                        pymess=pymess,
                                         trunc_lqgbtcv=trunc_lqgbtcv)
         btu.compare_freqresp(mmat=stokesmatsc['M'], amat=f_mat,
                              jmat=stokesmatsc['J'], bmat=b_mat,
@@ -356,7 +357,7 @@ def lqgbt(problemname='drivencavity',
                                jmat=jmat, bmat=b_mat_reg, cmat=c_mat_reg,
                                ric_ini_str=fdstrini, Rmhalf=Rmhalf,
                                nwtn_adi_dict=nwtn_adi_dict, zwconly=True,
-                               multiproc=multiproc, pymess=False,
+                               multiproc=multiproc, pymess=pymess,
                                checktheres=False)
 
         mtxb = pru.get_mTzzTtb(stokesmatsc['M'].T, zwc, b_mat_reg)
@@ -419,6 +420,7 @@ def lqgbt(problemname='drivencavity',
                               bmat=b_mat_reg, cmat=c_mat_reg,
                               cmpricfacpars=cmpricfacpars,
                               Rmhalf=Rmhalf,
+                              pymess=pymess,
                               cmprlprjpars=cmprlprjpars)
 
         obs_bk = np.dot(xok, ck_mat.T)
@@ -526,6 +528,7 @@ def lqgbt(problemname='drivencavity',
                 nru.get_prj_model(truncstr=truncstr, fdstr=sdrefdstr,
                                   mmat=mmat, fmat=-curfmat, jmat=jmat,
                                   bmat=b_mat_reg, cmat=c_mat_reg,
+                                  pymess=pymess,
                                   Rmhalf=Rmhalf,
                                   cmpricfacpars=cmpricfacpars,
                                   cmprlprjpars=cmprlprjpars)
@@ -647,6 +650,7 @@ def lqgbt(problemname='drivencavity',
                               bmat=b_mat_reg, cmat=c_mat_reg,
                               cmpricfacpars=cmpricfacpars,
                               Rmhalf=Rmhalf,
+                              pymess=pymess,
                               cmprlprjpars=cmprlprjpars)
         cktck = ck_mat.T.dot(ck_mat)
 

@@ -11,7 +11,7 @@ __all__ = ['get_ric_facs',
            'get_rl_projections',
            'get_prj_model']
 
-pymess = False
+# pymess = False
 pymess_dict = {}
 plain_bt = False
 debug = False
@@ -27,10 +27,10 @@ def get_ric_facs(fmat=None, mmat=None, jmat=None,
 
     if pymess:
         get_ricadifacs = pru.pymess_dae2_cnt_riccati
-        adidict = pymess_dict
+        adidict = nwtn_adi_dict
     else:
         get_ricadifacs = pru.proj_alg_ric_newtonadi
-        adidict = nwtn_adi_dict
+        adidict = dict(nwtn_adi_dict=nwtn_adi_dict)
 
     zinic, zinio = None, None
     if ric_ini_str is not None:
@@ -55,8 +55,7 @@ def get_ric_facs(fmat=None, mmat=None, jmat=None,
         except IOError:
             zwo = get_ricadifacs(mmat=mmat.T, amat=fmat.T, jmat=jmat,
                                  bmat=cmat.T, wmat=bmat,
-                                 nwtn_adi_dict=adidict,
-                                 z0=zinio)['zfac']
+                                 z0=zinio, **adidict)['zfac']
             dou.save_npa(zwo, fdstr + '__zwo')
         return
 
@@ -68,8 +67,7 @@ def get_ric_facs(fmat=None, mmat=None, jmat=None,
             # XXX: why here bmat*Rmhalf and in zwo not?
             zwc = get_ricadifacs(mmat=mmat, amat=fmat, jmat=jmat,
                                  bmat=bmat*Rmhalf, wmat=cmat.T,
-                                 nwtn_adi_dict=adidict,
-                                 z0=zinic)['zfac']
+                                 z0=zinic, **adidict)['zfac']
             dou.save_npa(zwc, fdstr + '__zwc')
         return
 
@@ -135,6 +133,7 @@ def get_rl_projections(fdstr=None, truncstr=None,
                        bmat=None, cmat=None,
                        Rmhalf=None, Rmo=None,
                        cmpricfacpars={},
+                       pymess=False,
                        trunc_lqgbtcv=None):
 
     try:
@@ -152,6 +151,7 @@ def get_rl_projections(fdstr=None, truncstr=None,
                ' and saving to: \n' + fdstr + truncstr + '__tl/__tr'))
         if zwc is None or zwo is None:
             zwc, zwo = get_ric_facs(fdstr=fdstr,
+                                    pymess=pymess,
                                     fmat=fmat, mmat=mmat, jmat=jmat,
                                     cmat=cmat, bmat=bmat,
                                     Rmhalf=Rmhalf, Rmo=Rmo,
@@ -172,7 +172,7 @@ def get_prj_model(truncstr=None, fdstr=None,
                   matsdict={},
                   abconly=False,
                   mmat=None, fmat=None, jmat=None, bmat=None, cmat=None,
-                  zwo=None, zwc=None,
+                  zwo=None, zwc=None, pymess=False,
                   tl=None, tr=None,
                   Rmhalf=None, Rmo=None,
                   return_tltr=True,
@@ -189,6 +189,7 @@ def get_prj_model(truncstr=None, fdstr=None,
                                     fmat=fmat, mmat=mmat, jmat=jmat,
                                     cmat=cmat, bmat=bmat,
                                     Rmhalf=Rmhalf, Rmo=Rmo,
+                                    pymess=pymess,
                                     cmpricfacpars=cmpricfacpars,
                                     **cmprlprjpars)
         tltristhere = True
