@@ -9,7 +9,9 @@ import getopt
 # to compute stabilizing initial values for higher Re numbers
 pymess = True
 pymess = False
-relist = [None, 5.0e1, 1.0e2, 1.15e2, 1.25e2, 1.35e2]  # , 1.45e2]
+relist = [None, 2.0e1, 5.0e1, 7.5e1, 8.8e1, 9.9e1, 1.15e2, 1.25e2]  # 1.01e2]
+# relist = [None, 5.0e1, 1.0e2, 1.075e2, 1.11e2]
+# , 1.15e2]  # , 1.25e2]  # , 1.35e2]  # , 1.45e2]
 max_re_only = False
 max_re_only = True  # consider only the last Re for the simu
 
@@ -35,13 +37,18 @@ robit = True
 robit = False
 robmrgnfac = 0.1
 # closed loop def
-closed_loop = 'full_state_fb'
-closed_loop = False
 closed_loop = None
+closed_loop = False
+closed_loop = 'full_state_fb'
 closed_loop = 'red_output_fb'
+# what inival
+whichinival = 'sstokes'  # steady state Stokes solution
+whichinival = 'sstokes++'  # a developed state starting from sstokes
+whichinival = 'sstate+d'  # sstate plus perturbation
 # number of time steps -- also define the lag in the control application
-scaletest = 1  # 0.6  # for 1. we simulate till 12.
-t0, tE, baseNts = 0.0, scaletest*12.0, np.int(scaletest*1*2.4e3+1)
+scaletest = .8  # 0.6  # for 1. we simulate till 12.
+baset0, basetE, baseNts = 0.0, 12.0, 2.4e3+1
+t0, tE, Nts = 0.0, scaletest*basetE, np.int(scaletest*baseNts)
 
 # get command line input and overwrite standard paramters if necessary
 options, rest = getopt.getopt(sys.argv[1:], '',
@@ -84,8 +91,6 @@ for opt, arg in options:
 print('max_re_only={0}'.format(max_re_only))
 if max_re_only:
     relist = relist[-2:]
-
-t0, tE, Nts = 0.0, scaletest*12.0, scaletest*baseNts
 
 # print reynolds number and discretization lvl
 infostring = ('Re             = {0}'.format(relist) +
@@ -140,6 +145,7 @@ for ctrunc in trunclist:
                          pymess=pymess, pymess_dict=pymess_dict,
                          # closed_loop='red_output_fb',
                          # closed_loop=None,
+                         whichinival=whichinival,
                          trytofail=trytofail, ttf_npcrdstps=ttf_npcrdstps,
                          robit=robit, robmrgnfac=robmrgnfac,
                          closed_loop=closed_loop,
