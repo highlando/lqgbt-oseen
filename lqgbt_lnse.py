@@ -687,14 +687,14 @@ def lqgbt(problemname='drivencavity',
                                R=Rmo*np.eye(bk_mat.shape[1]),
                                maxfac=None, maxeps=updtthrsh)
 
-            if time > 0.006:
-                prvvel = memory['prevvel']
-                difftopv = prvvel - curvel
-                difff = get_cur_sdccoeff(vcur=curvel) - \
-                    get_cur_sdccoeff(vcur=prvvel)
-                diffak = -basetl.T.dot(difff.dot(basetr))
-                ndiffak = norm(diffak)
-                import ipdb; ipdb.set_trace()
+            # if time > 0.006:
+            #     prvvel = memory['prevvel']
+            #     difftopv = prvvel - curvel
+            #     difff = get_cur_sdccoeff(vcur=curvel) - \
+            #         get_cur_sdccoeff(vcur=prvvel)
+            #     diffak = -basetl.T.dot(difff.dot(basetr))
+            #     ndiffak = norm(diffak)
+            #     import ipdb; ipdb.set_trace()
 
             actua = -b_mat_reg.dot(bk_mat.T.dot(pupd.dot(redvdiff)))
 
@@ -766,56 +766,56 @@ def lqgbt(problemname='drivencavity',
         soldict.update(dict(iniv=sstokspp))
         shortinivstr = 'sk{0}'.format(tpp)
 
-    checkdaredmod = True
-    checkdaredmod = False
-    if checkdaredmod:
-        import spacetime_galerkin_pod.gen_pod_utils as gpu
-        # akm = basetl.T.dot(amat*basetr)
-        # nk = basetl.shape[1]
+    # checkdaredmod = True
+    # checkdaredmod = False
+    # if checkdaredmod:
+    #     import spacetime_galerkin_pod.gen_pod_utils as gpu
+    #     # akm = basetl.T.dot(amat*basetr)
+    #     # nk = basetl.shape[1]
 
-        redmod = False
-        redmod = True
-        if redmod:
-            curiniv = basetl.T.dot(mmat*(soldict['iniv']-vinf))
-            nk = basetr.shape[1]
+    #     redmod = False
+    #     redmod = True
+    #     if redmod:
+    #         curiniv = basetl.T.dot(mmat*(soldict['iniv']-vinf))
+    #         nk = basetr.shape[1]
 
-            def rednonl(vvec, t):
-                inflv = basetr.dot(vvec.reshape((nk, 1)))
-                curcoeff = get_cur_sdccoeff(vdelta=inflv)
-                returval = basetl.T.dot(curcoeff.dot(inflv))
-                return returval.flatten()
-            curnonl = rednonl
-            tstrunstr = 'testdaredmod'
-            mmatforlsoda = None
-            tstc = ck_mat
+    #         def rednonl(vvec, t):
+    #             inflv = basetr.dot(vvec.reshape((nk, 1)))
+    #             curcoeff = get_cur_sdccoeff(vdelta=inflv)
+    #             returval = basetl.T.dot(curcoeff.dot(inflv))
+    #             return returval.flatten()
+    #         curnonl = rednonl
+    #         tstrunstr = 'testdaredmod'
+    #         mmatforlsoda = None
+    #         tstc = ck_mat
 
-        else:
-            curiniv = soldict['iniv'] - vinf
-            NV = mmat.shape[0]
+    #     else:
+    #         curiniv = soldict['iniv'] - vinf
+    #         NV = mmat.shape[0]
 
-            def fulnonl(vvec, t):
-                curcoeff = get_cur_sdccoeff(vvec.reshape((NV, 1)))
-                apconv = curcoeff.dot(vvec.reshape((NV, 1)))
-                prjapc = lau.app_prj_via_sadpnt(amat=mmat, jmat=jmat,
-                                                rhsv=apconv)
-                return prjapc.flatten()
-            mmatforlsoda = mmat
-            curnonl = fulnonl
-            tstrunstr = 'testdafulmod'
-            tstc = c_mat
+    #         def fulnonl(vvec, t):
+    #             curcoeff = get_cur_sdccoeff(vvec.reshape((NV, 1)))
+    #             apconv = curcoeff.dot(vvec.reshape((NV, 1)))
+    #             prjapc = lau.app_prj_via_sadpnt(amat=mmat, jmat=jmat,
+    #                                             rhsv=apconv)
+    #             return prjapc.flatten()
+    #         mmatforlsoda = mmat
+    #         curnonl = fulnonl
+    #         tstrunstr = 'testdafulmod'
+    #         tstc = c_mat
 
-        print('doing the `lsoda` integration...')
-        tstsol = gpu.time_int_semil(tmesh=trange, A=None, M=mmatforlsoda,
-                                    nfunc=curnonl, iniv=curiniv)
+    #     print('doing the `lsoda` integration...')
+    #     tstsol = gpu.time_int_semil(tmesh=trange, A=None, M=mmatforlsoda,
+    #                                 nfunc=curnonl, iniv=curiniv)
 
-        print('done with the `lsoda` integration!')
-        outptlst = []
-        for kline in range(tstsol.shape[0]):
-            # outptlst.append((ck_mat.dot(redsol[k, :])).tolist())
-            outptlst.append((tstc.dot(tstsol[kline, :])).tolist())
-        dou.save_output_json(dict(tmesh=trange.tolist(), outsig=outptlst),
-                             fstring=tstrunstr)
-        import ipdb; ipdb.set_trace()
+    #     print('done with the `lsoda` integration!')
+    #     outptlst = []
+    #     for kline in range(tstsol.shape[0]):
+    #         # outptlst.append((ck_mat.dot(redsol[k, :])).tolist())
+    #         outptlst.append((tstc.dot(tstsol[kline, :])).tolist())
+    #     dou.save_output_json(dict(tmesh=trange.tolist(), outsig=outptlst),
+    #                          fstring=tstrunstr)
+    #     import ipdb; ipdb.set_trace()
 
     outstr = truncstr + '{0}'.format(closed_loop) \
         + 't0{0}tE{1}Nts{2}N{3}Re{4}'.format(t0, tE, Nts, N, Re)
