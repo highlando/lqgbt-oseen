@@ -9,7 +9,8 @@ import getopt
 # to compute stabilizing initial values for higher Re numbers
 pymess = True
 pymess = False
-relist = [None, 2.0e1, 5.0e1, 7.5e1, 8.8e1, 9.9e1, 1.15e2, 1.25e2]  # 1.01e2]
+relist = [None, 7.5e1, 1.e2]
+# , 1.15e2, 1.25e2]  # 1.01e2]
 # relist = [None, 5.0e1, 1.0e2, 1.075e2, 1.11e2]
 # , 1.15e2]  # , 1.25e2]  # , 1.35e2]  # , 1.45e2]
 max_re_only = False
@@ -37,16 +38,18 @@ robit = True
 robit = False
 robmrgnfac = 0.1
 # closed loop def
-closed_loop = None
-closed_loop = False
 closed_loop = 'full_state_fb'
+closed_loop = None
+closed_loop = 'redmod_sdre_fb'
+closed_loop = 'red_sdre_fb'
+closed_loop = False
 closed_loop = 'red_output_fb'
 # what inival
 whichinival = 'sstokes'  # steady state Stokes solution
 whichinival = 'sstokes++'  # a developed state starting from sstokes
 whichinival = 'sstate+d'  # sstate plus perturbation
 # number of time steps -- also define the lag in the control application
-scaletest = .8  # 0.6  # for 1. we simulate till 12.
+scaletest = 1.0  # 0.6  # for 1. we simulate till 12.
 baset0, basetE, baseNts = 0.0, 12.0, 2.4e3+1
 t0, tE, Nts = 0.0, scaletest*basetE, np.int(scaletest*baseNts)
 
@@ -84,6 +87,8 @@ for opt, arg in options:
                 closed_loop = 'red_output_fb'
         elif np.int(arg) == 2:
                 closed_loop = 'full_output_fb'
+        elif np.int(arg) == 3:
+                closed_loop = 'red_sdre_fb'
     elif opt == '--max_re_only':
             max_re_only = int(arg)
             max_re_only = np.bool(max_re_only)
@@ -107,17 +112,19 @@ infostring = ('Re             = {0}'.format(relist) +
 print(infostring)
 
 print(infostring)
-nwtn_adi_dict = dict(adi_max_steps=300,  # 450,
-                     adi_newZ_reltol=1e-7,
-                     nwtn_max_steps=30,
-                     nwtn_upd_reltol=1e-10,
-                     nwtn_upd_abstol=1e-7,
-                     ms=[-2.0, -1.5, -1.25, -1.1, -1.0, -0.9, -0.7, -0.5],
-                     verbose=True,
-                     full_upd_norm_check=False,
-                     check_lyap_res=False)
-
-pymess_dict = dict(verbose=True, maxit=45, nwtn_res2_tol=4e-8, linesearch=True)
+if pymess:
+    nwtn_adi_dict = dict(verbose=True, maxit=45, aditol=1e-8,
+                         nwtn_res2_tol=4e-8, linesearch=True)
+else:
+    nwtn_adi_dict = dict(adi_max_steps=350,  # 450,
+                         adi_newZ_reltol=2e-8,
+                         nwtn_max_steps=30,
+                         nwtn_upd_reltol=2e-8,
+                         nwtn_upd_abstol=1e-7,
+                         ms=[-2.0, -1.5, -1.25, -1.1, -1.0, -0.9, -0.7, -0.5],
+                         verbose=True,
+                         full_upd_norm_check=False,
+                         check_lyap_res=False)
 
 logstr = 'logs/log_cyldim{0}NU{1}NY{2}gamma{3}'.format(cyldim, NU, NY, gamma) +\
     'closedloop{0}'.format(closed_loop) +\
@@ -133,6 +140,8 @@ print(('{0}'*10 + '\n log started at {1} \n' + '{0}'*10).
 
 for ctrunc in trunclist:
     for cre in range(1, len(relist)):
+        import matplotlib.pyplot as plt
+        plt.close('all')
         lqgbt_lnse.lqgbt(problemname='cylinderwake', N=cyldim,
                          use_ric_ini=relist[cre-1],
                          NU=NU, NY=NY,
@@ -142,12 +151,14 @@ for ctrunc in trunclist:
                          nwtn_adi_dict=nwtn_adi_dict,
                          paraoutput=False, multiproc=True,
                          comp_freqresp=False, comp_stepresp=False,
-                         pymess=pymess, pymess_dict=pymess_dict,
+                         pymess=pymess,
                          # closed_loop='red_output_fb',
                          # closed_loop=None,
+                         plotit=False,
                          whichinival=whichinival,
                          trytofail=trytofail, ttf_npcrdstps=ttf_npcrdstps,
                          robit=robit, robmrgnfac=robmrgnfac,
                          closed_loop=closed_loop,
                          perturbpara=perturbpara)
-print(infostring)
+
+    print(infostring)
