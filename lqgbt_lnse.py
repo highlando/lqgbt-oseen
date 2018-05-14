@@ -197,6 +197,11 @@ def lqgbt(problemname='drivencavity',
                                        rhsv=b_mat,
                                        transposedprj=True)
 
+    # Rmo = 1./gamma
+    Rmhalf = 1./np.sqrt(gamma)
+    b_mat_rgscld = b_mat_reg*Rmhalf
+    # We scale the input matrix to accomodate for input weighting
+
     try:
         mc_mat = dou.load_spa(ddir + contsetupstr + '__mc_mat')
         y_masmat = dou.load_spa(ddir + contsetupstr + '__y_masmat')
@@ -279,8 +284,6 @@ def lqgbt(problemname='drivencavity',
 #
 # ### Compute or get the Gramians
 #
-    Rmo, Rmhalf = 1./gamma, 1./np.sqrt(gamma)
-
     if closed_loop == 'red_output_fb' or closed_loop == 'red_sdre_fb':
         truncstr = '__lqgbtcv{0}'.format(trunc_lqgbtcv)
         shorttruncstr = '{0}'.format(trunc_lqgbtcv)
@@ -302,8 +305,7 @@ def lqgbt(problemname='drivencavity',
         tl, tr = nru.get_rl_projections(fdstr=fdstr, truncstr=truncstr,
                                         fmat=f_mat_gramians, mmat=mmat,
                                         jmat=jmat,
-                                        bmat=b_mat_reg, cmat=c_mat_reg,
-                                        Rmhalf=Rmhalf,
+                                        bmat=b_mat_rgscld, cmat=c_mat_reg,
                                         cmpricfacpars=cmpricfacpars,
                                         pymess=pymess,
                                         trunc_lqgbtcv=trunc_lqgbtcv)
@@ -354,13 +356,13 @@ def lqgbt(problemname='drivencavity',
         shortclstr = 'fsfb'
         zwc = nru.get_ric_facs(fdstr=fdstr,
                                fmat=f_mat_gramians, mmat=mmat,
-                               jmat=jmat, bmat=b_mat_reg, cmat=c_mat_reg,
-                               ric_ini_str=fdstrini, Rmhalf=Rmhalf,
+                               jmat=jmat, bmat=b_mat_rgscld, cmat=c_mat_reg,
+                               ric_ini_str=fdstrini,
                                nwtn_adi_dict=nwtn_adi_dict, zwconly=True,
                                multiproc=multiproc, pymess=pymess,
                                checktheres=False)
 
-        mtxb = pru.get_mTzzTtb(stokesmatsc['M'].T, zwc, b_mat_reg)
+        mtxb = pru.get_mTzzTtb(stokesmatsc['M'].T, zwc, b_mat_rgscld)
 
         dimu = b_mat.shape[1]
         zerou = np.zeros((dimu, 1))
@@ -402,7 +404,7 @@ def lqgbt(problemname='drivencavity',
                 actua = -lau.comp_uvz_spdns(tb_mat, btxm_mat, curvel-linv)
                 return actua, {}
 
-        tmdp_fsfb_dict = dict(linv=v_ss_nse, tb_mat=b_mat*Rmo,
+        tmdp_fsfb_dict = dict(linv=v_ss_nse, tb_mat=b_mat_rgscld,
                               btxm_mat=mtxb.T)
 
         fv_tmdp = fv_tmdp_fullstatefb
@@ -417,9 +419,8 @@ def lqgbt(problemname='drivencavity',
             nru.get_prj_model(truncstr=truncstr, fdstr=fdstr,
                               abconly=False,
                               mmat=mmat, fmat=f_mat_gramians, jmat=jmat,
-                              bmat=b_mat_reg, cmat=c_mat_reg,
+                              bmat=b_mat_rgscld, cmat=c_mat_reg,
                               cmpricfacpars=cmpricfacpars,
-                              Rmhalf=Rmhalf,
                               pymess=pymess,
                               cmprlprjpars=cmprlprjpars)
 
@@ -433,7 +434,7 @@ def lqgbt(problemname='drivencavity',
                               linvel=None,
                               ipsysk_mat_inv=None,
                               obs_bk=None, cts=None,
-                              b_mat=None, c_mat=None, Rmo=None,
+                              b_mat=None, c_mat=None,
                               xck=None, bk_mat=None,
                               **kw):
             """realizes a reduced static output feedback as a function
@@ -489,7 +490,7 @@ def lqgbt(problemname='drivencavity',
                              lau.mm_dnssps(c_mat, (curvel-linvel)))
             xk_old = np.dot(ipsysk_mat_inv, xk_old + buk)
             memory['xk_old'] = xk_old
-            actua = -lau.mm_dnssps(b_mat*Rmo,
+            actua = -lau.mm_dnssps(b_mat,
                                    np.dot(bk_mat.T, np.dot(xck, xk_old)))
             if np.mod(np.int(time/DT), np.int(tE/DT)/100) == 0:
                 print(('time now: {0}, end time: {1}'.format(time, tE)))
@@ -497,7 +498,7 @@ def lqgbt(problemname='drivencavity',
                 print('norm of actuation {0}'.format(np.linalg.norm(actua)))
             return actua, memory
 
-        fv_rofb_dict = dict(cts=DT, linvel=v_ss_nse, b_mat=b_mat, Rmo=Rmo,
+        fv_rofb_dict = dict(cts=DT, linvel=v_ss_nse, b_mat=b_mat_rgscld,
                             c_mat=c_mat_reg, obs_bk=obs_bk, bk_mat=bk_mat,
                             ipsysk_mat_inv=sysmatk_inv, xck=xck)
 
@@ -527,9 +528,8 @@ def lqgbt(problemname='drivencavity',
             ak_mat, cur_bk, _, _, cxck, cur_tl, cur_tr = \
                 nru.get_prj_model(truncstr=truncstr, fdstr=sdrefdstr,
                                   mmat=mmat, fmat=-curfmat, jmat=jmat,
-                                  bmat=b_mat_reg, cmat=c_mat_reg,
+                                  bmat=b_mat_rgscld, cmat=c_mat_reg,
                                   pymess=pymess,
-                                  Rmhalf=Rmhalf,
                                   cmpricfacpars=cmpricfacpars,
                                   cmprlprjpars=cmprlprjpars)
             cmpricfacpars.update(ric_ini_str=sdrefdstr)
@@ -562,7 +562,7 @@ def lqgbt(problemname='drivencavity',
                 solve_sdre(curfmat, memory=memory)
 
                 redvdiff = memory['cur_tl'].T.dot(mmat*(curvel-vinf))
-                actua = -b_mat_reg.dot(memory['baseGain'].dot(redvdiff))
+                actua = -b_mat_rgscld.dot(memory['baseGain'].dot(redvdiff))
                 return actua, memory
 
                 # sdrefdstr = sdre_ric_ini  # TODO: debugging here
@@ -593,7 +593,7 @@ def lqgbt(problemname='drivencavity',
             if elteps:  # E less than eps
                 updGain = memory['cur_bk'].T.dot(pupd)
                 redvdiff = memory['cur_tl'].T.dot(mmat*(curvel-vinf))
-                actua = -b_mat_reg.dot(updGain.dot(redvdiff))
+                actua = -b_mat_rgscld.dot(updGain.dot(redvdiff))
                 return actua, memory
 
             else:
@@ -612,7 +612,7 @@ def lqgbt(problemname='drivencavity',
                 # memory.update(basev=curvel)
                 solve_sdre(curfmat, memory=memory, eps=updtthrsh, time=time)
                 redvdiff = memory['cur_tl'].T.dot(mmat*(curvel-vinf))
-                actua = -b_mat_reg.dot(memory['baseGain'].dot(redvdiff))
+                actua = -b_mat_rgscld.dot(memory['baseGain'].dot(redvdiff))
                 return actua, memory
 
             # zwc = memory['czwc']
@@ -647,9 +647,8 @@ def lqgbt(problemname='drivencavity',
         ak_mat, bk_mat, ck_mat, _, _, basetl, basetr = \
             nru.get_prj_model(truncstr=truncstr, fdstr=fdstr,
                               mmat=mmat, fmat=-f_mat_gramians, jmat=jmat,
-                              bmat=b_mat_reg, cmat=c_mat_reg,
+                              bmat=b_mat_rgscld, cmat=c_mat_reg,
                               cmpricfacpars=cmpricfacpars,
-                              Rmhalf=Rmhalf,
                               pymess=pymess,
                               cmprlprjpars=cmprlprjpars)
         cktck = ck_mat.T.dot(ck_mat)
@@ -684,7 +683,6 @@ def lqgbt(problemname='drivencavity',
                                baseA=memory['baseAk'], baseZ=memory['baseZk'],
                                baseP=memory['basePk'],
                                B=bk_mat, Q=cktck,
-                               R=Rmo*np.eye(bk_mat.shape[1]),
                                maxfac=None, maxeps=updtthrsh)
 
             # if time > 0.006:
@@ -696,7 +694,7 @@ def lqgbt(problemname='drivencavity',
             #     ndiffak = norm(diffak)
             #     import ipdb; ipdb.set_trace()
 
-            actua = -b_mat_reg.dot(bk_mat.T.dot(pupd.dot(redvdiff)))
+            actua = -b_mat_rgscld.dot(bk_mat.T.dot(pupd.dot(redvdiff)))
 
             if not elteps:
                 baseZk = curak - bk_mat.dot(bk_mat.T.dot(pupd))

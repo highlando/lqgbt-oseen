@@ -19,7 +19,6 @@ debug = False
 
 def get_ric_facs(fmat=None, mmat=None, jmat=None,
                  bmat=None, cmat=None,
-                 Rmhalf=None, Rmo=None,
                  ric_ini_str=None, fdstr=None,
                  nwtn_adi_dict=None,
                  zwconly=False,
@@ -66,7 +65,7 @@ def get_ric_facs(fmat=None, mmat=None, jmat=None,
         except IOError:
             # XXX: why here bmat*Rmhalf and in zwo not?
             zwc = get_ricadifacs(mmat=mmat, amat=fmat, jmat=jmat,
-                                 bmat=bmat*Rmhalf, wmat=cmat.T,
+                                 bmat=bmat, wmat=cmat.T,
                                  z0=zinic, **adidict)['zfac']
             dou.save_npa(zwc, fdstr + '__zwc')
         return
@@ -94,7 +93,7 @@ def get_ric_facs(fmat=None, mmat=None, jmat=None,
     if checktheres:
         print('checking the Riccati residuals....')
         # check the cont Ric residual
-        umat = 0.5*bmat*Rmo
+        umat = 0.5*bmat
         vmat = np.dot(np.dot(bmat.T, zwc), zwc.T)*mmat
         res = pru.\
             comp_proj_lyap_res_norm(zwc, amat=fmat, mmat=mmat,
@@ -131,7 +130,6 @@ def get_rl_projections(fdstr=None, truncstr=None,
                        zwc=None, zwo=None,
                        fmat=None, mmat=None, jmat=None,
                        bmat=None, cmat=None,
-                       Rmhalf=None, Rmo=None,
                        cmpricfacpars={},
                        pymess=False,
                        trunc_lqgbtcv=None):
@@ -154,7 +152,6 @@ def get_rl_projections(fdstr=None, truncstr=None,
                                     pymess=pymess,
                                     fmat=fmat, mmat=mmat, jmat=jmat,
                                     cmat=cmat, bmat=bmat,
-                                    Rmhalf=Rmhalf, Rmo=Rmo,
                                     **cmpricfacpars)
         tl, tr, svs = btu.\
             compute_lrbt_transfos(zfc=zwc, zfo=zwo,
@@ -174,7 +171,6 @@ def get_prj_model(truncstr=None, fdstr=None,
                   mmat=None, fmat=None, jmat=None, bmat=None, cmat=None,
                   zwo=None, zwc=None, pymess=False,
                   tl=None, tr=None,
-                  Rmhalf=None, Rmo=None,
                   return_tltr=True,
                   cmpricfacpars={}, cmprlprjpars={}):
 
@@ -188,7 +184,6 @@ def get_prj_model(truncstr=None, fdstr=None,
                                     zwc=zwc, zwo=zwo,
                                     fmat=fmat, mmat=mmat, jmat=jmat,
                                     cmat=cmat, bmat=bmat,
-                                    Rmhalf=Rmhalf, Rmo=Rmo,
                                     pymess=pymess,
                                     cmpricfacpars=cmpricfacpars,
                                     **cmprlprjpars)
@@ -211,7 +206,6 @@ def get_prj_model(truncstr=None, fdstr=None,
                                         zwc=zwc, zwo=zwo,
                                         fmat=fmat, mmat=mmat, jmat=jmat,
                                         cmat=cmat, bmat=bmat,
-                                        Rmhalf=Rmhalf, Rmo=Rmo,
                                         cmpricfacpars=cmpricfacpars,
                                         **cmprlprjpars)
             tltristhere = True
@@ -237,7 +231,6 @@ def get_prj_model(truncstr=None, fdstr=None,
                 zwc, zwo = get_ric_facs(fdstr=fdstr,
                                         fmat=fmat, mmat=mmat, jmat=jmat,
                                         cmat=cmat, bmat=bmat,
-                                        Rmhalf=Rmhalf, Rmo=Rmo,
                                         **cmpricfacpars)
 
             if tltristhere:

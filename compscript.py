@@ -7,17 +7,15 @@ import sys
 import getopt
 
 # to compute stabilizing initial values for higher Re numbers
-pymess = False
 pymess = True
-relist = [None, 7.5e1, 1.e2]
-# , 1.15e2, 1.25e2]  # 1.01e2]
-# relist = [None, 5.0e1, 1.0e2, 1.075e2, 1.11e2]
-# , 1.15e2]  # , 1.25e2]  # , 1.35e2]  # , 1.45e2]
-max_re_only = False
+pymess = False
+relist = [None, 5e1, 7.5e1, 9e1, 1.e2, 1.15e2, 1.25e2]  # 1.01e2]
+# relist = [1.e2, 1.15e2, 1.25e2]  # 1.01e2]
 max_re_only = True  # consider only the last Re for the simu
+max_re_only = False
 
 # the input regularization parameter
-gamma = 1.  # e5
+gamma = 1e-3  # e5
 # mesh parameter for the cylinder meshes
 # whether to do bccontrol or distributed
 bccontrol = True
@@ -49,7 +47,7 @@ whichinival = 'sstokes'  # steady state Stokes solution
 whichinival = 'sstokes++'  # a developed state starting from sstokes
 whichinival = 'sstate+d'  # sstate plus perturbation
 # number of time steps -- also define the lag in the control application
-scaletest = 0.6  # for 1. we simulate till 12.
+scaletest = .01  # for 1. we simulate till 12.
 baset0, basetE, baseNts = 0.0, 12.0, 2.4e3+1
 t0, tE, Nts = 0.0, scaletest*basetE, np.int(scaletest*baseNts)
 
@@ -100,6 +98,7 @@ if max_re_only:
 # print reynolds number and discretization lvl
 infostring = ('Re             = {0}'.format(relist) +
               '\ncyldim         = {0}'.format(cyldim) +
+              '\npymess         = {0}'.format(pymess) +
               '\nclosed_loop    = {0}'.format(closed_loop) +
               '\nini_perturb    = {0}'.format(perturbpara) +
               '\nobs_perturb    = {0}'.format(trytofail) +
@@ -152,6 +151,7 @@ for ctrunc in trunclist:
                          paraoutput=False, multiproc=True,
                          comp_freqresp=False, comp_stepresp=False,
                          pymess=pymess,
+                         gamma=gamma,
                          # closed_loop='red_output_fb',
                          # closed_loop=None,
                          plotit=False,
