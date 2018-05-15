@@ -46,7 +46,7 @@ def nwtn_adi_params():
 
 
 def lqgbt(problemname='drivencavity',
-          N=10, Re=1e2, plain_bt=False,
+          N=10, Re=1e2, plain_bt=False, cl_linsys=False,
           gamma=1.,
           use_ric_ini=None, t0=0.0, tE=1.0, Nts=11,
           NU=3, NY=3,
@@ -247,10 +247,12 @@ def lqgbt(problemname='drivencavity',
                    fp=rhsd_stbc['fp']+rhsd_vfrc['fpr'],
                    N=N, nu=nu, data_prfx=veldatastr)
 
-    v_ss_nse, list_norm_nwtnupd = snu.\
-        solve_steadystate_nse(vel_pcrd_stps=npcrdstps,
+    vp_ss_nse, list_norm_nwtnupd = snu.\
+        solve_steadystate_nse(vel_pcrd_stps=npcrdstps, return_vp=True,
                               clearprvdata=debug, **soldict)
 
+    v_ss_nse = vp_ss_nse[:NV]
+    p_ss_nse = vp_ss_nse[NV:]
     (convc_mat, rhs_con,
      rhsv_conbc) = snu.get_v_conv_conts(prev_v=v_ss_nse, invinds=invinds,
                                         V=femp['V'], diribcs=femp['diribcs'])
@@ -492,10 +494,11 @@ def lqgbt(problemname='drivencavity',
             memory['xk_old'] = xk_old
             actua = -lau.mm_dnssps(b_mat,
                                    np.dot(bk_mat.T, np.dot(xck, xk_old)))
-            if np.mod(np.int(time/DT), np.int(tE/DT)/100) == 0:
-                print(('time now: {0}, end time: {1}'.format(time, tE)))
-                print('\nnorm of deviation', np.linalg.norm(curvel-linvel))
-                print('norm of actuation {0}'.format(np.linalg.norm(actua)))
+            # if np.mod(np.int(time/DT), np.int(tE/DT)/100) == 0:
+            #     print(('time now: {0}, end time: {1}'.format(time, tE)))
+            #     print('\nnorm of deviation', np.linalg.norm(curvel-linvel))
+            #     print('norm of actuation {0}'.format(np.linalg.norm(actua)))
+            memory['actualist'].append(actua)
             return actua, memory
 
         fv_rofb_dict = dict(cts=DT, linvel=v_ss_nse, b_mat=b_mat_rgscld,
@@ -504,9 +507,10 @@ def lqgbt(problemname='drivencavity',
 
         fv_tmdp = fv_tmdp_redoutpfb
         fv_tmdp_params = fv_rofb_dict
-        fv_tmdp_memory = dict(xk_old=np.zeros((tl.shape[1], 1)))
+        fv_tmdp_memory = dict(xk_old=np.zeros((tl.shape[1], 1)),
+                              actualist=[])
 
-        soldict.update(dict(verbose=False))
+        # soldict.update(dict(verbose=False))
 
     elif closed_loop == 'red_sdre_fb':
         shortclstr = 'rdsdrfb'
@@ -710,6 +714,9 @@ def lqgbt(problemname='drivencavity',
         fv_tmdp_params = fv_sdre_dict
         fv_tmdp_memory = dict(basePk=None, baseAk=None, baseZk=None)
 
+    if pymess:
+        shortclstr = shortclstr + 'pm'
+
     else:
         fv_tmdp = None
         fv_tmdp_params = {}
@@ -824,6 +831,13 @@ def lqgbt(problemname='drivencavity',
 
     shortstring = (get_fdstr(Re, short=True) + shortcontsetupstr +
                    shortclstr + shorttruncstr + shortinivstr)
+    if cl_linsys:
+        linsysrhs = soldict['fv'] + rhs_con + rhsv_conbc
+        shortstring = shortstring + '_linclsys'
+        nseres = -f_mat*v_ss_nse - jmat.T*p_ss_nse - linsysrhs
+        print('oseen res: {0}'.format(np.linalg.norm(nseres)))
+        soldict.update(stokes_flow=True, A=-f_mat, fv=linsysrhs)
+
     soldict.update(data_prfx=shortstring)
     dictofvelstrs = snu.solve_nse(**soldict)
 
@@ -836,10 +850,7 @@ def lqgbt(problemname='drivencavity',
         robitstr = ''
 
     dou.save_output_json(dict(tmesh=trange.tolist(), outsig=yscomplist),
-                         fstring=fdstr + truncstr + '{0}'.format(closed_loop) +
-                         't0{0:.4f}tE{1:.4f}Nts{2}'.format(t0, tE,
-                                                           np.int(Nts)) +
-                         'inipert{0}'.format(perturbpara) + robitstr)
+                         fstring=shortstring + robitstr)
 
     if plotit:
         dou.plot_outp_sig(tmesh=trange, outsig=yscomplist)

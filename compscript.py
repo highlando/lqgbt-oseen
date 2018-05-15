@@ -7,15 +7,15 @@ import sys
 import getopt
 
 # to compute stabilizing initial values for higher Re numbers
-pymess = True
 pymess = False
-relist = [None, 5e1, 7.5e1, 9e1, 1.e2, 1.15e2, 1.25e2]  # 1.01e2]
+pymess = True
+relist = [None, 5e1, 7.5e1, 1.e2]  # , 1.15e2, 1.25e2]  # 1.01e2]
 # relist = [1.e2, 1.15e2, 1.25e2]  # 1.01e2]
-max_re_only = True  # consider only the last Re for the simu
 max_re_only = False
+max_re_only = True  # consider only the last Re for the simu
 
 # the input regularization parameter
-gamma = 1e-3  # e5
+gamma = 1e-0  # e5
 # mesh parameter for the cylinder meshes
 # whether to do bccontrol or distributed
 bccontrol = True
@@ -35,19 +35,21 @@ ttf_npcrdstps = 6
 robit = True
 robit = False
 robmrgnfac = 0.1
+# whether to check the performance in the linear system
+cl_linsys = True
 # closed loop def
-closed_loop = 'full_state_fb'
-closed_loop = None
 closed_loop = 'redmod_sdre_fb'
 closed_loop = 'red_sdre_fb'
 closed_loop = False
+closed_loop = None
+closed_loop = 'full_state_fb'
 closed_loop = 'red_output_fb'
 # what inival
 whichinival = 'sstokes'  # steady state Stokes solution
-whichinival = 'sstokes++'  # a developed state starting from sstokes
 whichinival = 'sstate+d'  # sstate plus perturbation
+whichinival = 'sstokes++'  # a developed state starting from sstokes
 # number of time steps -- also define the lag in the control application
-scaletest = .01  # for 1. we simulate till 12.
+scaletest = .4  # for 1. we simulate till 12.
 baset0, basetE, baseNts = 0.0, 12.0, 2.4e3+1
 t0, tE, Nts = 0.0, scaletest*basetE, np.int(scaletest*baseNts)
 
@@ -105,7 +107,8 @@ infostring = ('Re             = {0}'.format(relist) +
               '\nrobustification= {0}'.format(robit) +
               '\nrob margin fac = {0}'.format(robmrgnfac) +
               '\nttf_npcrdstps  = {0}'.format(ttf_npcrdstps) +
-              '\nt0, tE, Nts    = {0}, {1}, {2}\n'.format(t0, tE, Nts)
+              '\nt0, tE, Nts    = {0}, {1}, {2}\n'.format(t0, tE, Nts) +
+              '\nlinear cl sys  = {0}'.format(cl_linsys)
               )
 
 print(infostring)
@@ -143,6 +146,7 @@ for ctrunc in trunclist:
         plt.close('all')
         lqgbt_lnse.lqgbt(problemname='cylinderwake', N=cyldim,
                          use_ric_ini=relist[cre-1],
+                         cl_linsys=cl_linsys,
                          NU=NU, NY=NY,
                          Re=relist[cre], plain_bt=False,
                          trunc_lqgbtcv=ctrunc,
