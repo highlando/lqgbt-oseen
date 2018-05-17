@@ -7,9 +7,10 @@ import sys
 import getopt
 
 # to compute stabilizing initial values for higher Re numbers
-pymess = False
 pymess = True
+pymess = False
 relist = [None, 5e1, 7.5e1, 1.e2]  # , 1.15e2, 1.25e2]  # 1.01e2]
+# relist = [None, 5e1, 7.5e1, 9.e1]  # , 1.15e2, 1.25e2]  # 1.01e2]
 # relist = [1.e2, 1.15e2, 1.25e2]  # 1.01e2]
 max_re_only = False
 max_re_only = True  # consider only the last Re for the simu
@@ -42,14 +43,14 @@ closed_loop = 'redmod_sdre_fb'
 closed_loop = 'red_sdre_fb'
 closed_loop = False
 closed_loop = None
-closed_loop = 'full_state_fb'
 closed_loop = 'red_output_fb'
+closed_loop = 'full_state_fb'
 # what inival
 whichinival = 'sstokes'  # steady state Stokes solution
 whichinival = 'sstate+d'  # sstate plus perturbation
 whichinival = 'sstokes++'  # a developed state starting from sstokes
 # number of time steps -- also define the lag in the control application
-scaletest = .4  # for 1. we simulate till 12.
+scaletest = .5  # for 1. we simulate till 12.
 baset0, basetE, baseNts = 0.0, 12.0, 2.4e3+1
 t0, tE, Nts = 0.0, scaletest*basetE, np.int(scaletest*baseNts)
 
@@ -123,7 +124,7 @@ else:
                          nwtn_max_steps=30,
                          nwtn_upd_reltol=2e-8,
                          nwtn_upd_abstol=1e-7,
-                         ms=[-2.0, -1.5, -1.25, -1.1, -1.0, -0.9, -0.7, -0.5],
+                         ms=[-100., -50., -10., -2.0, -1.3, -1.0, -0.9, -0.5],
                          verbose=True,
                          full_upd_norm_check=False,
                          check_lyap_res=False)

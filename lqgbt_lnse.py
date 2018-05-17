@@ -832,11 +832,62 @@ def lqgbt(problemname='drivencavity',
     shortstring = (get_fdstr(Re, short=True) + shortcontsetupstr +
                    shortclstr + shorttruncstr + shortinivstr)
     if cl_linsys:
-        linsysrhs = soldict['fv'] + rhs_con + rhsv_conbc
-        shortstring = shortstring + '_linclsys'
-        nseres = -f_mat*v_ss_nse - jmat.T*p_ss_nse - linsysrhs
-        print('oseen res: {0}'.format(np.linalg.norm(nseres)))
-        soldict.update(stokes_flow=True, A=-f_mat, fv=linsysrhs)
+        adjlinsys = True
+        if adjlinsys:
+
+            # XXX: only works if `closed_loop == 'full_state_fb'`
+            zwc, zwo = nru.get_ric_facs(fdstr=fdstr,
+                                        fmat=f_mat_gramians, mmat=mmat,
+                                        jmat=jmat, bmat=b_mat_rgscld,
+                                        cmat=c_mat_reg, ric_ini_str=fdstrini,
+                                        nwtn_adi_dict=nwtn_adi_dict,
+                                        multiproc=multiproc, pymess=pymess,
+                                        checktheres=False)
+            mtxct = pru.get_mTzzTtb(stokesmatsc['M'].T, zwo, c_mat_reg.T)
+            adj_fsfb_dict = dict(linv=v_ss_nse, tb_mat=c_mat_reg.T,
+                                 btxm_mat=mtxct.T)
+
+            adj_fv_tmdp = fv_tmdp_fullstatefb
+            adj_fv_tmdp_params = adj_fsfb_dict
+            adj_fv_tmdp_memory = None
+            # TODO: we only solve the difference system
+            # the full system will require the proper right hand sides
+            adjlinsysrhs = 0*soldict['fv']
+            adjlinsysrhsfp = 0*soldict['fp']
+            # adjiniv = soldict['iniv']
+            # adjiniv_reg = lau.app_prj_via_sadpnt(amat=stokesmatsc['M'],
+            #                                      jmat=stokesmatsc['J'],
+            #                                      rhsv=adjiniv,
+            #                                      transposedprj=False)
+            # soldict.update(iniv=adjiniv_reg)
+
+            soldict.update(fv_tmdp=adj_fv_tmdp,
+                           comp_nonl_semexp=True,
+                           fv_tmdp_params=adj_fv_tmdp_params,
+                           fv_tmdp_memory=adj_fv_tmdp_memory)
+
+            soldict.update(stokes_flow=True, A=-f_mat.T,
+                           fv=adjlinsysrhs,
+                           fp=adjlinsysrhsfp)
+            soldict.update(data_prfx=shortstring + '_adj')
+            print('norm fp: {0}'.format(np.linalg.norm(soldict['fp'])))
+            print('norm fv: {0}'.format(np.linalg.norm(soldict['fv'])))
+            dictofvelstrs = snu.solve_nse(**soldict)
+
+            yscomplist = cou.\
+                extract_output(strdict=dictofvelstrs, tmesh=trange,
+                               c_mat=b_mat_rgscld.T, load_data=dou.load_npa)
+            dou.save_output_json(dict(tmesh=trange.tolist(),
+                                      outsig=yscomplist),
+                                 fstring=shortstring + '_adj')
+            return
+
+        else:
+            linsysrhs = soldict['fv'] + rhs_con + rhsv_conbc
+            shortstring = shortstring + '_linclsys'
+            nseres = -f_mat*v_ss_nse - jmat.T*p_ss_nse - linsysrhs
+            print('oseen res: {0}'.format(np.linalg.norm(nseres)))
+            soldict.update(stokes_flow=True, A=-f_mat, fv=linsysrhs)
 
     soldict.update(data_prfx=shortstring)
     dictofvelstrs = snu.solve_nse(**soldict)
