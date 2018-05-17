@@ -38,6 +38,7 @@ robit = False
 robmrgnfac = 0.1
 # whether to check the performance in the linear system
 cl_linsys = True
+cl_linsys = False
 # closed loop def
 closed_loop = 'redmod_sdre_fb'
 closed_loop = 'red_sdre_fb'
