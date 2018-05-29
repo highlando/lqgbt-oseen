@@ -9,12 +9,33 @@ import sadptprj_riclyap_adi.bal_trunc_utils as btu
 
 __all__ = ['get_ric_facs',
            'get_rl_projections',
-           'get_prj_model']
+           'get_prj_model',
+           'get_hinf_ric_facs']
 
 # pymess = False
 pymess_dict = {}
 plain_bt = False
 debug = False
+
+
+def get_hinf_ric_facs(fmat=None, mmat=None, jmat=None,
+                      bmat=None, cmat=None,
+                      ric_ini_str=None, fdstr=None,
+                      importexport='export',
+                      checktheres=False):
+
+    if importexport == 'export':
+        from scipy.io import savemat
+        zinic = dou.load_npa(ric_ini_str + '__zwc')
+        zinio = dou.load_npa(ric_ini_str + '__zwo')
+        savematdict = dict(mmat=mmat, amat=fmat, jmat=jmat,
+                           bmat=bmat, cmat=cmat,
+                           zinic=zinic, zinio=zinio)
+
+        savemat(fdstr + '__mats', savematdict, do_compression=True)
+        raise UserWarning('done with saving to ' + fdstr + '__mats')
+
+    return
 
 
 def get_ric_facs(fmat=None, mmat=None, jmat=None,
@@ -69,17 +90,6 @@ def get_ric_facs(fmat=None, mmat=None, jmat=None,
                                  z0=zinic, **adidict)['zfac']
             dou.save_npa(zwc, fdstr + '__zwc')
         return
-
-    onlyexport = True
-    if onlyexport:
-        from scipy.io import savemat
-        zinio = dou.load_npa(ric_ini_str + '__zwo')
-        savematdict = dict(mmat=mmat, amat=fmat, jmat=jmat,
-                           bmat=bmat, cmat=cmat,
-                           zinic=zinic, zinio=zinio)
-
-        savemat(fdstr + '__mats', savematdict, do_compression=True)
-        raise UserWarning('done with saving to ' + fdstr + '__mats')
 
     if multiproc:
         import multiprocessing

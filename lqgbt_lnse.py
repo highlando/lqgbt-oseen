@@ -56,6 +56,7 @@ def lqgbt(problemname='drivencavity',
           paraoutput=True,
           plotit=True,
           trunc_lqgbtcv=1e-6,
+          hinf=False,
           nwtn_adi_dict=None,
           pymess_dict=None,
           whichinival='sstate',
@@ -69,29 +70,15 @@ def lqgbt(problemname='drivencavity',
 
     Parameters
     ----------
-    problemname : string, optional
-        what problem to be solved, 'cylinderwake' or 'drivencavity'
-    N : int, optional
-        parameter for the dimension of the space discretization
-    Re : real, optional
-        Reynolds number, defaults to `1e2`
-    gamma : real, optional
-        regularization parameter, puts weight on `|u|` in the underlying
-        LQR cost functional that, defaults to `1.`
-    plain_bt : boolean, optional
-        whether to try simple *balanced truncation*, defaults to False
-    use_ric_ini : real, optional
-        use the solution with this Re number as stabilizing initial guess,
-        defaults to `None`
-    t0, tE, Nts : real, real, int, optional
-        starting and endpoint of the considered time interval, number of
-        time instancses, default to `0.0, 1.0, 11`
-    bccontrol : boolean, optional
-        whether to apply boundary control via penalized robin conditions,
+    closed_loop : {'full_state_fb', 'red_output_fb', False, None}
+        how to do the closed loop simulation:
+
+        | if False -> no simulation
+        | if == 'full_state_fb' -> full state feedback
+        | if == 'red_output_fb' -> reduced output feedback
+        | else -> no control is applied
+
         defaults to `False`
-    NU, NY : int, optional
-        dimensions of components of in and output space (will double because
-        there are two components), default to `3, 3`
     comp_freqresp : boolean, optional
         whether to compute and compare the frequency responses,
         defaults to `False`
@@ -103,20 +90,34 @@ def lqgbt(problemname='drivencavity',
         | else -> linear reduced versus linear full model
 
         defaults to `False`
-
+    bccontrol : boolean, optional
+        whether to apply boundary control via penalized robin conditions,
+        defaults to `False`
+    gamma : real, optional
+        regularization parameter, puts weight on `|u|` in the underlying
+        LQR cost functional that, defaults to `1.`
+    hinf : boolean, optional
+        whether to compute the normalized hinf aware central controller
+    N : int, optional
+        parameter for the dimension of the space discretization
+    NU, NY : int, optional
+        dimensions of components of in and output space (will double because
+        there are two components), default to `3, 3`
+    problemname : string, optional
+        what problem to be solved, 'cylinderwake' or 'drivencavity'
+    plain_bt : boolean, optional
+        whether to try simple *balanced truncation*, defaults to False
+    Re : real, optional
+        Reynolds number, defaults to `1e2`
+    t0, tE, Nts : real, real, int, optional
+        starting and endpoint of the considered time interval, number of
+        time instancses, default to `0.0, 1.0, 11`
     trunc_lqgbtcv : real, optional
         threshold at what the lqgbt characteristiv values are truncated,
         defaults to `1e-6`
-    closed_loop : {'full_state_fb', 'red_output_fb', False, None}
-        how to do the closed loop simulation:
-
-        | if False -> no simulation
-        | if == 'full_state_fb' -> full state feedback
-        | if == 'red_output_fb' -> reduced output feedback
-        | else -> no control is applied
-
-        defaults to `False`
-
+    use_ric_ini : real, optional
+        use the solution with this Re number as stabilizing initial guess,
+        defaults to `None`
     """
 
     typprb = 'BT' if plain_bt else 'LQG-BT'
@@ -424,6 +425,7 @@ def lqgbt(problemname='drivencavity',
                               bmat=b_mat_rgscld, cmat=c_mat_reg,
                               cmpricfacpars=cmpricfacpars,
                               pymess=pymess,
+                              hinf=hinf,
                               cmprlprjpars=cmprlprjpars)
 
         obs_bk = np.dot(xok, ck_mat.T)
