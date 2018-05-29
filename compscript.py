@@ -9,7 +9,7 @@ import getopt
 # to compute stabilizing initial values for higher Re numbers
 pymess = True
 pymess = False
-relist = [None, 5e1, 7.5e1, 1.e2]  # , 1.15e2, 1.25e2]  # 1.01e2]
+relist = [None, 5e1, 7.5e1]  # , 1.e2]  # , 1.15e2, 1.25e2]  # 1.01e2]
 # relist = [None, 5e1, 7.5e1, 9.e1]  # , 1.15e2, 1.25e2]  # 1.01e2]
 # relist = [1.e2, 1.15e2, 1.25e2]  # 1.01e2]
 max_re_only = False
@@ -21,7 +21,7 @@ gamma = 1e-0  # e5
 # whether to do bccontrol or distributed
 bccontrol = True
 palpha = 1e-5  # parameter for the Robin penalization
-cyldim = 3
+cyldim = 2
 # where to truncate the LQGBT characteristic values
 trunclist = [1e-4]  # , 1e-3, 1e-2, 1e-1, 1e-0]
 # dimension of in and output spaces

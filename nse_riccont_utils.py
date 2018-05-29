@@ -70,6 +70,17 @@ def get_ric_facs(fmat=None, mmat=None, jmat=None,
             dou.save_npa(zwc, fdstr + '__zwc')
         return
 
+    onlyexport = True
+    if onlyexport:
+        from scipy.io import savemat
+        zinio = dou.load_npa(ric_ini_str + '__zwo')
+        savematdict = dict(mmat=mmat, amat=fmat, jmat=jmat,
+                           bmat=bmat, cmat=cmat,
+                           zinic=zinic, zinio=zinio)
+
+        savemat(fdstr + '__mats', savematdict, do_compression=True)
+        raise UserWarning('done with saving to ' + fdstr + '__mats')
+
     if multiproc:
         import multiprocessing
 
