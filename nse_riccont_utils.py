@@ -52,7 +52,7 @@ def get_ric_facs(fmat=None, mmat=None, jmat=None,
             lmatstr = ('oc-hinf-data/' + fdstr.partition('/')[2]
                        + '__mats' + '_output')
             loadmat(lmatstr, mdict=lmd)
-            zwc, zwo, gamma = lmd['ZC'], lmd['ZB'], lmd['gam_opt']
+            zwc, zwo, gamma = lmd['ZB'], lmd['ZC'], lmd['gam_opt']
             return zwc, zwo, gamma
 
         except IOError:
