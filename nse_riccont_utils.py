@@ -9,32 +9,12 @@ import sadptprj_riclyap_adi.bal_trunc_utils as btu
 
 __all__ = ['get_ric_facs',
            'get_rl_projections',
-           'get_prj_model',
-           'get_hinf_ric_facs']
+           'get_prj_model']
 
 # pymess = False
 pymess_dict = {}
 plain_bt = False
 debug = False
-
-
-def get_hinf_ric_facs(fmat=None, mmat=None, jmat=None,
-                      bmat=None, cmat=None,
-                      ric_ini_str=None, fdstr=None,
-                      importexport='export',
-                      checktheres=False):
-    if importexport == 'export':
-        from scipy.io import savemat
-        zinic = dou.load_npa(ric_ini_str + '__zwc')
-        zinio = dou.load_npa(ric_ini_str + '__zwo')
-        savematdict = dict(mmat=mmat, amat=fmat, jmat=jmat,
-                           bmat=bmat, cmat=cmat,
-                           zinic=zinic, zinio=zinio)
-
-        savemat(fdstr + '__mats', savematdict, do_compression=True)
-        raise UserWarning('done with saving to ' + fdstr + '__mats')
-
-    return
 
 
 def get_ric_facs(fmat=None, mmat=None, jmat=None,
@@ -216,6 +196,8 @@ def get_prj_model(truncstr=None, fdstr=None,
                   return_tltr=True,
                   cmpricfacpars={}, cmprlprjpars={}):
 
+    gamma = None
+
     if tl is None or tr is None:
         tltristhere = False
     else:
@@ -269,6 +251,9 @@ def get_prj_model(truncstr=None, fdstr=None,
                 raise IOError
             xok = dou.load_npa(fdstr+truncstr+'__xok')
             xck = dou.load_npa(fdstr+truncstr+'__xck')
+            if hinf:
+                gamma = dou.load_npa(fdstr+'__gamma')
+                gamma = gamma.flatten()[0]
         except IOError:
             if zwo is None and zwc is None:
                 zwc, zwo, gamma = get_ric_facs(fdstr=fdstr,
@@ -292,6 +277,7 @@ def get_prj_model(truncstr=None, fdstr=None,
             xck = np.dot(np.dot(trtm, zwc), np.dot(zwc.T, trtm.T))
             dou.save_npa(xok, fdstr+truncstr+'__xok')
             dou.save_npa(xck, fdstr+truncstr+'__xck')
+            dou.save_npa(np.array([gamma]), fdstr+'__gamma')
 
         if return_tltr:
             return ak_mat, bk_mat, ck_mat, xok, xck, gamma, tl, tr

@@ -282,8 +282,10 @@ def lqgbt(problemname='drivencavity',
               format(relnormdiffv))
         f_mat_gramians = - stokesmatsc['A'] - convc_mat_MAF
         fdstr = fdstr + '_MAF_ttfnpcrds{0}'.format(ttf_npcrdstps)
+        shortfailstr = 'maf{0}'.format(ttf_npcrdstps)
     else:
         f_mat_gramians = f_mat
+        shortfailstr = ''
 
 #
 # ### Compute or get the Gramians
@@ -419,7 +421,7 @@ def lqgbt(problemname='drivencavity',
         shortclstr = 'hinfrofb' if hinf else 'rofb'
         DT = (tE - t0)/(Nts-1)
 
-        ak_mat, bk_mat, ck_mat, xok, xck, tl, tr, gamma = \
+        ak_mat, bk_mat, ck_mat, xok, xck, gamma, tl, tr = \
             nru.get_prj_model(truncstr=truncstr, fdstr=fdstr,
                               abconly=False,
                               mmat=mmat, fmat=f_mat_gramians, jmat=jmat,
@@ -429,25 +431,33 @@ def lqgbt(problemname='drivencavity',
                               hinf=hinf,
                               cmprlprjpars=cmprlprjpars)
 
-        obs_bk = np.dot(xok, ck_mat.T)
+        if hinf:
+            zk = np.linalg.inv(np.eye(xck.shape[0]) - 1./gamma**2*xok.dot(xck))
+            amatk = (ak_mat
+                     - (1. - 1./gamma**2)*np.dot(np.dot(xok, ck_mat.T), ck_mat)
+                     - np.dot(bk_mat, np.dot(bk_mat.T, xck).dot(zk)))
+            obs_ck = -np.dot(bk_mat.T.dot(xck), zk)
 
-        sysmatk_inv = np.linalg.inv(np.eye(ak_mat.shape[1]) - DT*(ak_mat -
-                                    np.dot(np.dot(xok, ck_mat.T), ck_mat) -
-                                    np.dot(bk_mat, np.dot(bk_mat.T, xck))))
+        else:
+            amatk = (ak_mat - np.dot(np.dot(xok, ck_mat.T), ck_mat) -
+                     np.dot(bk_mat, np.dot(bk_mat.T, xck)))
+            obs_ck = -bk_mat.T.dot(xck)
+
+        obs_bk = np.dot(xok, ck_mat.T)
+        sysmatk_inv = np.linalg.inv(np.eye(ak_mat.shape[1]) - DT*amatk)
 
         def fv_tmdp_redoutpfb(time=None, curvel=None, memory=None,
                               linvel=None,
-                              ipsysk_mat_inv=None,
-                              obs_bk=None, cts=None,
                               b_mat=None, c_mat=None,
-                              xck=None, bk_mat=None,
+                              ipsysk_mat_inv=None, cts=None,
+                              obs_bk=None, obs_ck=None,
+                              # xck=None, bk_mat=None,
                               **kw):
             """realizes a reduced static output feedback as a function
 
             that can be passed to a solution routine for the
             unsteady Navier-Stokes equations
 
-            For convinience the
             Parameters
             ----------
             time : real
@@ -472,15 +482,8 @@ def lqgbt(problemname='drivencavity',
                 time step length
             b_mat : (N,NU) sparse matrix
                 input matrix of the full system
-                c_mat=None,
             c_mat : (NY,N) sparse matrix
                 output matrix of the full system
-            Rmo : float
-                inverse of the input weighting scalar
-            xck : (K,K) nparray
-                reduced solution of the CARE
-            bk_mat : (K,NU) nparray
-                reduced input matrix
 
             Returns
             -------
@@ -495,8 +498,7 @@ def lqgbt(problemname='drivencavity',
                              lau.mm_dnssps(c_mat, (curvel-linvel)))
             xk_old = np.dot(ipsysk_mat_inv, xk_old + buk)
             memory['xk_old'] = xk_old
-            actua = -lau.mm_dnssps(b_mat,
-                                   np.dot(bk_mat.T, np.dot(xck, xk_old)))
+            actua = lau.mm_dnssps(b_mat, obs_ck.dot(xk_old))
             # if np.mod(np.int(time/DT), np.int(tE/DT)/100) == 0:
             #     print(('time now: {0}, end time: {1}'.format(time, tE)))
             #     print('\nnorm of deviation', np.linalg.norm(curvel-linvel))
@@ -504,9 +506,10 @@ def lqgbt(problemname='drivencavity',
             memory['actualist'].append(actua)
             return actua, memory
 
-        fv_rofb_dict = dict(cts=DT, linvel=v_ss_nse, b_mat=b_mat_rgscld,
-                            c_mat=c_mat_reg, obs_bk=obs_bk, bk_mat=bk_mat,
-                            ipsysk_mat_inv=sysmatk_inv, xck=xck)
+        fv_rofb_dict = dict(cts=DT, linvel=v_ss_nse,
+                            b_mat=b_mat_rgscld, c_mat=c_mat_reg,
+                            obs_bk=obs_bk, obs_ck=obs_ck,
+                            ipsysk_mat_inv=sysmatk_inv)
 
         fv_tmdp = fv_tmdp_redoutpfb
         fv_tmdp_params = fv_rofb_dict
@@ -832,7 +835,7 @@ def lqgbt(problemname='drivencavity',
                        pfileprfx='results/p_'+outstr)
 
     shortstring = (get_fdstr(Re, short=True) + shortcontsetupstr +
-                   shortclstr + shorttruncstr + shortinivstr)
+                   shortclstr + shorttruncstr + shortinivstr + shortfailstr)
     if cl_linsys:
         adjlinsys = True
         if adjlinsys:

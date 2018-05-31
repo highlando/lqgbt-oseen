@@ -29,8 +29,8 @@ NU, NY = 3, 3
 # to what extend we perturb the initial value
 perturbpara = 1e-3
 # whether we use a perturbed system
-trytofail = True
 trytofail = False
+trytofail = True
 ttf_npcrdstps = 6
 # whether to robustify the observer
 robit = True
@@ -44,15 +44,15 @@ closed_loop = 'redmod_sdre_fb'
 closed_loop = 'red_sdre_fb'
 closed_loop = False
 closed_loop = 'full_state_fb'
-closed_loop = 'red_output_fb'
 closed_loop = None
+closed_loop = 'red_output_fb'
 closed_loop = 'hinf_red_output_fb'
 # what inival
 whichinival = 'sstokes'  # steady state Stokes solution
 whichinival = 'sstokes++'  # a developed state starting from sstokes
 whichinival = 'sstate+d'  # sstate plus perturbation
 # number of time steps -- also define the lag in the control application
-scaletest = 2.  # .5  # for 1. we simulate till 12.
+scaletest = .5  # .5  # for 1. we simulate till 12.
 baset0, basetE, baseNts = 0.0, 12.0, 2.4e3+1
 t0, tE, Nts = 0.0, scaletest*basetE, np.int(scaletest*baseNts)
 
