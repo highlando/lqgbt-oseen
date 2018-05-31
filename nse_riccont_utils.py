@@ -23,7 +23,6 @@ def get_hinf_ric_facs(fmat=None, mmat=None, jmat=None,
                       ric_ini_str=None, fdstr=None,
                       importexport='export',
                       checktheres=False):
-
     if importexport == 'export':
         from scipy.io import savemat
         zinic = dou.load_npa(ric_ini_str + '__zwc')
@@ -42,8 +41,29 @@ def get_ric_facs(fmat=None, mmat=None, jmat=None,
                  bmat=None, cmat=None,
                  ric_ini_str=None, fdstr=None,
                  nwtn_adi_dict=None,
-                 zwconly=False,
+                 zwconly=False, hinf=False,
                  multiproc=False, pymess=False, checktheres=False):
+
+    if hinf:
+        # we can't compute we can only import export
+        try:
+            from scipy.io import loadmat
+            lmd = {}
+            lmatstr = ('oc-hinf-data/' + fdstr.partition('/')[2]
+                       + '__mats' + '_output')
+            loadmat(lmatstr, mdict=lmd)
+            zwc, zwo, gamma = lmd['ZC'], lmd['ZB'], lmd['gam_opt']
+            return zwc, zwo, gamma
+
+        except IOError:
+            from scipy.io import savemat
+            zinic = dou.load_npa(ric_ini_str + '__zwc')
+            zinio = dou.load_npa(ric_ini_str + '__zwo')
+            savematdict = dict(mmat=mmat, amat=fmat, jmat=jmat,
+                               bmat=bmat, cmat=cmat,
+                               zinic=zinic, zinio=zinio)
+            savemat(fdstr + '__mats', savematdict, do_compression=True)
+            raise UserWarning('done with saving to ' + fdstr + '__mats')
 
     if pymess:
         get_ricadifacs = pru.pymess_dae2_cnt_riccati
@@ -151,7 +171,7 @@ def get_rl_projections(fdstr=None, truncstr=None,
                        zwc=None, zwo=None,
                        fmat=None, mmat=None, jmat=None,
                        bmat=None, cmat=None,
-                       cmpricfacpars={},
+                       cmpricfacpars={}, hinf=False,
                        pymess=False,
                        trunc_lqgbtcv=None):
 
@@ -173,6 +193,7 @@ def get_rl_projections(fdstr=None, truncstr=None,
                                     pymess=pymess,
                                     fmat=fmat, mmat=mmat, jmat=jmat,
                                     cmat=cmat, bmat=bmat,
+                                    hinf=hinf,
                                     **cmpricfacpars)
         tl, tr, svs = btu.\
             compute_lrbt_transfos(zfc=zwc, zfo=zwo,
@@ -187,6 +208,7 @@ def get_rl_projections(fdstr=None, truncstr=None,
 
 
 def get_prj_model(truncstr=None, fdstr=None,
+                  hinf=False,
                   matsdict={},
                   abconly=False,
                   mmat=None, fmat=None, jmat=None, bmat=None, cmat=None,
@@ -205,7 +227,7 @@ def get_prj_model(truncstr=None, fdstr=None,
                                     zwc=zwc, zwo=zwo,
                                     fmat=fmat, mmat=mmat, jmat=jmat,
                                     cmat=cmat, bmat=bmat,
-                                    pymess=pymess,
+                                    pymess=pymess, hinf=hinf,
                                     cmpricfacpars=cmpricfacpars,
                                     **cmprlprjpars)
         tltristhere = True
@@ -228,6 +250,7 @@ def get_prj_model(truncstr=None, fdstr=None,
                                         fmat=fmat, mmat=mmat, jmat=jmat,
                                         cmat=cmat, bmat=bmat,
                                         cmpricfacpars=cmpricfacpars,
+                                        hinf=hinf,
                                         **cmprlprjpars)
             tltristhere = True
 
@@ -252,6 +275,7 @@ def get_prj_model(truncstr=None, fdstr=None,
                 zwc, zwo = get_ric_facs(fdstr=fdstr,
                                         fmat=fmat, mmat=mmat, jmat=jmat,
                                         cmat=cmat, bmat=bmat,
+                                        hinf=hinf,
                                         **cmpricfacpars)
 
             if tltristhere:
@@ -260,6 +284,7 @@ def get_prj_model(truncstr=None, fdstr=None,
                 tl, tr = get_rl_projections(fdstr=fdstr, truncstr=truncstr,
                                             mmat=mmat,
                                             zwc=zwc, zwo=zwo,
+                                            hinf=hinf,
                                             **cmprlprjpars)
                 tltristhere = True
 

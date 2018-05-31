@@ -171,6 +171,7 @@ def lqgbt(problemname='drivencavity',
             contsetupstr + prbstr
 
     fdstr = get_fdstr(Re)
+    fdstr = fdstr + '_hinf' if hinf else fdstr
     fdstrini = get_fdstr(use_ric_ini) if use_ric_ini is not None else None
 
 #
@@ -415,7 +416,7 @@ def lqgbt(problemname='drivencavity',
         fv_tmdp_memory = None
 
     elif closed_loop == 'red_output_fb':
-        shortclstr = 'rofb'
+        shortclstr = 'hinfrofb' if hinf else 'rofb'
         DT = (tE - t0)/(Nts-1)
 
         ak_mat, bk_mat, ck_mat, xok, xck, tl, tr = \
@@ -716,14 +717,13 @@ def lqgbt(problemname='drivencavity',
         fv_tmdp_params = fv_sdre_dict
         fv_tmdp_memory = dict(basePk=None, baseAk=None, baseZk=None)
 
-    if pymess:
-        shortclstr = shortclstr + 'pm'
-
     else:
         fv_tmdp = None
         fv_tmdp_params = {}
         fv_tmdp_memory = {}
         shortclstr = '_'
+
+    shortclstr = shortclstr + 'pm' if pymess else shortclstr
 
     soldict.update(fv_stbc=rhsd_stbc['fv'],
                    trange=trange,
@@ -745,7 +745,7 @@ def lqgbt(problemname='drivencavity',
                                                jmat=stokesmatsc['J'],
                                                rhsv=perturbini)
         soldict.update(dict(iniv=v_ss_nse + reg_pertubini))
-        shortinivstr = 'ssd'
+        shortinivstr = 'ssd{0}'.format(perturbpara)
     elif whichinival == 'sstokes++':
         lctrng = (trange[trange < tpp]).tolist()
         lctrng.append(tpp)
