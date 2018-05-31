@@ -419,7 +419,7 @@ def lqgbt(problemname='drivencavity',
         shortclstr = 'hinfrofb' if hinf else 'rofb'
         DT = (tE - t0)/(Nts-1)
 
-        ak_mat, bk_mat, ck_mat, xok, xck, tl, tr = \
+        ak_mat, bk_mat, ck_mat, xok, xck, tl, tr, gamma = \
             nru.get_prj_model(truncstr=truncstr, fdstr=fdstr,
                               abconly=False,
                               mmat=mmat, fmat=f_mat_gramians, jmat=jmat,

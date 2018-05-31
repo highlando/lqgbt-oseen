@@ -164,7 +164,7 @@ def get_ric_facs(fmat=None, mmat=None, jmat=None,
     if zwconly:
         return zwc
     else:
-        return zwc, zwo
+        return zwc, zwo, None
 
 
 def get_rl_projections(fdstr=None, truncstr=None,
@@ -189,12 +189,11 @@ def get_rl_projections(fdstr=None, truncstr=None,
         print(('computing the left and right transformations' +
                ' and saving to: \n' + fdstr + truncstr + '__tl/__tr'))
         if zwc is None or zwo is None:
-            zwc, zwo = get_ric_facs(fdstr=fdstr,
-                                    pymess=pymess,
-                                    fmat=fmat, mmat=mmat, jmat=jmat,
-                                    cmat=cmat, bmat=bmat,
-                                    hinf=hinf,
-                                    **cmpricfacpars)
+            zwc, zwo, gamma = get_ric_facs(fdstr=fdstr, pymess=pymess,
+                                           fmat=fmat, mmat=mmat, jmat=jmat,
+                                           cmat=cmat, bmat=bmat,
+                                           hinf=hinf,
+                                           **cmpricfacpars)
         tl, tr, svs = btu.\
             compute_lrbt_transfos(zfc=zwc, zfo=zwo,
                                   mmat=mmat,
@@ -272,11 +271,11 @@ def get_prj_model(truncstr=None, fdstr=None,
             xck = dou.load_npa(fdstr+truncstr+'__xck')
         except IOError:
             if zwo is None and zwc is None:
-                zwc, zwo = get_ric_facs(fdstr=fdstr,
-                                        fmat=fmat, mmat=mmat, jmat=jmat,
-                                        cmat=cmat, bmat=bmat,
-                                        hinf=hinf,
-                                        **cmpricfacpars)
+                zwc, zwo, gamma = get_ric_facs(fdstr=fdstr,
+                                               fmat=fmat, mmat=mmat, jmat=jmat,
+                                               cmat=cmat, bmat=bmat,
+                                               hinf=hinf,
+                                               **cmpricfacpars)
 
             if tltristhere:
                 pass
@@ -295,10 +294,10 @@ def get_prj_model(truncstr=None, fdstr=None,
             dou.save_npa(xck, fdstr+truncstr+'__xck')
 
         if return_tltr:
-            return ak_mat, bk_mat, ck_mat, xok, xck, tl, tr
+            return ak_mat, bk_mat, ck_mat, xok, xck, gamma, tl, tr
 
         else:
-            return ak_mat, bk_mat, ck_mat, xok, xck
+            return ak_mat, bk_mat, ck_mat, xok, xck, gamma
 
 
 def get_sdrefb_upd(amat, t, fbtype=None, wnrm=2,
