@@ -522,6 +522,115 @@ def lqgbt(problemname='drivencavity',
 
         # soldict.update(dict(verbose=False))
 
+    elif closed_loop == 'full_sdre_fb':
+        shortclstr = 'fsdrfb'
+
+        sdcpicard = 1.
+        vinf = v_ss_nse
+        get_cur_sdccoeff = neu.get_get_cur_extlin(vinf=vinf, amat=amat,
+                                                  picrdvsnwtn=sdcpicard,
+                                                  **femp)
+        sdre_ric_ini = fdstr
+        cmpricfacpars.update(ric_ini_str=sdre_ric_ini)
+
+        def solve_full_sdre(curfmat, memory=None, eps=None, time=None):
+            if memory['baseP'] is None:  # initialization
+                sdrefdstr = fdstr + inivstr + '_SDREini'
+            else:
+                sdrefdstr = (fdstr + inivstr +
+                             '_SDREeps{0}t{1:.2e}'.format(eps, time))
+
+            cmpricfacpars.update(ric_ini_str=sdrefdstr)
+            zwc = nru.get_ric_facs(fdstr=sdrefdstr,
+                                   fmat=curfmat, mmat=mmat,
+                                   jmat=jmat, bmat=b_mat_rgscld,
+                                   cmat=c_mat_reg,
+                                   ric_ini_str=sdre_ric_ini,
+                                   nwtn_adi_dict=nwtn_adi_dict,
+                                   zwconly=True,
+                                   multiproc=False, pymess=pymess,
+                                   checktheres=False)
+
+            mtxb = pru.get_mTzzTtb(stokesmatsc['M'].T, zwc, b_mat_rgscld)
+            baseGain = mtxb.T
+            memory.update(baseA=curfmat)
+            memory.update(basePfac=zwc, baseGain=baseGain)
+            memory.update(baseZ=curfmat - b_mat_rgscld.dot(baseGain))
+            # XXX: memory!
+            return
+
+        def sdre_feedback(curvel=None, memory=None,
+                          updtthrsh=None, time=None, **kw):
+            ''' function for the SDRE feedback
+
+            Parameters
+            ---
+            use_ric_ini : string, optional
+                path to a stabilizing initial guess
+            '''
+
+            curfmat = get_cur_sdccoeff(vcur=curvel)
+
+            if memory['baseP'] is None:  # initialization
+                savethev = np.copy(curvel)
+                memory.update(basev=savethev)
+                solve_full_sdre(curfmat, memory=memory)
+
+                vdiff = mmat*(curvel-vinf)
+                actua = -b_mat_rgscld.dot(memory['baseGain'].dot(vdiff))
+                return actua, memory
+
+            # ## updated sdre feedback
+            nomvdiff = curvel-vinf
+            print('diff: `curv-linv`: {0}'.format(np.linalg.norm(nomvdiff)))
+
+            pupd, elteps = nru.\
+                get_fullnsesdrefb_upd(curak, time, fbtype='sylvupdfb', wnrm=2,
+                                      baseA=memory['baseA'],
+                                      baseZ=memory['baseZ'],
+                                      baseP=memory['basePfac'],
+                                      maxfac=None, maxeps=updtthrsh)
+
+            if elteps:  # E less than eps
+                updGain = memory['cur_bk'].T.dot(pupd)
+                redvdiff = memory['cur_tl'].T.dot(mmat*(curvel-vinf))
+                actua = -b_mat_rgscld.dot(updGain.dot(redvdiff))
+                return actua, memory
+
+            else:
+                tl = memory['cur_tl']
+                tr = memory['cur_tr']
+                prvvel = memory['basev']
+                prvfmat = get_cur_sdccoeff(vcur=prvvel)
+                prvak = -tl.T.dot(prvfmat.dot(tr))
+                basak = memory['baseAk']
+                print('|prv Ak|: {0}'.format(norm(prvak)))
+                print('|cur Ak|: {0}'.format(norm(curak)))
+                print('|bas Ak|: {0}'.format(norm(basak)))
+
+                savethev = np.copy(curvel)
+                memory.update(basev=savethev)
+                # memory.update(basev=curvel)
+                solve_sdre(curfmat, memory=memory, eps=updtthrsh, time=time)
+                redvdiff = memory['cur_tl'].T.dot(mmat*(curvel-vinf))
+                actua = -b_mat_rgscld.dot(memory['baseGain'].dot(redvdiff))
+                return actua, memory
+
+            return actua, memory
+
+        fv_sdre_dict = dict(updtthrsh=.9)
+
+        fv_tmdp = sdre_feedback
+        fv_tmdp_params = fv_sdre_dict
+        fv_tmdp_memory = dict(basePk=None)
+
+        # 1. prelims
+        #    * func:get Riccati Grams at current state
+        #    * get reduced model (func: Ak(vdelta(t)))
+        # 2. func: sdre_fblaw
+        #    compute E -- solve sylvester
+        #    reset Grams and Ak, Bk, etc
+
     elif closed_loop == 'red_sdre_fb':
         shortclstr = 'rdsdrfb'
 

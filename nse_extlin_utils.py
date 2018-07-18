@@ -78,3 +78,31 @@ def get_get_cur_extlin(vinf=None, V=None, diribcs=None, invinds=None,
         return curfmat
 
     return get_cur_extlin
+
+
+def decomp_leray(mmat, jmat):
+    from spacetime_galerkin_pod.ldfnp_ext_cholmod import SparseFactorMassmat
+    import scipy.linalg as spla
+
+    Np, Nv = jmat.shape
+
+    facmy = SparseFactorMassmat(mmat)
+    minv = facmy.solve_M
+
+    minvjt = minv(jmat.T).todense()
+    S = jmat*minvjt
+    Sinv = spla.inv(S)
+    Pi = np.eye(Nv) - minvjt.dot(Sinv*jmat)
+
+    umat, svec, vmat = spla.svd(Pi)
+    uk = umat[:, :Nv-Np]
+    vk = vmat.T[:, :Nv-Np]
+
+    thl = uk*svec[:Nv-Np]
+    thr = vk
+    minvthr = minv(thr)
+
+    # print(np.allclose(np.eye(Nv-Np), thr.T.dot(thl)))
+    # print(np.allclose(Pi, thl.dot(thr.T)))
+
+    return thl, thr, minvthr

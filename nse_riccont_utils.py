@@ -9,7 +9,8 @@ import sadptprj_riclyap_adi.bal_trunc_utils as btu
 
 __all__ = ['get_ric_facs',
            'get_rl_projections',
-           'get_prj_model']
+           'get_prj_model',
+           'get_sdrefb_upd']
 
 # pymess = False
 pymess_dict = {}
