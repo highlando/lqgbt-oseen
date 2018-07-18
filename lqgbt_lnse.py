@@ -421,7 +421,7 @@ def lqgbt(problemname='drivencavity',
         shortclstr = 'hinfrofb' if hinf else 'rofb'
         DT = (tE - t0)/(Nts-1)
 
-        ak_mat, bk_mat, ck_mat, xok, xck, gamma, tl, tr = \
+        ak_mat, bk_mat, ck_mat, xok, xck, hinfgamma, tl, tr = \
             nru.get_prj_model(truncstr=truncstr, fdstr=fdstr,
                               abconly=False,
                               mmat=mmat, fmat=f_mat_gramians, jmat=jmat,
@@ -430,11 +430,14 @@ def lqgbt(problemname='drivencavity',
                               pymess=pymess,
                               hinf=hinf,
                               cmprlprjpars=cmprlprjpars)
+        print('Controller has dimension: {0}'.format(ak_mat.shape[0]))
 
         if hinf:
-            zk = np.linalg.inv(np.eye(xck.shape[0]) - 1./gamma**2*xok.dot(xck))
+            zk = np.linalg.inv(np.eye(xck.shape[0])
+                               - 1./hinfgamma**2*xok.dot(xck))
             amatk = (ak_mat
-                     - (1. - 1./gamma**2)*np.dot(np.dot(xok, ck_mat.T), ck_mat)
+                     - (1. - 1./hinfgamma**2)*np.dot(np.dot(xok, ck_mat.T),
+                                                     ck_mat)
                      - np.dot(bk_mat, np.dot(bk_mat.T, xck).dot(zk)))
             obs_ck = -np.dot(bk_mat.T.dot(xck), zk)
 
@@ -504,6 +507,7 @@ def lqgbt(problemname='drivencavity',
             #     print('\nnorm of deviation', np.linalg.norm(curvel-linvel))
             #     print('norm of actuation {0}'.format(np.linalg.norm(actua)))
             memory['actualist'].append(actua)
+
             return actua, memory
 
         fv_rofb_dict = dict(cts=DT, linvel=v_ss_nse,
@@ -834,7 +838,7 @@ def lqgbt(problemname='drivencavity',
                        vfileprfx='results/vel_'+outstr,
                        pfileprfx='results/p_'+outstr)
 
-    shortstring = (get_fdstr(Re, short=True) + shortcontsetupstr +
+    shortstring = (get_fdstr(Re, short=True) +  # shortcontsetupstr +
                    shortclstr + shorttruncstr + shortinivstr + shortfailstr)
     if cl_linsys:
         adjlinsys = True

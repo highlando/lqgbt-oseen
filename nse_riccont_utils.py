@@ -26,24 +26,34 @@ def get_ric_facs(fmat=None, mmat=None, jmat=None,
 
     if hinf:
         # we can't compute we can only import export
+        # other directory than `data`
+        # hinfmatstr = 'oc-hinf-data/outputs/' + \
+        hinfmatstr = 'oc-hinf-data/outputs/' + \
+            fdstr.partition('/')[2] + '__mats'
         try:
             from scipy.io import loadmat
             lmd = {}
-            lmatstr = ('oc-hinf-data/' + fdstr.partition('/')[2]
-                       + '__mats' + '_output')
-            loadmat(lmatstr, mdict=lmd)
-            zwc, zwo, gamma = lmd['ZB'], lmd['ZC'], lmd['gam_opt']
-            return zwc, zwo, gamma
+            loadmat(hinfmatstr + '_output', mdict=lmd)
+            try:
+                zwc, zwo, hinfgamma = lmd['ZB'], lmd['ZC'], lmd['gam_opt']
+            except KeyError:
+                zwc, zwo, hinfgamma = (lmd['outControl'][0, 0]['Z'],
+                                       lmd['outFilter'][0, 0]['Z'],
+                                       lmd['gam_opt'])
+            return zwc, zwo, hinfgamma
 
         except IOError:
+            print('could not load: ' + hinfmatstr + '_output')
+            hinfmatstr = 'oc-hinf-data/' + \
+                fdstr.partition('/')[2] + '__mats'
             from scipy.io import savemat
             zinic = dou.load_npa(ric_ini_str + '__zwc')
             zinio = dou.load_npa(ric_ini_str + '__zwo')
             savematdict = dict(mmat=mmat, amat=fmat, jmat=jmat,
                                bmat=bmat, cmat=cmat,
                                zinic=zinic, zinio=zinio)
-            savemat(fdstr + '__mats', savematdict, do_compression=True)
-            raise UserWarning('done with saving to ' + fdstr + '__mats')
+            savemat(hinfmatstr, savematdict, do_compression=True)
+            raise UserWarning('done with saving to ' + hinfmatstr)
 
     if pymess:
         get_ricadifacs = pru.pymess_dae2_cnt_riccati
@@ -169,11 +179,11 @@ def get_rl_projections(fdstr=None, truncstr=None,
         print(('computing the left and right transformations' +
                ' and saving to: \n' + fdstr + truncstr + '__tl/__tr'))
         if zwc is None or zwo is None:
-            zwc, zwo, gamma = get_ric_facs(fdstr=fdstr, pymess=pymess,
-                                           fmat=fmat, mmat=mmat, jmat=jmat,
-                                           cmat=cmat, bmat=bmat,
-                                           hinf=hinf,
-                                           **cmpricfacpars)
+            zwc, zwo, hinfgamma = \
+                get_ric_facs(fdstr=fdstr, pymess=pymess,
+                             fmat=fmat, mmat=mmat, jmat=jmat,
+                             cmat=cmat, bmat=bmat, hinf=hinf,
+                             **cmpricfacpars)
         tl, tr, svs = btu.\
             compute_lrbt_transfos(zfc=zwc, zfo=zwo,
                                   mmat=mmat,
@@ -196,7 +206,7 @@ def get_prj_model(truncstr=None, fdstr=None,
                   return_tltr=True,
                   cmpricfacpars={}, cmprlprjpars={}):
 
-    gamma = None
+    hinfgamma = None
 
     if tl is None or tr is None:
         tltristhere = False
@@ -252,15 +262,14 @@ def get_prj_model(truncstr=None, fdstr=None,
             xok = dou.load_npa(fdstr+truncstr+'__xok')
             xck = dou.load_npa(fdstr+truncstr+'__xck')
             if hinf:
-                gamma = dou.load_npa(fdstr+'__gamma')
-                gamma = gamma.flatten()[0]
+                hinfgamma = dou.load_npa(fdstr+'__gamma')
+                hinfgamma = hinfgamma.flatten()[0]
         except IOError:
             if zwo is None and zwc is None:
-                zwc, zwo, gamma = get_ric_facs(fdstr=fdstr,
-                                               fmat=fmat, mmat=mmat, jmat=jmat,
-                                               cmat=cmat, bmat=bmat,
-                                               hinf=hinf,
-                                               **cmpricfacpars)
+                zwc, zwo, hinfgamma = \
+                    get_ric_facs(fdstr=fdstr, fmat=fmat, mmat=mmat, jmat=jmat,
+                                 cmat=cmat, bmat=bmat, hinf=hinf,
+                                 **cmpricfacpars)
 
             if tltristhere:
                 pass
@@ -277,13 +286,13 @@ def get_prj_model(truncstr=None, fdstr=None,
             xck = np.dot(np.dot(trtm, zwc), np.dot(zwc.T, trtm.T))
             dou.save_npa(xok, fdstr+truncstr+'__xok')
             dou.save_npa(xck, fdstr+truncstr+'__xck')
-            dou.save_npa(np.array([gamma]), fdstr+'__gamma')
+            dou.save_npa(np.array([hinfgamma]), fdstr+'__gamma')
 
         if return_tltr:
-            return ak_mat, bk_mat, ck_mat, xok, xck, gamma, tl, tr
+            return ak_mat, bk_mat, ck_mat, xok, xck, hinfgamma, tl, tr
 
         else:
-            return ak_mat, bk_mat, ck_mat, xok, xck, gamma
+            return ak_mat, bk_mat, ck_mat, xok, xck, hinfgamma
 
 
 def get_sdrefb_upd(amat, t, fbtype=None, wnrm=2,
