@@ -1,47 +1,11 @@
-#directories
+data
+results
 docs/_build
-data/
-
-#files
-*.png
-*.pdf
-*.py[cod]
-*.pvd
-*.vtu
+oc-hinf-data
+ottodata
+logs
+log*
 *.xml
-*.mat
-*.npy
 
-# C extensions
-*.so
-
-# Packages
-*.egg
-*.egg-info
-dist
-build
-eggs
-parts
-bin
-var
-sdist
-develop-eggs
-.installed.cfg
-lib
-lib64
-
-# Installer logs
-pip-log.txt
-
-# Unit test / coverage reports
-.coverage
-.tox
-nosetests.xml
-
-# Translations
-*.mo
-
-# Mr Developer
-.mr.developer.cfg
-.project
-.pydevproject
+# special
+tags
