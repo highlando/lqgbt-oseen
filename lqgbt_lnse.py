@@ -592,9 +592,6 @@ def lqgbt(problemname='drivencavity',
             cur_tr = memory['cur_tr']
             cur_tl = memory['cur_tl']
             curak = -cur_tl.T.dot(curfmat.dot(cur_tr))
-            # print('norm Ak: {0}'.format(np.linalg.norm(curak)))
-            # print('diff: `akbase-aknow`: {0}'.
-            #       format(np.linalg.norm(curak-memory['baseAk'])))
             redvdiff = memory['cur_tl'].T.dot(mmat*(curvel-vinf))
             print('diff: `curv-linv`: {0}'.format(np.linalg.norm(redvdiff)))
             print('|basegain|: {0}'.format(np.linalg.norm(memory['baseGain'])))
@@ -629,17 +626,6 @@ def lqgbt(problemname='drivencavity',
                 actua = -b_mat_rgscld.dot(memory['baseGain'].dot(redvdiff))
                 return actua, memory
 
-            # zwc = memory['czwc']
-
-            # btxm_mat = pru.get_mTzzTtb(stokesmatsc['M'].T, zwc, b_mat_reg).T
-            # actua = -lau.comp_uvz_spdns(b_mat_reg, btxm_mat, curvel-vinf)
-            # actua = -lau.comp_uvz_spdns(b_mat_reg, cur_f,
-            #                             cur_tl.T.dot(mmat*(curvel-vinf)))
-            # diffv = curvel-vinf
-            # rldiffv = cur_tr.dot(cur_tr.T.dot(mmat*(diffv)))
-            # nrmrldiffv = np.linalg.norm(rldiffv)
-            # print('norm of prj/lfd veldiff: {0}'.format(nrmrldiffv))
-            # import ipdb; ipdb.set_trace()
             return actua, memory
 
         fv_sdre_dict = dict(updtthrsh=.9)
@@ -683,8 +669,6 @@ def lqgbt(problemname='drivencavity',
             '''
 
             norm = np.linalg.norm
-            # print('time: {0}, |v|: {1}'.format(time, norm(curvel)))
-            # print('time: {0}, |vinf|: {1}'.format(time, norm(vinf)))
             curfmat = get_cur_sdccoeff(vcur=curvel)
             curak = -basetl.T.dot(curfmat.dot(basetr))
             redvdiff = basetl.T.dot(mmat*(curvel-vinf))
@@ -698,15 +682,6 @@ def lqgbt(problemname='drivencavity',
                                baseP=memory['basePk'],
                                B=bk_mat, Q=cktck,
                                maxfac=None, maxeps=updtthrsh)
-
-            # if time > 0.006:
-            #     prvvel = memory['prevvel']
-            #     difftopv = prvvel - curvel
-            #     difff = get_cur_sdccoeff(vcur=curvel) - \
-            #         get_cur_sdccoeff(vcur=prvvel)
-            #     diffak = -basetl.T.dot(difff.dot(basetr))
-            #     ndiffak = norm(diffak)
-            #     import ipdb; ipdb.set_trace()
 
             actua = -b_mat_rgscld.dot(bk_mat.T.dot(pupd.dot(redvdiff)))
 
@@ -779,57 +754,6 @@ def lqgbt(problemname='drivencavity',
             dou.save_npa(sstokspp, stksppdtstr)
         soldict.update(dict(iniv=sstokspp))
         shortinivstr = 'sk{0}'.format(tpp)
-
-    # checkdaredmod = True
-    # checkdaredmod = False
-    # if checkdaredmod:
-    #     import spacetime_galerkin_pod.gen_pod_utils as gpu
-    #     # akm = basetl.T.dot(amat*basetr)
-    #     # nk = basetl.shape[1]
-
-    #     redmod = False
-    #     redmod = True
-    #     if redmod:
-    #         curiniv = basetl.T.dot(mmat*(soldict['iniv']-vinf))
-    #         nk = basetr.shape[1]
-
-    #         def rednonl(vvec, t):
-    #             inflv = basetr.dot(vvec.reshape((nk, 1)))
-    #             curcoeff = get_cur_sdccoeff(vdelta=inflv)
-    #             returval = basetl.T.dot(curcoeff.dot(inflv))
-    #             return returval.flatten()
-    #         curnonl = rednonl
-    #         tstrunstr = 'testdaredmod'
-    #         mmatforlsoda = None
-    #         tstc = ck_mat
-
-    #     else:
-    #         curiniv = soldict['iniv'] - vinf
-    #         NV = mmat.shape[0]
-
-    #         def fulnonl(vvec, t):
-    #             curcoeff = get_cur_sdccoeff(vvec.reshape((NV, 1)))
-    #             apconv = curcoeff.dot(vvec.reshape((NV, 1)))
-    #             prjapc = lau.app_prj_via_sadpnt(amat=mmat, jmat=jmat,
-    #                                             rhsv=apconv)
-    #             return prjapc.flatten()
-    #         mmatforlsoda = mmat
-    #         curnonl = fulnonl
-    #         tstrunstr = 'testdafulmod'
-    #         tstc = c_mat
-
-    #     print('doing the `lsoda` integration...')
-    #     tstsol = gpu.time_int_semil(tmesh=trange, A=None, M=mmatforlsoda,
-    #                                 nfunc=curnonl, iniv=curiniv)
-
-    #     print('done with the `lsoda` integration!')
-    #     outptlst = []
-    #     for kline in range(tstsol.shape[0]):
-    #         # outptlst.append((ck_mat.dot(redsol[k, :])).tolist())
-    #         outptlst.append((tstc.dot(tstsol[kline, :])).tolist())
-    #     dou.save_output_json(dict(tmesh=trange.tolist(), outsig=outptlst),
-    #                          fstring=tstrunstr)
-    #     import ipdb; ipdb.set_trace()
 
     outstr = truncstr + '{0}'.format(closed_loop) \
         + 't0{0}tE{1}Nts{2}N{3}Re{4}'.format(t0, tE, Nts, N, Re)
