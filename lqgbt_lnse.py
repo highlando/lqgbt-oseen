@@ -532,9 +532,25 @@ def lqgbt(problemname='drivencavity',
                                                   **femp)
         sdre_ric_ini = fdstr
         cmpricfacpars.update(ric_ini_str=sdre_ric_ini)
+        # we decompose the Leray projector `Pi=thl*thr.T`
+        leraystr = (ddir + 'discleray_' + problemname +
+                    'Nv{0}Np{1}'.format(jmat.shape[0], jmat.shape[1]))
+        thl, thr, minvthr = neu.decomp_leray(mmat, jmat, dataprfx=leraystr)
+
+        def _lrymts(fmat, leftonly=False, rightonly=False, thrtonly=False):
+            if leftonly:
+                return minvthr.T.dot(fmat)
+            elif rightonly:
+                return fmat.dot(thl)
+            elif thrtonly:
+                return thr.T.dot(fmat)
+            else:
+                return minvthr.T.dot(fmat.dot(thl))
+
+        thrminvbmat = _lrymts(b_mat_rgscld, leftonly=True)
 
         def solve_full_sdre(curfmat, memory=None, eps=None, time=None):
-            if memory['baseP'] is None:  # initialization
+            if memory['baseGain'] is None:  # initialization
                 sdrefdstr = fdstr + inivstr + '_SDREini'
             else:
                 sdrefdstr = (fdstr + inivstr +
@@ -552,10 +568,12 @@ def lqgbt(problemname='drivencavity',
                                    checktheres=False)
 
             mtxb = pru.get_mTzzTtb(stokesmatsc['M'].T, zwc, b_mat_rgscld)
-            baseGain = mtxb.T
-            memory.update(baseA=curfmat)
-            memory.update(basePfac=zwc, baseGain=baseGain)
-            memory.update(baseZ=curfmat - b_mat_rgscld.dot(baseGain))
+            baseA = _lrymts(curfmat)
+            baseGain = _lrymts(mtxb.T, rightonly=True)
+            baseZ = baseA - thrminvbmat.dot(baseGain)
+            memory.update(baseA=baseA)
+            memory.update(baseGain=baseGain)
+            memory.update(baseZ=baseZ)
             # XXX: memory!
             return
 
@@ -570,50 +588,48 @@ def lqgbt(problemname='drivencavity',
             '''
 
             curfmat = get_cur_sdccoeff(vcur=curvel)
+            thrtvdiff = _lrymts(curvel-vinf, thrtonly=True)
 
-            if memory['baseP'] is None:  # initialization
+            if memory['baseGain'] is None:  # initialization
                 savethev = np.copy(curvel)
                 memory.update(basev=savethev)
                 solve_full_sdre(curfmat, memory=memory)
 
-                vdiff = mmat*(curvel-vinf)
-                actua = -b_mat_rgscld.dot(memory['baseGain'].dot(vdiff))
+                thrtvdiff = _lrymts(curvel-vinf, thrtonly=True)
+                actua = -b_mat_rgscld.dot(memory['baseGain'].dot(thrtvdiff))
                 return actua, memory
 
             # ## updated sdre feedback
-            nomvdiff = curvel-vinf
-            print('diff: `curv-linv`: {0}'.format(np.linalg.norm(nomvdiff)))
+            # nomvdiff = curvel-vinf
+            # print('diff: `curv-linv`: {0}'.format(np.linalg.norm(nomvdiff)))
 
-            pupd, elteps = nru.\
-                get_fullnsesdrefb_upd(curak, time, fbtype='sylvupdfb', wnrm=2,
-                                      baseA=memory['baseA'],
-                                      baseZ=memory['baseZ'],
-                                      baseP=memory['basePfac'],
-                                      maxfac=None, maxeps=updtthrsh)
+            curak = _lrymts(curfmat)
+            updGain, elteps = nru.\
+                get_sdregain_upd(curak, wnrm=2,
+                                 baseA=memory['baseA'],
+                                 baseZ=memory['baseZ'],
+                                 baseP=memory['baseGain'],
+                                 maxfac=None, maxeps=updtthrsh)
 
             if elteps:  # E less than eps
-                updGain = memory['cur_bk'].T.dot(pupd)
-                redvdiff = memory['cur_tl'].T.dot(mmat*(curvel-vinf))
-                actua = -b_mat_rgscld.dot(updGain.dot(redvdiff))
+                actua = -b_mat_rgscld.dot(updGain.dot(thrtvdiff))
                 return actua, memory
 
             else:
-                tl = memory['cur_tl']
-                tr = memory['cur_tr']
-                prvvel = memory['basev']
-                prvfmat = get_cur_sdccoeff(vcur=prvvel)
-                prvak = -tl.T.dot(prvfmat.dot(tr))
-                basak = memory['baseAk']
-                print('|prv Ak|: {0}'.format(norm(prvak)))
-                print('|cur Ak|: {0}'.format(norm(curak)))
-                print('|bas Ak|: {0}'.format(norm(basak)))
+                # prvvel = memory['basev']
+                # prvfmat = get_cur_sdccoeff(vcur=prvvel)
+                # prvak = -tl.T.dot(prvfmat.dot(tr))
+                # basak = memory['baseAk']
+                # print('|prv Ak|: {0}'.format(norm(prvak)))
+                # print('|cur Ak|: {0}'.format(norm(curak)))
+                # print('|bas Ak|: {0}'.format(norm(basak)))
 
                 savethev = np.copy(curvel)
                 memory.update(basev=savethev)
                 # memory.update(basev=curvel)
                 solve_sdre(curfmat, memory=memory, eps=updtthrsh, time=time)
-                redvdiff = memory['cur_tl'].T.dot(mmat*(curvel-vinf))
-                actua = -b_mat_rgscld.dot(memory['baseGain'].dot(redvdiff))
+                thrtvdiff = _lrymts(curvel-vinf, thrtonly=True)
+                actua = -b_mat_rgscld.dot(memory['baseGain'].dot(thrtvdiff))
                 return actua, memory
 
             return actua, memory
@@ -622,7 +638,7 @@ def lqgbt(problemname='drivencavity',
 
         fv_tmdp = sdre_feedback
         fv_tmdp_params = fv_sdre_dict
-        fv_tmdp_memory = dict(basePk=None)
+        fv_tmdp_memory = dict(baseGain=None)
 
         # 1. prelims
         #    * func:get Riccati Grams at current state

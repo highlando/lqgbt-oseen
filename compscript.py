@@ -10,10 +10,10 @@ import getopt
 pymess = True
 pymess = False
 # relist = [None, 5e1, 7.5e1, 1.e2]  # , 1.15e2, 1.25e2]  # 1.01e2]
-relist = [None, 5e1, 7.5e1, 9.e1]  # , 1.e2]  # , 1.15e2, 1.25e2]  # 1.01e2]
+relist = [None, 5e1, 6e1]  # , 7.5e1]  # , 9.e1]  # , 1.e2]
 # relist = [1.e2, 1.15e2, 1.25e2]  # 1.01e2]
-max_re_only = False
 max_re_only = True  # consider only the last Re for the simu
+max_re_only = False
 
 # the input regularization parameter
 gamma = 1e-0  # e5
@@ -21,7 +21,7 @@ gamma = 1e-0  # e5
 # whether to do bccontrol or distributed
 bccontrol = True
 palpha = 1e-5  # parameter for the Robin penalization
-cyldim = 3
+cyldim = 2
 # where to truncate the LQGBT characteristic values
 trunclist = [1e-1]  # , 1e-3, 1e-2, 1e-1, 1e-0]
 # dimension of in and output spaces
@@ -29,8 +29,8 @@ NU, NY = 3, 3
 # to what extend we perturb the initial value
 perturbpara = 1e-3
 # whether we use a perturbed system
-trytofail = False
 trytofail = True
+trytofail = False
 ttf_npcrdstps = 3
 # whether to robustify the observer
 robit = True
@@ -43,16 +43,18 @@ cl_linsys = False
 closed_loop = 'redmod_sdre_fb'
 closed_loop = 'red_sdre_fb'
 closed_loop = False
-closed_loop = 'full_state_fb'
 closed_loop = 'red_output_fb'
-closed_loop = None
 closed_loop = 'hinf_red_output_fb'
+closed_loop = None
+closed_loop = 'full_state_fb'
+closed_loop = 'full_sdre_fb'
 # what inival
-whichinival = 'sstokes'  # steady state Stokes solution
-whichinival = 'sstokes++'  # a developed state starting from sstokes
 whichinival = 'sstate+d'  # sstate plus perturbation
+whichinival, tpp = 'sstokes++', 5.  # a developed state starting from sstokes
+whichinival = 'sstokes'  # steady state Stokes solution
+tpp is tpp if whichinival == 'sstokes++' else None
 # number of time steps -- also define the lag in the control application
-scaletest = 1.5  # .5  # for 1. we simulate till 12.
+scaletest = .5  # .5  # for 1. we simulate till 12.
 baset0, basetE, baseNts = 0.0, 12.0, 2.4e3+1
 t0, tE, Nts = 0.0, scaletest*basetE, np.int(scaletest*baseNts)
 
@@ -135,7 +137,9 @@ else:
                          nwtn_max_steps=30,
                          nwtn_upd_reltol=2e-8,
                          nwtn_upd_abstol=1e-7,
-                         ms=[-100., -50., -10., -2.0, -1.3, -1.0, -0.9, -0.5],
+                         # ms=[-100., -50., -10., -2.0, -1.3,
+                         #     -1.0, -0.9, -0.5],
+                         ms=[-10., -2.0, -1.3, -1.0, -0.9, -0.5],
                          verbose=True,
                          full_upd_norm_check=False,
                          check_lyap_res=False)
@@ -171,7 +175,7 @@ for ctrunc in trunclist:
                          # closed_loop='red_output_fb',
                          # closed_loop=None,
                          plotit=False,
-                         whichinival=whichinival,
+                         whichinival=whichinival, tpp=tpp,
                          hinf=hinf,
                          trytofail=trytofail, ttf_npcrdstps=ttf_npcrdstps,
                          robit=robit, robmrgnfac=robmrgnfac,

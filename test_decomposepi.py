@@ -16,5 +16,9 @@ jmat = stokesmatsc['J']
 
 import nse_extlin_utils as neu
 
-thl, thr, minvthr = neu.decomp_leray(mmat, jmat)
+dataprfx = ('data/discleray_' + problemname +
+            'Nv{0}Np{1}'.format(jmat.shape[0], jmat.shape[1]))
+
+thl, thr, minvthr = neu.decomp_leray(mmat, jmat, testit=True,
+                                     dataprfx=dataprfx)
 # np.allclose(np.eye(jmat.shape[1]), thr.T.dot(thl))
