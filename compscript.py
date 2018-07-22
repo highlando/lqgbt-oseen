@@ -10,10 +10,11 @@ import getopt
 pymess = True
 pymess = False
 # relist = [None, 5e1, 7.5e1, 1.e2]  # , 1.15e2, 1.25e2]  # 1.01e2]
-relist = [None, 5e1, 6e1]  # , 7.5e1]  # , 9.e1]  # , 1.e2]
+# relist = [None, 6e1, 7e1]  # , 7.5e1]  # , 9.e1]  # , 1.e2]
+relist = [None, 5e1, 7e1]
 # relist = [1.e2, 1.15e2, 1.25e2]  # 1.01e2]
-max_re_only = True  # consider only the last Re for the simu
 max_re_only = False
+max_re_only = True  # consider only the last Re for the simu
 
 # the input regularization parameter
 gamma = 1e-0  # e5
@@ -43,15 +44,15 @@ cl_linsys = False
 closed_loop = 'redmod_sdre_fb'
 closed_loop = 'red_sdre_fb'
 closed_loop = False
-closed_loop = 'red_output_fb'
 closed_loop = 'hinf_red_output_fb'
 closed_loop = None
+closed_loop = 'red_output_fb'
 closed_loop = 'full_state_fb'
 closed_loop = 'full_sdre_fb'
 # what inival
 whichinival = 'sstate+d'  # sstate plus perturbation
-whichinival, tpp = 'sstokes++', 5.  # a developed state starting from sstokes
 whichinival = 'sstokes'  # steady state Stokes solution
+whichinival, tpp = 'sstokes++', 3.  # a developed state starting from sstokes
 tpp is tpp if whichinival == 'sstokes++' else None
 # number of time steps -- also define the lag in the control application
 scaletest = .5  # .5  # for 1. we simulate till 12.
@@ -137,9 +138,9 @@ else:
                          nwtn_max_steps=30,
                          nwtn_upd_reltol=2e-8,
                          nwtn_upd_abstol=1e-7,
-                         # ms=[-100., -50., -10., -2.0, -1.3,
-                         #     -1.0, -0.9, -0.5],
-                         ms=[-10., -2.0, -1.3, -1.0, -0.9, -0.5],
+                         ms=[-100., -50., -10., -2.0, -1.3,
+                             -1.0, -0.9, -0.5],
+                         # ms=[-10., -2.0, -1.3, -1.0, -0.9, -0.5],
                          verbose=True,
                          full_upd_norm_check=False,
                          check_lyap_res=False)

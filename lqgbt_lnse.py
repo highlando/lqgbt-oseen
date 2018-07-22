@@ -587,7 +587,7 @@ def lqgbt(problemname='drivencavity',
                 path to a stabilizing initial guess
             '''
 
-            curfmat = get_cur_sdccoeff(vcur=curvel)
+            curfmat = (-1)*get_cur_sdccoeff(vcur=curvel)
             thrtvdiff = _lrymts(curvel-vinf, thrtonly=True)
 
             if memory['baseGain'] is None:  # initialization
@@ -627,7 +627,8 @@ def lqgbt(problemname='drivencavity',
                 savethev = np.copy(curvel)
                 memory.update(basev=savethev)
                 # memory.update(basev=curvel)
-                solve_sdre(curfmat, memory=memory, eps=updtthrsh, time=time)
+                solve_full_sdre(curfmat, memory=memory, eps=updtthrsh,
+                                time=time)
                 thrtvdiff = _lrymts(curvel-vinf, thrtonly=True)
                 actua = -b_mat_rgscld.dot(memory['baseGain'].dot(thrtvdiff))
                 return actua, memory
@@ -658,7 +659,7 @@ def lqgbt(problemname='drivencavity',
         sdre_ric_ini = fdstr
         cmpricfacpars.update(ric_ini_str=sdre_ric_ini)
 
-        def solve_sdre(curfmat, memory=None, eps=None, time=None):
+        def solve_red_sdre(curfmat, memory=None, eps=None, time=None):
             if memory['basePk'] is None:  # initialization
                 sdrefdstr = fdstr + inivstr + '_SDREini'
             else:
@@ -698,7 +699,7 @@ def lqgbt(problemname='drivencavity',
             if memory['basePk'] is None:  # initialization
                 savethev = np.copy(curvel)
                 memory.update(basev=savethev)
-                solve_sdre(curfmat, memory=memory)
+                solve_red_sdre(curfmat, memory=memory)
 
                 redvdiff = memory['cur_tl'].T.dot(mmat*(curvel-vinf))
                 actua = -b_mat_rgscld.dot(memory['baseGain'].dot(redvdiff))
@@ -746,7 +747,8 @@ def lqgbt(problemname='drivencavity',
                 savethev = np.copy(curvel)
                 memory.update(basev=savethev)
                 # memory.update(basev=curvel)
-                solve_sdre(curfmat, memory=memory, eps=updtthrsh, time=time)
+                solve_red_sdre(curfmat, memory=memory, eps=updtthrsh,
+                               time=time)
                 redvdiff = memory['cur_tl'].T.dot(mmat*(curvel-vinf))
                 actua = -b_mat_rgscld.dot(memory['baseGain'].dot(redvdiff))
                 return actua, memory

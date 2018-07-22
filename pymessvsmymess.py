@@ -77,21 +77,21 @@ c_mat_reg = lau.app_prj_via_sadpnt(amat=stokesmatsc['M'],
 fmat = stokesmatsc['A']
 J, M = stokesmatsc['J'], stokesmatsc['M']
 
-myzwc, myzwo = nru.get_ric_facs(fmat=-fmat, mmat=M, jmat=J,
-                                bmat=b_mat_rgscl, cmat=c_mat_reg,
-                                ric_ini_str=None,
-                                nwtn_adi_dict=nwtn_myadi_dict,
-                                fdstr=fdstr,
-                                multiproc=multiproc, pymess=False,
-                                checktheres=True)
+myzwc, myzwo, _ = nru.get_ric_facs(fmat=-fmat, mmat=M, jmat=J,
+                                   bmat=b_mat_rgscl, cmat=c_mat_reg,
+                                   ric_ini_str=None,
+                                   nwtn_adi_dict=nwtn_myadi_dict,
+                                   fdstr=fdstr,
+                                   multiproc=multiproc, pymess=False,
+                                   checktheres=True)
 
-pyzwc, pyzwo = nru.get_ric_facs(fmat=-fmat, mmat=M, jmat=J,
-                                bmat=b_mat_rgscl, cmat=c_mat_reg,
-                                ric_ini_str=None,
-                                nwtn_adi_dict=nwtn_pyadi_dict,
-                                fdstr=fdstr+'__pymess',
-                                multiproc=multiproc, pymess=True,
-                                checktheres=True)
+pyzwc, pyzwo, _ = nru.get_ric_facs(fmat=-fmat, mmat=M, jmat=J,
+                                   bmat=b_mat_rgscl, cmat=c_mat_reg,
+                                   ric_ini_str=None,
+                                   nwtn_adi_dict=nwtn_pyadi_dict,
+                                   fdstr=fdstr+'__pymess',
+                                   multiproc=multiproc, pymess=True,
+                                   checktheres=True)
 
 
 checkmat = np.random.randn(NV, 5)
