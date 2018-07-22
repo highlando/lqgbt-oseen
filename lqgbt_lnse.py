@@ -604,14 +604,16 @@ def lqgbt(problemname='drivencavity',
             # print('diff: `curv-linv`: {0}'.format(np.linalg.norm(nomvdiff)))
 
             curak = _lrymts(curfmat)
+            print('solving for the update...')
             updGain, elteps = nru.\
-                get_sdregain_upd(curak, wnrm=2,
-                                 baseA=memory['baseA'],
-                                 baseZ=memory['baseZ'],
-                                 baseP=memory['baseGain'],
-                                 maxfac=None, maxeps=updtthrsh)
+                get_sdrgain_upd(curak, wnrm='fro',
+                                baseA=memory['baseA'],
+                                baseZ=memory['baseZ'],
+                                baseGain=memory['baseGain'],
+                                maxfac=None, maxeps=updtthrsh)
 
             if elteps:  # E less than eps
+                print('update is small, yeyeye...')
                 actua = -b_mat_rgscld.dot(updGain.dot(thrtvdiff))
                 return actua, memory
 

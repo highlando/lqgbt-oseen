@@ -326,22 +326,24 @@ def get_sdrefb_upd(amat, t, fbtype=None, wnrm=2,
     return None, False
 
 
-def get_sdrgain_upd(amat, wnrm=2, maxeps=None,
+def get_sdrgain_upd(amat, wnrm='fro', maxeps=None,
                     baseA=None, baseZ=None, baseGain=None,
-                    maxfac=None, **kwargs):
+                    maxfac=None):
 
     deltaA = amat - baseA
     epsP = spla.solve_sylvester(amat, -baseZ, -deltaA)
+    # print('debugging!!!')
+    # epsP = 0*amat
     eps = npla.norm(epsP, ord=wnrm)
     print('|amat - baseA|: {0} -- |E|: {1}'.
           format(npla.norm(deltaA, ord=wnrm), eps))
     if maxeps is not None:
         if eps < maxeps:
-            updGaint = npla.solve(epsP+np.eye(epsP.shape[0]), baseGain)
+            updGaint = npla.solve(epsP+np.eye(epsP.shape[0]), baseGain.T)
             return updGaint.T, True
     elif maxfac is not None:
         if (1+eps)/(1-eps) < maxfac and eps < 1:
-            updGaint = npla.solve(epsP+np.eye(epsP.shape[0]), baseGain)
+            updGaint = npla.solve(epsP+np.eye(epsP.shape[0]), baseGain.T)
             return updGaint.T, True
 
     return None, False
