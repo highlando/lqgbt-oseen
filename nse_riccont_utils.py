@@ -331,6 +331,11 @@ def get_sdrgain_upd(amat, wnrm='fro', maxeps=None,
                     maxfac=None):
 
     deltaA = amat - baseA
+    nda = npla.norm(deltaA, ord=wnrm)
+    nz = npla.norm(baseZ, ord=wnrm)
+    na = npla.norm(baseA, ord=wnrm)
+    import ipdb; ipdb.set_trace()
+
     epsP = spla.solve_sylvester(amat, -baseZ, -deltaA)
     # print('debugging!!!')
     # epsP = 0*amat

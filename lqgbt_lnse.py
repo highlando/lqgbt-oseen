@@ -520,22 +520,16 @@ def lqgbt(problemname='drivencavity',
         fv_tmdp_memory = dict(xk_old=np.zeros((tl.shape[1], 1)),
                               actualist=[])
 
-        # soldict.update(dict(verbose=False))
-
     elif closed_loop == 'full_sdre_fb':
         shortclstr = 'fsdrfb'
 
         sdcpicard = 1.
+        import ipdb; ipdb.set_trace()
         vinf = v_ss_nse
         get_cur_sdccoeff = neu.get_get_cur_extlin(vinf=vinf, amat=amat,
                                                   picrdvsnwtn=sdcpicard,
                                                   **femp)
         sdre_ric_ini = fdstr
-        cmpricfacpars.update(ric_ini_str=sdre_ric_ini)
-        # we decompose the Leray projector `Pi=thl*thr.T`
-        leraystr = (ddir + 'discleray_' + problemname +
-                    'Nv{0}Np{1}'.format(jmat.shape[0], jmat.shape[1]))
-        thl, thr, minvthr = neu.decomp_leray(mmat, jmat, dataprfx=leraystr)
 
         def _lrymts(fmat, leftonly=False, rightonly=False, thrtonly=False):
             if leftonly:
@@ -577,8 +571,8 @@ def lqgbt(problemname='drivencavity',
             # XXX: memory!
             return
 
-        def sdre_feedback(curvel=None, memory=None,
-                          updtthrsh=None, time=None, **kw):
+        def updsdre_feedback(curvel=None, memory=None,
+                             updtthrsh=None, time=None, **kw):
             ''' function for the SDRE feedback
 
             Parameters
@@ -639,7 +633,127 @@ def lqgbt(problemname='drivencavity',
 
         fv_sdre_dict = dict(updtthrsh=.9)
 
-        fv_tmdp = sdre_feedback
+        fv_tmdp = updsdre_feedback
+        fv_tmdp_params = fv_sdre_dict
+        fv_tmdp_memory = dict(baseGain=None)
+    elif closed_loop == 'full_updsdre_fb':
+        shortclstr = 'fupsdrfb'
+
+        sdcpicard = 1.
+        vinf = v_ss_nse
+        get_cur_sdccoeff = neu.get_get_cur_extlin(vinf=vinf, amat=amat,
+                                                  picrdvsnwtn=sdcpicard,
+                                                  **femp)
+        sdre_ric_ini = fdstr
+        cmpricfacpars.update(ric_ini_str=sdre_ric_ini)
+        # we decompose the Leray projector `Pi=thl*thr.T`
+        leraystr = (ddir + 'discleray_' + problemname +
+                    'Nv{0}Np{1}'.format(jmat.shape[0], jmat.shape[1]))
+        thl, thr, minvthr = neu.decomp_leray(mmat, jmat, dataprfx=leraystr)
+
+        def _lrymts(fmat, leftonly=False, rightonly=False, thrtonly=False):
+            if leftonly:
+                return minvthr.T.dot(fmat)
+            elif rightonly:
+                return fmat.dot(thl)
+            elif thrtonly:
+                return thr.T.dot(fmat)
+            else:
+                return minvthr.T.dot(fmat.dot(thl))
+
+        thrminvbmat = _lrymts(b_mat_rgscld, leftonly=True)
+
+        def solve_full_sdre(curfmat, memory=None, eps=None, time=None):
+            if memory['baseGain'] is None:  # initialization
+                sdrefdstr = fdstr + inivstr + '_SDREini'
+            else:
+                sdrefdstr = (fdstr + inivstr +
+                             '_SDREeps{0}t{1:.2e}'.format(eps, time))
+
+            cmpricfacpars.update(ric_ini_str=sdrefdstr)
+            zwc = nru.get_ric_facs(fdstr=sdrefdstr,
+                                   fmat=curfmat, mmat=mmat,
+                                   jmat=jmat, bmat=b_mat_rgscld,
+                                   cmat=c_mat_reg,
+                                   ric_ini_str=sdre_ric_ini,
+                                   nwtn_adi_dict=nwtn_adi_dict,
+                                   zwconly=True,
+                                   multiproc=False, pymess=pymess,
+                                   checktheres=False)
+
+            mtxb = pru.get_mTzzTtb(stokesmatsc['M'].T, zwc, b_mat_rgscld)
+            baseA = _lrymts(curfmat)
+            baseGain = _lrymts(mtxb.T, rightonly=True)
+            baseZ = baseA - thrminvbmat.dot(baseGain)
+            memory.update(baseA=baseA)
+            memory.update(baseGain=baseGain)
+            memory.update(baseZ=baseZ)
+            # XXX: memory!
+            return
+
+        def updsdre_feedback(curvel=None, memory=None,
+                             updtthrsh=None, time=None, **kw):
+            ''' function for the SDRE feedback
+
+            Parameters
+            ---
+            use_ric_ini : string, optional
+                path to a stabilizing initial guess
+            '''
+
+            curfmat = (-1)*get_cur_sdccoeff(vcur=curvel)
+            thrtvdiff = _lrymts(curvel-vinf, thrtonly=True)
+
+            if memory['baseGain'] is None:  # initialization
+                savethev = np.copy(curvel)
+                memory.update(basev=savethev)
+                solve_full_sdre(curfmat, memory=memory)
+
+                thrtvdiff = _lrymts(curvel-vinf, thrtonly=True)
+                actua = -b_mat_rgscld.dot(memory['baseGain'].dot(thrtvdiff))
+                return actua, memory
+
+            # ## updated sdre feedback
+            # nomvdiff = curvel-vinf
+            # print('diff: `curv-linv`: {0}'.format(np.linalg.norm(nomvdiff)))
+
+            curak = _lrymts(curfmat)
+            print('solving for the update...')
+            updGain, elteps = nru.\
+                get_sdrgain_upd(curak, wnrm='fro',
+                                baseA=memory['baseA'],
+                                baseZ=memory['baseZ'],
+                                baseGain=memory['baseGain'],
+                                maxfac=None, maxeps=updtthrsh)
+
+            if elteps:  # E less than eps
+                print('update is small, yeyeye...')
+                actua = -b_mat_rgscld.dot(updGain.dot(thrtvdiff))
+                return actua, memory
+
+            else:
+                # prvvel = memory['basev']
+                # prvfmat = get_cur_sdccoeff(vcur=prvvel)
+                # prvak = -tl.T.dot(prvfmat.dot(tr))
+                # basak = memory['baseAk']
+                # print('|prv Ak|: {0}'.format(norm(prvak)))
+                # print('|cur Ak|: {0}'.format(norm(curak)))
+                # print('|bas Ak|: {0}'.format(norm(basak)))
+
+                savethev = np.copy(curvel)
+                memory.update(basev=savethev)
+                # memory.update(basev=curvel)
+                solve_full_sdre(curfmat, memory=memory, eps=updtthrsh,
+                                time=time)
+                thrtvdiff = _lrymts(curvel-vinf, thrtonly=True)
+                actua = -b_mat_rgscld.dot(memory['baseGain'].dot(thrtvdiff))
+                return actua, memory
+
+            return actua, memory
+
+        fv_sdre_dict = dict(updtthrsh=.9)
+
+        fv_tmdp = updsdre_feedback
         fv_tmdp_params = fv_sdre_dict
         fv_tmdp_memory = dict(baseGain=None)
 
@@ -650,7 +764,7 @@ def lqgbt(problemname='drivencavity',
         #    compute E -- solve sylvester
         #    reset Grams and Ak, Bk, etc
 
-    elif closed_loop == 'red_sdre_fb':
+    elif closed_loop == 'red_updsdre_fb':
         shortclstr = 'rdsdrfb'
 
         sdcpicard = 1.
