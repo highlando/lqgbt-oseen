@@ -202,7 +202,7 @@ def lqgbt(problemname='drivencavity',
     # Rmo = 1./gamma
     Rmhalf = 1./np.sqrt(gamma)
     b_mat_rgscld = b_mat_reg*Rmhalf
-    # We scale the input matrix to accomodate for input weighting
+    # We scale the input matrix to acommodate for input weighting
 
     try:
         mc_mat = dou.load_spa(ddir + contsetupstr + '__mc_mat')
@@ -524,7 +524,6 @@ def lqgbt(problemname='drivencavity',
         shortclstr = 'fsdrfb'
 
         sdcpicard = 1.
-        import ipdb; ipdb.set_trace()
         vinf = v_ss_nse
         get_cur_sdccoeff = neu.get_get_cur_extlin(vinf=vinf, amat=amat,
                                                   picrdvsnwtn=sdcpicard,
@@ -1070,6 +1069,7 @@ def lqgbt(problemname='drivencavity',
 
     yscomplist = cou.extract_output(strdict=dictofvelstrs, tmesh=trange,
                                     c_mat=c_mat, load_data=dou.load_npa)
+    print('dou has a func to compute performance')
 
     if robit:
         robitstr = '_robmgnfac{0}'.format(robmrgnfac)
@@ -1081,6 +1081,10 @@ def lqgbt(problemname='drivencavity',
 
     if plotit:
         dou.plot_outp_sig(tmesh=trange, outsig=yscomplist)
+
+    ymys = dou.meas_output_diff(tmesh=trange, ylist=yscomplist,
+                                ystar=c_mat.dot(v_ss_nse))
+    print('|y-y*|: {0}'.format(ymys))
     # import matplotlib.pyplot as plt
     # plt.plot(trange, yscomplist)
     # plt.show(block=False)
