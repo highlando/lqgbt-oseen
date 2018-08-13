@@ -1064,20 +1064,24 @@ def lqgbt(problemname='drivencavity',
             print('oseen res: {0}'.format(np.linalg.norm(nseres)))
             soldict.update(stokes_flow=True, A=-f_mat, fv=linsysrhs)
 
-    soldict.update(data_prfx=shortstring)
-    dictofvelstrs = snu.solve_nse(**soldict)
-
-    yscomplist = cou.extract_output(strdict=dictofvelstrs, tmesh=trange,
-                                    c_mat=c_mat, load_data=dou.load_npa)
-    print('dou has a func to compute performance')
-
     if robit:
         robitstr = '_robmgnfac{0}'.format(robmrgnfac)
     else:
         robitstr = ''
 
-    dou.save_output_json(dict(tmesh=trange.tolist(), outsig=yscomplist),
-                         fstring=shortstring + robitstr)
+    try:
+        yscomplist = dou.load_json_dicts(shortstring + robitstr)['outsig']
+        print('loaded the outputs from' + shortstring + robitstr)
+
+    except IOError:
+        soldict.update(data_prfx=shortstring)
+        dictofvelstrs = snu.solve_nse(**soldict)
+
+        yscomplist = cou.extract_output(strdict=dictofvelstrs, tmesh=trange,
+                                        c_mat=c_mat, load_data=dou.load_npa)
+
+        dou.save_output_json(dict(tmesh=trange.tolist(), outsig=yscomplist),
+                             fstring=shortstring + robitstr)
 
     if plotit:
         dou.plot_outp_sig(tmesh=trange, outsig=yscomplist)
