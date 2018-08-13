@@ -1069,9 +1069,12 @@ def lqgbt(problemname='drivencavity',
     else:
         robitstr = ''
 
+    timediscstr = 't{0}{1}Nts{2}'.format(t0, tE, Nts)
+
     try:
-        yscomplist = dou.load_json_dicts(shortstring + robitstr)['outsig']
-        print('loaded the outputs from' + shortstring + robitstr)
+        yscomplist = dou.load_json_dicts(shortstring + robitstr +
+                                         timediscstr)['outsig']
+        print('loaded the outputs from: ' + shortstring + robitstr)
 
     except IOError:
         soldict.update(data_prfx=shortstring)
@@ -1081,7 +1084,7 @@ def lqgbt(problemname='drivencavity',
                                         c_mat=c_mat, load_data=dou.load_npa)
 
         dou.save_output_json(dict(tmesh=trange.tolist(), outsig=yscomplist),
-                             fstring=shortstring + robitstr)
+                             fstring=shortstring + robitstr + timediscstr)
 
     if plotit:
         dou.plot_outp_sig(tmesh=trange, outsig=yscomplist)
