@@ -43,11 +43,11 @@ cl_linsys = False
 closed_loop = 'redmod_sdre_fb'
 closed_loop = 'red_updsdre_fb'
 closed_loop = False
-closed_loop = 'hinf_red_output_fb'
 closed_loop = 'red_output_fb'
 closed_loop = 'full_updsdre_fb'
 closed_loop = 'full_sdre_fb'
 closed_loop = None
+closed_loop = 'hinf_red_output_fb'
 closed_loop = 'full_state_fb'
 # what inival
 whichinival = 'sstate+d'  # sstate plus perturbation
