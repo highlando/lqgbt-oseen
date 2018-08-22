@@ -138,20 +138,21 @@ def get_ric_facs(fmat=None, mmat=None, jmat=None,
         nrhs = (ctc * ctc).sum(-1).sum()
         print('sqrd f-norm of rhs=C.T*C: ', nrhs**2)
 
-        # check the obsv Ric residual
-        umat = 0.5*cmat.T
-        vmat = np.dot(np.dot(cmat, zwo), zwo.T)*mmat
-        res = pru.\
-            comp_proj_lyap_res_norm(zwo, amat=fmat.T, mmat=mmat.T,
-                                    jmat=jmat,
-                                    wmat=bmat,
-                                    umat=umat, vmat=vmat)
-        print('sqrd Residual of obsv-Riccati: ', res)
+        if not zwconly:
+            # check the obsv Ric residual
+            umat = 0.5*cmat.T
+            vmat = np.dot(np.dot(cmat, zwo), zwo.T)*mmat
+            res = pru.\
+                comp_proj_lyap_res_norm(zwo, amat=fmat.T, mmat=mmat.T,
+                                        jmat=jmat,
+                                        wmat=bmat,
+                                        umat=umat, vmat=vmat)
+            print('sqrd Residual of obsv-Riccati: ', res)
 
-        btb = np.dot(bmat.T, bmat)
-        nrhs = (btb * btb).sum(-1).sum()
-        print('sqrd f-norm of rhs=B*B.T: ', nrhs**2)
-        print('... done with checking the Riccati residuals!')
+            btb = np.dot(bmat.T, bmat)
+            nrhs = (btb * btb).sum(-1).sum()
+            print('sqrd f-norm of rhs=B*B.T: ', nrhs**2)
+            print('... done with checking the Riccati residuals!')
 
     if zwconly:
         return zwc

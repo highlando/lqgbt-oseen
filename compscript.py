@@ -129,21 +129,19 @@ infostring = ('Re             = {0}'.format(relist) +
 print(infostring)
 
 print(infostring)
-if pymess:
-    nwtn_adi_dict = dict(verbose=True, maxit=45, aditol=1e-8,
-                         nwtn_res2_tol=4e-8, linesearch=True)
-else:
-    nwtn_adi_dict = dict(adi_max_steps=350,  # 450,
-                         adi_newZ_reltol=2e-8,
-                         nwtn_max_steps=30,
-                         nwtn_upd_reltol=2e-8,
-                         nwtn_upd_abstol=1e-7,
-                         ms=[-100., -50., -10., -2.0, -1.3,
-                             -1.0, -0.9, -0.5],
-                         # ms=[-10., -2.0, -1.3, -1.0, -0.9, -0.5],
-                         verbose=True,
-                         full_upd_norm_check=False,
-                         check_lyap_res=False)
+pm_nwtn_adi_dict = dict(verbose=True, maxit=45, aditol=1e-8,
+                        nwtn_res2_tol=4e-8, linesearch=True)
+mm_nwtn_adi_dict = dict(adi_max_steps=350,  # 450,
+                        adi_newZ_reltol=2e-8,
+                        nwtn_max_steps=30,
+                        nwtn_upd_reltol=2e-8,
+                        nwtn_upd_abstol=1e-7,
+                        ms=[-100., -50., -10., -2.0, -1.3,
+                            -1.0, -0.9, -0.5],
+                        # ms=[-10., -2.0, -1.3, -1.0, -0.9, -0.5],
+                        verbose=True,
+                        full_upd_norm_check=False,
+                        check_lyap_res=False)
 
 logstr = 'logs/log_cyldim{0}NU{1}NY{2}gamma{3}'.format(cyldim, NU, NY, gamma) +\
     'closedloop{0}'.format(closed_loop) +\
@@ -168,7 +166,8 @@ for ctrunc in trunclist:
                          Re=relist[cre], plain_bt=False,
                          trunc_lqgbtcv=ctrunc,
                          t0=t0, tE=tE, Nts=Nts,
-                         nwtn_adi_dict=nwtn_adi_dict,
+                         pm_nwtn_adi_dict=pm_nwtn_adi_dict,
+                         mm_nwtn_adi_dict=mm_nwtn_adi_dict,
                          paraoutput=False, multiproc=True,
                          comp_freqresp=False, comp_stepresp=False,
                          pymess=pymess,

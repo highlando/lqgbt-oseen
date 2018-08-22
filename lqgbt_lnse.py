@@ -22,6 +22,8 @@ checktheres = False
 
 switchonsfb = 0  # 1.5
 
+chckpmvsmm = True
+
 # TODO: clear distinction of target state, linearization point, initial value
 # TODO: maybe redefine: by now we need to use -fmat all the time (but +ak_mat)
 
@@ -58,6 +60,8 @@ def lqgbt(problemname='drivencavity',
           trunc_lqgbtcv=1e-6,
           hinf=False,
           nwtn_adi_dict=None,
+          pm_nwtn_adi_dict=None,
+          mm_nwtn_adi_dict=None,
           pymess_dict=None,
           whichinival='sstate',
           tpp=5.,  # time to add on Stokes inival for `sstokes++`
@@ -145,8 +149,10 @@ def lqgbt(problemname='drivencavity',
 # Prepare for control
 #
     prbstr = '_bt' if plain_bt else '_lqgbt'
-    if pymess:
-        prbstr = prbstr + '__pymess'
+    if chckpmvsmm:
+        pmprobstr = prbstr + '__pymess'
+        mmprobstr = prbstr
+
     # contsetupstr = 'NV{0}NU{1}NY{2}alphau{3}'.format(NV, NU, NY, alphau)
     if bccontrol:
         import scipy.sparse as sps
@@ -163,16 +169,30 @@ def lqgbt(problemname='drivencavity',
     inivstr = '_' + whichinival if not whichinival == 'sstokes++' \
         else '_sstokes++{0}'.format(tpp)
 
-    def get_fdstr(Re, short=False):
+    def get_fdstr(Re, short=False, pmplz=False, mmplz=False):
+        if pmplz:
+            curprbstr = pmprobstr
+        elif mmplz:
+            curprbstr = mmprobstr
+        else:
+            curprbstr = prbstr
+
         if short:
             return ddir + 'cw' + '{0}{1}_'.format(Re, gamma) + \
                 shortcontsetupstr
         return ddir + problemname + '_Re{0}_gamma{1}_'.format(Re, gamma) + \
-            contsetupstr + prbstr
+            contsetupstr + curprbstr
 
     fdstr = get_fdstr(Re)
     fdstr = fdstr + '_hinf' if hinf else fdstr
     fdstrini = get_fdstr(use_ric_ini) if use_ric_ini is not None else None
+    if chckpmvsmm:
+        pmfdstr = get_fdstr(Re, pmplz=True)
+        mmfdstr = get_fdstr(Re, mmplz=True)
+        pmfdstrini = get_fdstr(use_ric_ini, pmplz=True) \
+            if use_ric_ini is not None else None
+        mmfdstrini = get_fdstr(use_ric_ini, mmplz=True) \
+            if use_ric_ini is not None else None
 
 #
 # Prepare for control
@@ -360,6 +380,31 @@ def lqgbt(problemname='drivencavity',
 
     elif closed_loop == 'full_state_fb':
         shortclstr = 'fsfb'
+
+        def pmmmgrm(pmmmfdstr=None, pmmmricinistr=None,
+                    pmmmnwtnadidict=None, pmmmpymess=None):
+            czwc = nru.\
+                get_ric_facs(fdstr=pmmmfdstr, ric_ini_str=pmmmricinistr,
+                             pymess=pmmmpymess, nwtn_adi_dict=pmmmnwtnadidict,
+                             fmat=f_mat_gramians, mmat=mmat,
+                             jmat=jmat, bmat=b_mat_rgscld, cmat=c_mat_reg,
+                             zwconly=True,
+                             multiproc=multiproc,
+                             checktheres=True)
+            return czwc
+        if chckpmvsmm:
+            pmzwc = pmmmgrm(pmmmfdstr=pmfdstr, pmmmricinistr=pmfdstrini,
+                            pmmmnwtnadidict=pm_nwtn_adi_dict,
+                            pmmmpymess=True)
+            pmmtxb = pru.get_mTzzTtb(stokesmatsc['M'].T, pmzwc, b_mat_rgscld)
+            mmzwc = pmmmgrm(pmmmfdstr=mmfdstr, pmmmricinistr=mmfdstrini,
+                            pmmmnwtnadidict=mm_nwtn_adi_dict,
+                            pmmmpymess=False)
+            mmmtxb = pru.get_mTzzTtb(stokesmatsc['M'].T, mmzwc, b_mat_rgscld)
+            print('diff in fb gain: {0}'.format(np.linalg.norm(mmmtxb-pmmtxb)))
+            print('norm of mm fb gain: {0}'.format(np.linalg.norm(mmmtxb)))
+            print('norm of pm fb gain: {0}'.format(np.linalg.norm(pmmtxb)))
+            return
         zwc = nru.get_ric_facs(fdstr=fdstr,
                                fmat=f_mat_gramians, mmat=mmat,
                                jmat=jmat, bmat=b_mat_rgscld, cmat=c_mat_reg,
