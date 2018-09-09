@@ -1,6 +1,6 @@
 import numpy as np
 
-import lqgbt_lnse
+from lqgbt_oseen import lqgbt_lnse
 # import sys
 import datetime
 import sys

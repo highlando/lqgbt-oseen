@@ -12,8 +12,8 @@ import sadptprj_riclyap_adi.bal_trunc_utils as btu
 
 import distr_control_fenics.cont_obs_utils as cou
 
-import nse_riccont_utils as nru
-import nse_extlin_utils as neu
+import lqgbt_oseen.nse_riccont_utils as nru
+import lqgbt_oseen.nse_extlin_utils as neu
 
 debug = False
 
