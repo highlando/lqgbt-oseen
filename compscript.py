@@ -21,7 +21,7 @@ gamma = 1e-0  # e5
 bccontrol = True
 bccontrol = False
 palpha = 1e-5  # parameter for the Robin penalization
-cyldim = 0
+cyldim = 1
 # where to truncate the LQGBT characteristic values
 trunclist = [1e-1]  # , 1e-3, 1e-2, 1e-1, 1e-0]
 # dimension of in and output spaces
