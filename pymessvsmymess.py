@@ -2,6 +2,7 @@ import numpy as np
 
 import dolfin_navier_scipy.data_output_utils as dou
 import dolfin_navier_scipy.problem_setups as dnsps
+import dolfin_navier_scipy.stokes_navier_utils as snu
 
 import distr_control_fenics.cont_obs_utils as cou
 
@@ -9,7 +10,7 @@ import sadptprj_riclyap_adi.lin_alg_utils as lau
 
 import nse_riccont_utils as nru
 
-Re = 5e1  # 1e2
+Re = 5.5e1  # 1e2
 ddir = 'data/'
 bccontrol = True
 problemname = 'cylinderwake'
@@ -33,8 +34,10 @@ nwtn_myadi_dict = dict(adi_max_steps=300,
                        full_upd_norm_check=False,
                        check_lyap_res=False)
 
-nwtn_pyadi_dict = dict(verbose=True, maxit=45, aditol=1e-8,
-                       nwtn_res2_tol=4e-8, linesearch=True)
+nwtn_pyadi_dict = dict(verbose=True, maxit=45, aditol=1e-12,
+                       nwtn_res2_tol=1e-12, linesearch=True)
+
+nwtn_pyadi_dict = dict(verbose=True, linesearch=True, maxit=50)
 
 femp, stokesmatsc, rhsd_vfrc, rhsd_stbc \
     = dnsps.get_sysmats(problem=problemname, N=N, Re=Re,
@@ -73,25 +76,49 @@ c_mat_reg = lau.app_prj_via_sadpnt(amat=stokesmatsc['M'],
                                    jmat=stokesmatsc['J'],
                                    rhsv=c_mat.T,
                                    transposedprj=True).T
+soldict = {}
+soldict.update(stokesmatsc)  # containing A, J, JT
+soldict.update(femp)  # adding V, Q, invinds, diribcs
+# soldict.update(rhsd_vfrc)  # adding fvc, fpr
+veldatastr = ddir + problemname + '_Re{0}'.format(Re)
+if bccontrol:
+    veldatastr = veldatastr + '__bcc_palpha{0}'.format(palpha)
 
-fmat = stokesmatsc['A']
+nu = femp['charlen']/Re
+soldict.update(fv=rhsd_stbc['fv']+rhsd_vfrc['fvc'],
+               fp=rhsd_stbc['fp']+rhsd_vfrc['fpr'],
+               N=N, nu=nu)
+
+vp_ss_nse, list_norm_nwtnupd = snu.\
+    solve_steadystate_nse(vel_pcrd_stps=5, return_vp=True,
+                          useolddata=False, **soldict)
+
+v_ss_nse = vp_ss_nse[:NV]
+p_ss_nse = vp_ss_nse[NV:]
+(convc_mat, rhs_con,
+ rhsv_conbc) = snu.get_v_conv_conts(prev_v=v_ss_nse, invinds=invinds,
+                                    V=femp['V'], diribcs=femp['diribcs'])
+
+f_mat = - stokesmatsc['A'] - convc_mat
+
+# fmat = stokesmatsc['A']
 J, M = stokesmatsc['J'], stokesmatsc['M']
 
-myzwc, myzwo = nru.get_ric_facs(fmat=-fmat, mmat=M, jmat=J,
-                                bmat=b_mat_rgscl, cmat=c_mat_reg,
-                                ric_ini_str=None,
-                                nwtn_adi_dict=nwtn_myadi_dict,
-                                fdstr=fdstr,
-                                multiproc=multiproc, pymess=False,
-                                checktheres=True)
+myzwc, myzwo, _ = nru.get_ric_facs(fmat=f_mat, mmat=M, jmat=J,
+                                   bmat=b_mat_rgscl, cmat=c_mat_reg,
+                                   ric_ini_str=None,
+                                   nwtn_adi_dict=nwtn_myadi_dict,
+                                   fdstr=fdstr,
+                                   multiproc=multiproc, pymess=False,
+                                   checktheres=False)
 
-pyzwc, pyzwo = nru.get_ric_facs(fmat=-fmat, mmat=M, jmat=J,
-                                bmat=b_mat_rgscl, cmat=c_mat_reg,
-                                ric_ini_str=None,
-                                nwtn_adi_dict=nwtn_pyadi_dict,
-                                fdstr=fdstr+'__pymess',
-                                multiproc=multiproc, pymess=True,
-                                checktheres=True)
+pyzwc, pyzwo, _ = nru.get_ric_facs(fmat=f_mat, mmat=M, jmat=J,
+                                   bmat=b_mat_rgscl, cmat=c_mat_reg,
+                                   ric_ini_str=None,
+                                   nwtn_adi_dict=nwtn_pyadi_dict,
+                                   fdstr=fdstr+'__pymess',
+                                   multiproc=multiproc, pymess=True,
+                                   checktheres=True)
 
 
 checkmat = np.random.randn(NV, 5)

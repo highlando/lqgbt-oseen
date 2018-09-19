@@ -1,5 +1,7 @@
 import numpy as np
+import scipy.linalg as spla
 import dolfin_navier_scipy.stokes_navier_utils as snu
+import dolfin_navier_scipy.data_output_utils as dou
 
 
 def get_get_cur_extlin(vinf=None, V=None, diribcs=None, invinds=None,
@@ -78,3 +80,47 @@ def get_get_cur_extlin(vinf=None, V=None, diribcs=None, invinds=None,
         return curfmat
 
     return get_cur_extlin
+
+
+def _pinsvd(jmat=None, Minv=None):
+
+    Np, Nv = jmat.shape
+
+    minvjt = Minv(jmat.T).todense()
+    S = jmat*minvjt
+    Sinv = spla.inv(S)
+    Pi = np.eye(Nv) - minvjt.dot(Sinv*jmat)
+
+    umat, svec, vmat = spla.svd(Pi)
+    uk = umat[:, :Nv-Np]
+    vk = vmat.T[:, :Nv-Np]
+
+    thl = uk*svec[:Nv-Np]
+    thr = vk
+
+    return thl, thr
+
+
+def decomp_leray(mmat, jmat, dataprfx='', testit=False):
+    from spacetime_galerkin_pod.ldfnp_ext_cholmod import SparseFactorMassmat
+
+    facmy = SparseFactorMassmat(mmat)
+    Minv = facmy.solve_M
+
+    pinsvddict = dict(jmat=jmat, Minv=Minv)
+    thrthlstrl = [dataprfx+'_pithl', dataprfx+'_pithr']
+    thl, thr = dou.load_or_comp(arraytype='dense', filestr=thrthlstrl,
+                                numthings=2,
+                                comprtn=_pinsvd, comprtnargs=pinsvddict)
+    minvthr = Minv(thr)
+
+    if testit:
+        Np, Nv = jmat.shape
+        print(np.allclose(np.eye(Nv-Np), thr.T.dot(thl)))
+        minvjt = Minv(jmat.T).todense()
+        S = jmat*minvjt
+        Sinv = spla.inv(S)
+        Pi = np.eye(Nv) - minvjt.dot(Sinv*jmat)
+        print(np.allclose(Pi, thl.dot(thr.T)))
+
+    return thl, thr, minvthr

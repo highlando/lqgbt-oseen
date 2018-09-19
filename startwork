@@ -1,7 +1,9 @@
 #!/bin/bash
 
+tail -10 did.md
+
 git pull
 git status
 FILETOEDIT=lqgbt_lnse.py
 echo $FILETOEDIT
-gvim --remote-silent $FILETOEDIT 
+/usr/local/bin/gvim --remote-silent $FILETOEDIT 

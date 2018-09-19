@@ -1,17 +1,19 @@
-PLAN FOR NUMTESTS
+
+cur work: find an sdre setup that is feasible
+cur idea: cylwake with dim 1 and dist cont
+last step: added func to dou to compute `|y-y*|**2`
+next step: use it to see performance
+
+IMPLEMENTING
 ---
 
-### Concerning robust controllers
-Found that the robustification does not give a better performance... 
-Gonna try:
- 
- * check whether LQGBT blows up in the long run
- * check whether robustification helps here
- * test case: no initial perturbation -- long simulation time
-   * check: no initial perturb -- observer returns zero all time??
+ * SDRE Feedback!! for checking whether SDC helps at all
+
+PLAN FOR NUMTESTS
+---
 
 TODOUS:
 ---
  * pymess integration
    * check pymessvsmymess.py
- * add gamma <--> scale bmat once vs. on demand ??
+   * -- why does the control gramian converge so badly???

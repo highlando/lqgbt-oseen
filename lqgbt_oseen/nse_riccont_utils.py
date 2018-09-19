@@ -9,7 +9,9 @@ import sadptprj_riclyap_adi.bal_trunc_utils as btu
 
 __all__ = ['get_ric_facs',
            'get_rl_projections',
-           'get_prj_model']
+           'get_prj_model',
+           'get_sdrefb_upd',
+           'get_sdrgain_upd']
 
 # pymess = False
 pymess_dict = {}
@@ -321,4 +323,32 @@ def get_sdrefb_upd(amat, t, fbtype=None, wnrm=2,
     #                  format(t, eps))
     # else:
     #     logger.debug('t={0}: computed the SDRE feedback')
+    return None, False
+
+
+def get_sdrgain_upd(amat, wnrm='fro', maxeps=None,
+                    baseA=None, baseZ=None, baseGain=None,
+                    maxfac=None):
+
+    deltaA = amat - baseA
+    nda = npla.norm(deltaA, ord=wnrm)
+    nz = npla.norm(baseZ, ord=wnrm)
+    na = npla.norm(baseA, ord=wnrm)
+    import ipdb; ipdb.set_trace()
+
+    epsP = spla.solve_sylvester(amat, -baseZ, -deltaA)
+    # print('debugging!!!')
+    # epsP = 0*amat
+    eps = npla.norm(epsP, ord=wnrm)
+    print('|amat - baseA|: {0} -- |E|: {1}'.
+          format(npla.norm(deltaA, ord=wnrm), eps))
+    if maxeps is not None:
+        if eps < maxeps:
+            updGaint = npla.solve(epsP+np.eye(epsP.shape[0]), baseGain.T)
+            return updGaint.T, True
+    elif maxfac is not None:
+        if (1+eps)/(1-eps) < maxfac and eps < 1:
+            updGaint = npla.solve(epsP+np.eye(epsP.shape[0]), baseGain.T)
+            return updGaint.T, True
+
     return None, False
