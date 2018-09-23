@@ -211,7 +211,7 @@ def lqgbt(problemname='drivencavity',
     except IOError:
         print('computing `c_mat`...')
         mc_mat, y_masmat = cou.get_mout_opa(odcoo=femp['odcoo'],
-                                            V=femp['V'], NY=NY)
+                                            V=femp['V'], mfgrid=(NY, 1))
         dou.save_spa(mc_mat, ddir + contsetupstr + '__mc_mat')
         dou.save_spa(y_masmat, ddir + contsetupstr + '__y_masmat')
 
