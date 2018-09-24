@@ -24,6 +24,7 @@ switchonsfb = 0  # 1.5
 
 # TODO: clear distinction of target state, linearization point, initial value
 # TODO: maybe redefine: by now we need to use -fmat all the time (but +ak_mat)
+# TODO: outsource the contrlr definitions
 
 
 def nwtn_adi_params():
@@ -373,7 +374,7 @@ def lqgbt(problemname='drivencavity',
         dimu = b_mat.shape[1]
         zerou = np.zeros((dimu, 1))
         if switchonsfb > 0:
-            print('the feedback will switched on at ' +
+            print('the feedback will be switched on at ' +
                   't={0:.4f}'.format(switchonsfb))
 
         def fv_tmdp_fullstatefb(time=None, curvel=None,
@@ -449,12 +450,12 @@ def lqgbt(problemname='drivencavity',
         obs_bk = np.dot(xok, ck_mat.T)
         sysmatk_inv = np.linalg.inv(np.eye(ak_mat.shape[1]) - DT*amatk)
 
-        def fv_tmdp_redoutpfb(time=None, curvel=None, memory=None,
-                              linvel=None,
-                              b_mat=None, c_mat=None,
+        def fv_tmdp_redoutpfb(time=None, memory=None,
+                              cury=None, ystar=None,
+                              curvel=None, velstar=None, c_mat=None,
                               ipsysk_mat_inv=None, cts=None,
                               obs_bk=None, obs_ck=None,
-                              # xck=None, bk_mat=None,
+                              b_mat=None,
                               **kw):
             """realizes a reduced static output feedback as a function
 
@@ -465,15 +466,14 @@ def lqgbt(problemname='drivencavity',
             ----------
             time : real
                 current time
-            curvel : (N,1) nparray
-                current velocity. For consistency, the full state is taken
-                as input. However, internally, we only use the observation
-                `y = c_mat*curvel`
             memory : dictionary
                 contains values from previous call, in particular the
                 previous state estimate
-            linvel : (N,1) nparray
-                linearization point for the linear model
+            curvel : (N,1) nparray
+                current velocity. For consistency, the full state can be taken
+                as input. Internally, the observation `y=c_mat*curvel` is used
+            velstar : (N,1) nparray
+                target velocity
             ipsysk_mat_inv : (K,K) nparray
                 inverse of the system matrix that defines the update
                 of the state estimate
@@ -497,15 +497,14 @@ def lqgbt(problemname='drivencavity',
 
             """
             xk_old = memory['xk_old']
-            buk = cts*np.dot(obs_bk,
-                             lau.mm_dnssps(c_mat, (curvel-linvel)))
+            if cury is not None and ystar is not None:
+                ydiff = cury - ystar
+            else:
+                ydiff = c_mat.dot(curvel-velstar)
+            buk = cts*np.dot(obs_bk, ydiff)
             xk_old = np.dot(ipsysk_mat_inv, xk_old + buk)
             memory['xk_old'] = xk_old
-            actua = lau.mm_dnssps(b_mat, obs_ck.dot(xk_old))
-            # if np.mod(np.int(time/DT), np.int(tE/DT)/100) == 0:
-            #     print(('time now: {0}, end time: {1}'.format(time, tE)))
-            #     print('\nnorm of deviation', np.linalg.norm(curvel-linvel))
-            #     print('norm of actuation {0}'.format(np.linalg.norm(actua)))
+            actua = b_mat.dot(obs_ck.dot(xk_old))
             memory['actualist'].append(actua)
 
             return actua, memory
@@ -954,6 +953,7 @@ def lqgbt(problemname='drivencavity',
                    lin_vel_point=None,
                    clearprvdata=True,
                    fv_tmdp=fv_tmdp,
+                   cv_mat=c_mat,  # needed for the output feedback
                    comp_nonl_semexp=True,
                    fv_tmdp_params=fv_tmdp_params,
                    fv_tmdp_memory=fv_tmdp_memory,
