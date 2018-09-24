@@ -48,6 +48,7 @@ def nwtn_adi_params():
 
 def lqgbt(problemname='drivencavity',
           N=10, Re=1e2, plain_bt=False, cl_linsys=False,
+          simuN=None,
           gamma=1.,
           use_ric_ini=None, t0=0.0, tE=1.0, Nts=11,
           NU=3, NY=3,
