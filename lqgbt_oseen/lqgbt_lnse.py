@@ -509,7 +509,7 @@ def lqgbt(problemname='drivencavity',
 
             return actua, memory
 
-        fv_rofb_dict = dict(cts=DT, linvel=v_ss_nse,
+        fv_rofb_dict = dict(cts=DT, velstar=v_ss_nse,
                             b_mat=b_mat_rgscld, c_mat=c_mat_reg,
                             obs_bk=obs_bk, obs_ck=obs_ck,
                             ipsysk_mat_inv=sysmatk_inv)
@@ -953,7 +953,7 @@ def lqgbt(problemname='drivencavity',
                    lin_vel_point=None,
                    clearprvdata=True,
                    fv_tmdp=fv_tmdp,
-                   cv_mat=c_mat,  # needed for the output feedback
+                   # cv_mat=c_mat,  # needed for the output feedback
                    comp_nonl_semexp=True,
                    fv_tmdp_params=fv_tmdp_params,
                    fv_tmdp_memory=fv_tmdp_memory,
@@ -1083,8 +1083,8 @@ def lqgbt(problemname='drivencavity',
         yscomplist = cou.extract_output(strdict=dictofvelstrs, tmesh=trange,
                                         c_mat=c_mat, load_data=dou.load_npa)
 
-        dou.save_output_json(dict(tmesh=trange.tolist(), outsig=yscomplist),
-                             fstring=shortstring + robitstr + timediscstr)
+    dou.save_output_json(dict(tmesh=trange.tolist(), outsig=yscomplist),
+                         fstring=shortstring + robitstr + timediscstr)
 
     if plotit:
         dou.plot_outp_sig(tmesh=trange, outsig=yscomplist)

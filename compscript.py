@@ -10,6 +10,7 @@ import getopt
 pymess = True
 pymess = False
 relist = [None, 5e1, 7.5e1, 1e2, 1.2e2]
+relist = [None, 5e1, 7.5e1, 9e1]
 max_re_only = False
 max_re_only = True  # consider only the last Re for the simu
 
@@ -20,7 +21,7 @@ gamma = 1e-0  # e5
 bccontrol = True
 bccontrol = False
 palpha = 1e-5  # parameter for the Robin penalization
-cyldim = 3
+cyldim = 2
 simucyldim = 4  # the dim model used in the simulation
 # where to truncate the LQGBT characteristic values
 trunclist = [1e-2]  # , 1e-2, 1e-1, 1e-0]
