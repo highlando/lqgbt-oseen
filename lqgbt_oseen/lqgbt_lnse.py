@@ -418,6 +418,7 @@ def lqgbt(problemname='drivencavity',
         fv_tmdp_params = tmdp_fsfb_dict
         fv_tmdp_memory = None
 
+    # ### CHAP: define the reduced output feedback
     elif closed_loop == 'red_output_fb':
         shortclstr = 'hinfrofb' if hinf else 'rofb'
         DT = (tE - t0)/(Nts-1)
@@ -501,6 +502,7 @@ def lqgbt(problemname='drivencavity',
                 ydiff = cury - ystar
             else:
                 ydiff = c_mat.dot(curvel-velstar)
+                print('sorry, I used the full state for y=Cx ...')
             buk = cts*np.dot(obs_bk, ydiff)
             xk_old = np.dot(ipsysk_mat_inv, xk_old + buk)
             memory['xk_old'] = xk_old
@@ -509,8 +511,9 @@ def lqgbt(problemname='drivencavity',
 
             return actua, memory
 
-        fv_rofb_dict = dict(cts=DT, velstar=v_ss_nse,
-                            b_mat=b_mat_rgscld, c_mat=c_mat_reg,
+        fv_rofb_dict = dict(cts=DT, ystar=c_mat.dot(v_ss_nse),
+                            # velstar=v_ss_nse, c_mat=c_mat_reg,
+                            b_mat=b_mat_rgscld,
                             obs_bk=obs_bk, obs_ck=obs_ck,
                             ipsysk_mat_inv=sysmatk_inv)
 
@@ -948,17 +951,17 @@ def lqgbt(problemname='drivencavity',
 
     shortclstr = shortclstr + 'pm' if pymess else shortclstr
 
-    soldict.update(fv_stbc=rhsd_stbc['fv'],
-                   trange=trange,
+    soldict.update(trange=trange,
                    lin_vel_point=None,
                    clearprvdata=True,
                    fv_tmdp=fv_tmdp,
-                   # cv_mat=c_mat,  # needed for the output feedback
+                   cv_mat=c_mat,  # needed for the output feedback
                    comp_nonl_semexp=True,
                    fv_tmdp_params=fv_tmdp_params,
                    fv_tmdp_memory=fv_tmdp_memory,
                    return_dictofvelstrs=True)
 
+    # ### CHAP: define the initial values
     if whichinival == 'sstokes':
         print('we start with Stokes -- `perturbpara` is not considered')
         soldict.update(dict(iniv=None, start_ssstokes=True))
@@ -1071,6 +1074,7 @@ def lqgbt(problemname='drivencavity',
 
     timediscstr = 't{0}{1}Nts{2}'.format(t0, tE, Nts)
 
+    # ### CHAP: start the simulation
     try:
         yscomplist = dou.load_json_dicts(shortstring + robitstr +
                                          timediscstr)['outsig']
@@ -1092,9 +1096,6 @@ def lqgbt(problemname='drivencavity',
     ymys = dou.meas_output_diff(tmesh=trange, ylist=yscomplist,
                                 ystar=c_mat.dot(v_ss_nse))
     print('|y-y*|: {0}'.format(ymys))
-    # import matplotlib.pyplot as plt
-    # plt.plot(trange, yscomplist)
-    # plt.show(block=False)
 
 if __name__ == '__main__':
     # lqgbt(N=10, Re=500, use_ric_ini=None, plain_bt=False)

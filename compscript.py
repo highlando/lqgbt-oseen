@@ -46,8 +46,8 @@ closed_loop = 'red_updsdre_fb'
 closed_loop = False
 closed_loop = 'hinf_red_output_fb'
 closed_loop = 'full_state_fb'
-closed_loop = 'red_output_fb'
 closed_loop = None
+closed_loop = 'red_output_fb'
 # what inival
 whichinival = 'sstokes'  # steady state Stokes solution
 whichinival, tpp = 'sstokes++', .5  # a developed state starting from sstokes
