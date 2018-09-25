@@ -4,4 +4,5 @@ from . import nse_riccont_utils
 
 __all__ = ["lqgbt_lnse",
            "nse_extlin_utils",
-           "nse_riccont_utils"]
+           "nse_riccont_utils",
+           "cntrl_simu_helpers"]

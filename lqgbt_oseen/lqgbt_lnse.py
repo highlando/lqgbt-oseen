@@ -1,7 +1,6 @@
 import os
 import numpy as np
 
-# import dolfin_navier_scipy.dolfin_to_sparrays as dts
 import dolfin_navier_scipy.data_output_utils as dou
 import dolfin_navier_scipy.stokes_navier_utils as snu
 import dolfin_navier_scipy.problem_setups as dnsps
@@ -14,6 +13,7 @@ import distr_control_fenics.cont_obs_utils as cou
 
 import lqgbt_oseen.nse_riccont_utils as nru
 import lqgbt_oseen.nse_extlin_utils as neu
+import lqgbt_oseen.cntrl_simu_helpers as csh
 
 debug = False
 
@@ -251,7 +251,7 @@ def lqgbt(problemname='drivencavity',
                    fp=rhsd_stbc['fp']+rhsd_vfrc['fpr'],
                    N=N, nu=nu, data_prfx=veldatastr)
 
-    vp_ss_nse, list_norm_nwtnupd = snu.\
+    vp_ss_nse = snu.\
         solve_steadystate_nse(vel_pcrd_stps=npcrdstps, return_vp=True,
                               clearprvdata=debug, **soldict)
 
@@ -270,7 +270,7 @@ def lqgbt(problemname='drivencavity',
     # MAF -- need to change the convc_mat, i.e. we need another v_ss_nse
     # MAF -- need to change the f_mat, i.e. we need another convc_mat
     if trytofail:
-        v_ss_nse_MAF, _ = snu.\
+        v_ss_nse_MAF = snu.\
             solve_steadystate_nse(vel_pcrd_stps=ttf_npcrdstps, vel_nwtn_stps=0,
                                   vel_pcrd_tol=1e-15,
                                   clearprvdata=True, **soldict)
@@ -963,43 +963,10 @@ def lqgbt(problemname='drivencavity',
                    return_dictofvelstrs=True)
 
     # ### CHAP: define the initial values
-    if whichinival == 'sstokes':
-        print('we start with Stokes -- `perturbpara` is not considered')
-        soldict.update(dict(iniv=None, start_ssstokes=True))
-        shortinivstr = 'sks'
-    elif whichinival == 'sstate+d':
-        perturbini = perturbpara*np.ones((NV, 1))
-        reg_pertubini = lau.app_prj_via_sadpnt(amat=stokesmatsc['M'],
-                                               jmat=stokesmatsc['J'],
-                                               rhsv=perturbini)
-        soldict.update(dict(iniv=v_ss_nse + reg_pertubini))
-        shortinivstr = 'ssd{0}'.format(perturbpara)
-    elif whichinival == 'sstokes++':
-        lctrng = (trange[trange < tpp]).tolist()
-        lctrng.append(tpp)
-
-        stksppdtstr = fdstr + 't0{0:.1f}tE{1:.4f}Nts{2}'.\
-            format(t0, tpp, len(lctrng)) + '__stokesppvel'
-        try:
-            sstokspp = dou.load_npa(stksppdtstr)
-            print('loaded `stokespp({0})` for inival'.format(tpp))
-        except IOError:
-            print('solving for `stokespp({0})` as inival'.format(tpp))
-            inivsoldict = {}
-            inivsoldict.update(stokesmatsc)  # containing A, J, JT
-            inivsoldict.update(femp)  # adding V, Q, invinds, diribcs
-            inivsoldict.update(fv=rhsd_stbc['fv']+rhsd_vfrc['fvc'],
-                               fp=rhsd_stbc['fp']+rhsd_vfrc['fpr'],
-                               N=N, nu=nu, data_prfx=veldatastr)
-            inivsoldict.update(trange=np.array(lctrng),
-                               iniv=None, start_ssstokes=True,
-                               comp_nonl_semexp=True,
-                               return_dictofvelstrs=True)
-            dcvlstrs = snu.solve_nse(**inivsoldict)
-            sstokspp = dou.load_npa(dcvlstrs[tpp])
-            dou.save_npa(sstokspp, stksppdtstr)
-        soldict.update(dict(iniv=sstokspp))
-        shortinivstr = 'sk{0}'.format(tpp)
+    shortinivstr = csh.\
+        set_inival(soldict=soldict, whichinival=whichinival, trange=trange,
+                   tpp=tpp, v_ss_nse=v_ss_nse, perturbpara=perturbpara,
+                   fdstr=fdstr)
 
     outstr = truncstr + '{0}'.format(closed_loop) \
         + 't0{0}tE{1}Nts{2}N{3}Re{4}'.format(t0, tE, Nts, N, Re)
