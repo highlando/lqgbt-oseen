@@ -22,7 +22,7 @@ bccontrol = True
 bccontrol = False
 palpha = 1e-5  # parameter for the Robin penalization
 cyldim = 2
-simucyldim = 4  # the dim model used in the simulation
+simucyldim = 2  # the dim model used in the simulation
 # where to truncate the LQGBT characteristic values
 trunclist = [1e-2]  # , 1e-2, 1e-1, 1e-0]
 # dimension of in and output spaces
@@ -161,6 +161,7 @@ for ctrunc in trunclist:
         import matplotlib.pyplot as plt
         plt.close('all')
         lqgbt_lnse.lqgbt(problemname='cylinderwake', N=cyldim,
+                         simuN=simucyldim,
                          use_ric_ini=relist[cre-1],
                          cl_linsys=cl_linsys,
                          NU=NU, NY=NY,

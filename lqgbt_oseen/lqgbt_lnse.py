@@ -177,7 +177,7 @@ def lqgbt(problemname='drivencavity',
     fdstrini = get_fdstr(use_ric_ini) if use_ric_ini is not None else None
 
 #
-# Prepare for control
+# ### CHAP: Prepare for control
 #
 
     # get the control and observation operators
@@ -1075,21 +1075,48 @@ def lqgbt(problemname='drivencavity',
 
     timediscstr = 't{0}{1}Nts{2}'.format(t0, tE, Nts)
 
-    # ### CHAP: start the simulation
+    # ### CHAP: the simulation
+    if not simuN == N or simuN == N:
+        simuxtrstr = 'SN{0}'.format(simuN)
+        print('Controller with N={0}, Simulation with N={1}'.format(N, simuN))
+        sfemp, sstokesmatsc, srhsd \
+            = dnsps.get_sysmats(problem=problemname, N=simuN, Re=Re,
+                                bccontrol=bccontrol, scheme='TH',
+                                mergerhs=True)
+        sb_mat, u_masmat = cou.get_inp_opa(cdcoo=sfemp['cdcoo'], V=sfemp['V'],
+                                           NU=NU, xcomp=sfemp['uspacedep'])
+        sb_mat = sb_mat[invinds, :][:, :]
+        sb_mat_scld = sb_mat*Rmhalf
+
+        smc_mat, sy_masmat = cou.get_mout_opa(odcoo=sfemp['odcoo'],
+                                              V=sfemp['V'], mfgrid=(NY, 1))
+        sc_mat = lau.apply_massinv(sy_masmat, smc_mat, output='sparse')
+        sc_mat = sc_mat[:, invinds][:, :]
+
+        soldict.update(sstokesmatsc)  # containing A, J, JT
+        soldict.update(sfemp)  # adding V, Q, invinds, diribcs
+        soldict.update(srhsd)  # right hand sides
+        soldict.update(dict(cv_mat=c_mat))  # needed for the output feedback
+        fv_rofb_dict.update(dict(b_mat=sb_mat_scld))
+
+    else:
+        simuxtrstr = ''
+
     try:
-        yscomplist = dou.load_json_dicts(shortstring + robitstr +
+        yscomplist = dou.load_json_dicts(shortstring + robitstr + simuxtrstr +
                                          timediscstr)['outsig']
         print('loaded the outputs from: ' + shortstring + robitstr)
 
     except IOError:
-        soldict.update(data_prfx=shortstring)
+        soldict.update(data_prfx=shortstring + simuxtrstr)
         dictofvelstrs = snu.solve_nse(**soldict)
 
         yscomplist = cou.extract_output(strdict=dictofvelstrs, tmesh=trange,
                                         c_mat=c_mat, load_data=dou.load_npa)
 
     dou.save_output_json(dict(tmesh=trange.tolist(), outsig=yscomplist),
-                         fstring=shortstring + robitstr + timediscstr)
+                         fstring=(shortstring + simuxtrstr
+                                  + robitstr + timediscstr))
 
     if plotit:
         dou.plot_outp_sig(tmesh=trange, outsig=yscomplist)
