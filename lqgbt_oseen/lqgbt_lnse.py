@@ -506,6 +506,7 @@ def lqgbt(problemname='drivencavity',
                 print('sorry, I used the full state for y=Cx ...')
             buk = cts*np.dot(obs_bk, ydiff)
             xk_old = np.dot(ipsysk_mat_inv, xk_old + buk)
+            print(obs_ck.dot(xk_old))
             memory['xk_old'] = xk_old
             actua = b_mat.dot(obs_ck.dot(xk_old))
             memory['actualist'].append(actua)
@@ -1050,24 +1051,30 @@ def lqgbt(problemname='drivencavity',
             = dnsps.get_sysmats(problem=problemname, N=simuN, Re=Re,
                                 bccontrol=bccontrol, scheme='TH',
                                 mergerhs=True)
+        sinvinds = sfemp['invinds']
         sb_mat, u_masmat = cou.get_inp_opa(cdcoo=sfemp['cdcoo'], V=sfemp['V'],
                                            NU=NU, xcomp=sfemp['uspacedep'])
-        sb_mat = sb_mat[invinds, :][:, :]
+        sb_mat = sb_mat[sinvinds, :][:, :]
         sb_mat_scld = sb_mat*Rmhalf
 
         smc_mat, sy_masmat = cou.get_mout_opa(odcoo=sfemp['odcoo'],
                                               V=sfemp['V'], mfgrid=(NY, 1))
         sc_mat = lau.apply_massinv(sy_masmat, smc_mat, output='sparse')
-        sc_mat = sc_mat[:, invinds][:, :]
+        sc_mat = sc_mat[:, sinvinds][:, :]
 
         soldict.update(sstokesmatsc)  # containing A, J, JT
         soldict.update(sfemp)  # adding V, Q, invinds, diribcs
         soldict.update(srhsd)  # right hand sides
-        soldict.update(dict(cv_mat=c_mat))  # needed for the output feedback
+        soldict.update(dict(cv_mat=sc_mat))  # needed for the output feedback
         fv_rofb_dict.update(dict(b_mat=sb_mat_scld))
+
+        shortinivstr = csh.\
+            set_inival(soldict=soldict, whichinival=whichinival, trange=trange,
+                       tpp=tpp, perturbpara=perturbpara, fdstr=fdstr)
 
     else:
         simuxtrstr = ''
+        sc_mat = c_mat
 
     try:
         yscomplist = dou.load_json_dicts(shortstring + robitstr + simuxtrstr +
@@ -1079,7 +1086,7 @@ def lqgbt(problemname='drivencavity',
         dictofvelstrs = snu.solve_nse(**soldict)
 
         yscomplist = cou.extract_output(strdict=dictofvelstrs, tmesh=trange,
-                                        c_mat=c_mat, load_data=dou.load_npa)
+                                        c_mat=sc_mat, load_data=dou.load_npa)
 
     dou.save_output_json(dict(tmesh=trange.tolist(), outsig=yscomplist),
                          fstring=(shortstring + simuxtrstr

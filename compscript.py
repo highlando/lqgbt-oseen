@@ -10,7 +10,7 @@ import getopt
 pymess = True
 pymess = False
 relist = [None, 5e1, 7.5e1, 1e2, 1.2e2]
-relist = [None, 5e1, 7.5e1, 9e1]
+relist = [None, 5e1, 7.5e1, 9e1, 1e2]
 max_re_only = False
 max_re_only = True  # consider only the last Re for the simu
 
@@ -22,9 +22,9 @@ bccontrol = True
 bccontrol = False
 palpha = 1e-5  # parameter for the Robin penalization
 cyldim = 2
-simucyldim = 2  # the dim model used in the simulation
+simucyldim = 3  # the dim model used in the simulation
 # where to truncate the LQGBT characteristic values
-trunclist = [1e-2]  # , 1e-2, 1e-1, 1e-0]
+trunclist = [1e-3]  # , 1e-2, 1e-1, 1e-0]
 # dimension of in and output spaces
 NU, NY = 3, 3
 # to what extend we perturb the initial value
@@ -54,7 +54,7 @@ whichinival, tpp = 'sstokes++', .5  # a developed state starting from sstokes
 whichinival = 'sstate+d'  # sstate plus perturbation
 tpp is tpp if whichinival == 'sstokes++' else None
 # number of time steps -- also define the lag in the control application
-scaletest = 1.0  # .5  # for 1. we simulate till 12.
+scaletest = 1.5  # for 1. we simulate till 12.
 baset0, basetE, baseNts = 0.0, 12.0, 2.4e3+1
 t0, tE, Nts = 0.0, scaletest*basetE, np.int(scaletest*baseNts)
 
