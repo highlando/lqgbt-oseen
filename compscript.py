@@ -18,17 +18,20 @@ max_re_only = True  # consider only the last Re for the simu
 gamma = 1e-0  # e5
 # mesh parameter for the cylinder meshes
 # whether to do bccontrol or distributed
-bccontrol = True
 bccontrol = False
+bccontrol = True
 palpha = 1e-5  # parameter for the Robin penalization
 cyldim = 2
 simucyldim = 3  # the dim model used in the simulation
 # where to truncate the LQGBT characteristic values
-trunclist = [1e-3]  # , 1e-2, 1e-1, 1e-0]
+trunclist = [1e-4]  # , 1e-2, 1e-1, 1e-0]
 # dimension of in and output spaces
-NU, NY = 3, 3
+NU = 3  # dimension of the distributed control
+if bccontrol:
+    NU = 'bcc'
+Cgrid = (3, 1)  # grid of the sensors -- defines the C
 # to what extend we perturb the initial value
-perturbpara = 1e-3
+perturbpara = 1e-5
 # whether we use a perturbed system
 trytofail = True
 trytofail = False
@@ -44,17 +47,17 @@ cl_linsys = False
 closed_loop = 'redmod_sdre_fb'
 closed_loop = 'red_updsdre_fb'
 closed_loop = False
-closed_loop = 'hinf_red_output_fb'
-closed_loop = 'full_state_fb'
 closed_loop = None
+closed_loop = 'full_state_fb'
 closed_loop = 'red_output_fb'
+closed_loop = 'hinf_red_output_fb'
 # what inival
 whichinival = 'sstokes'  # steady state Stokes solution
 whichinival, tpp = 'sstokes++', .5  # a developed state starting from sstokes
 whichinival = 'sstate+d'  # sstate plus perturbation
 tpp is tpp if whichinival == 'sstokes++' else None
 # number of time steps -- also define the lag in the control application
-scaletest = 1.5  # for 1. we simulate till 12.
+scaletest = .15  # for 1. we simulate till 12.
 baset0, basetE, baseNts = 0.0, 12.0, 2.4e3+1
 t0, tE, Nts = 0.0, scaletest*basetE, np.int(scaletest*baseNts)
 
@@ -144,7 +147,8 @@ else:
                          full_upd_norm_check=False,
                          check_lyap_res=False)
 
-logstr = 'logs/log_cyldim{0}NU{1}NY{2}gamma{3}'.format(cyldim, NU, NY, gamma) +\
+logstr = 'logs/log_cyldim{0}NU{1}C{2[0]}{2[1]}gamma{3}'.\
+    format(cyldim, NU, Cgrid, gamma) +\
     'closedloop{0}'.format(closed_loop) +\
     't0{0}tE{1}Nts{2}'.format(t0, tE, Nts) +\
     'Re{2}to{3}kappa{0}to{1}eps{4}'.format(trunclist[0], trunclist[-1],
@@ -164,7 +168,7 @@ for ctrunc in trunclist:
                          simuN=simucyldim,
                          use_ric_ini=relist[cre-1],
                          cl_linsys=cl_linsys,
-                         NU=NU, NY=NY,
+                         NU=NU, Cgrid=Cgrid,
                          Re=relist[cre], plain_bt=False,
                          trunc_lqgbtcv=ctrunc,
                          t0=t0, tE=tE, Nts=Nts,

@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import scipy.sparse as sps
 
 import dolfin_navier_scipy.data_output_utils as dou
 import dolfin_navier_scipy.stokes_navier_utils as snu
@@ -51,7 +52,7 @@ def lqgbt(problemname='drivencavity',
           simuN=None,
           gamma=1.,
           use_ric_ini=None, t0=0.0, tE=1.0, Nts=11,
-          NU=3, NY=3,
+          NU=3, Cgrid=(3, 1),
           bccontrol=True, palpha=1e-5,
           npcrdstps=8,
           pymess=False,
@@ -102,9 +103,12 @@ def lqgbt(problemname='drivencavity',
         whether to compute the normalized hinf aware central controller
     N : int, optional
         parameter for the dimension of the space discretization
-    NU, NY : int, optional
-        dimensions of components of in and output space (will double because
-        there are two components), default to `3, 3`
+    NU : int, optional
+        defines the `B` and, thus, the dimension the input space
+        (will double because there are two components), defaults to `3`
+    Cgrid : tuple, optional
+        defines the `C` and, thus, the dimension of the output space
+        (dim Y = 2*Cgrid[0]*Cgrid[1]), defaults to `(3, 1)`
     problemname : string, optional
         what problem to be solved, 'cylinderwake' or 'drivencavity'
     plain_bt : boolean, optional
@@ -149,18 +153,17 @@ def lqgbt(problemname='drivencavity',
     prbstr = '_bt' if plain_bt else '_lqgbt'
     if pymess:
         prbstr = prbstr + '__pymess'
-    # contsetupstr = 'NV{0}NU{1}NY{2}alphau{3}'.format(NV, NU, NY, alphau)
+
+    contsetupstr = 'NV{0}_B{3}_C{1[0]}{1[1]}_palpha{2}'.\
+        format(NV, Cgrid, palpha, NU)
+    shortcontsetupstr = '{0}{1[0]}{1[1]}{2}'.\
+        format(NV, Cgrid, np.int(np.log2(palpha)))
+
     if bccontrol:
-        import scipy.sparse as sps
-        contsetupstr = 'NV{0}_bcc_NY{1}_palpha{2}'.format(NV, NY, palpha)
-        shortcontsetupstr = '{0}{1}{2}'.format(NV, NY, np.int(np.log2(palpha)))
         stokesmatsc['A'] = stokesmatsc['A'] + 1./palpha*stokesmatsc['Arob']
         b_mat = 1./palpha*stokesmatsc['Brob']
         u_masmat = sps.eye(b_mat.shape[1], format='csr')
         print(' ### Robin-type boundary control palpha={0}'.format(palpha))
-    else:
-        contsetupstr = 'NV{0}NU{1}NY{2}'.format(NV, NU, NY)
-        shortcontsetupstr = '{0}{1}{2}'.format(NV, NU, NY)
 
     inivstr = '_' + whichinival if not whichinival == 'sstokes++' \
         else '_sstokes++{0}'.format(tpp)
@@ -213,7 +216,7 @@ def lqgbt(problemname='drivencavity',
     except IOError:
         print('computing `c_mat`...')
         mc_mat, y_masmat = cou.get_mout_opa(odcoo=femp['odcoo'],
-                                            V=femp['V'], mfgrid=(NY, 1))
+                                            V=femp['V'], mfgrid=Cgrid)
         dou.save_spa(mc_mat, ddir + contsetupstr + '__mc_mat')
         dou.save_spa(y_masmat, ddir + contsetupstr + '__y_masmat')
 
@@ -506,7 +509,7 @@ def lqgbt(problemname='drivencavity',
                 print('sorry, I used the full state for y=Cx ...')
             buk = cts*np.dot(obs_bk, ydiff)
             xk_old = np.dot(ipsysk_mat_inv, xk_old + buk)
-            print(obs_ck.dot(xk_old))
+            # print(obs_ck.dot(xk_old))
             memory['xk_old'] = xk_old
             actua = b_mat.dot(obs_ck.dot(xk_old))
             memory['actualist'].append(actua)
@@ -1044,7 +1047,7 @@ def lqgbt(problemname='drivencavity',
     timediscstr = 't{0}{1}Nts{2}'.format(t0, tE, Nts)
 
     # ### CHAP: the simulation
-    if not simuN == N or simuN == N:
+    if closed_loop == 'red_output_fb' and not simuN == N:
         simuxtrstr = 'SN{0}'.format(simuN)
         print('Controller with N={0}, Simulation with N={1}'.format(N, simuN))
         sfemp, sstokesmatsc, srhsd \
@@ -1052,13 +1055,21 @@ def lqgbt(problemname='drivencavity',
                                 bccontrol=bccontrol, scheme='TH',
                                 mergerhs=True)
         sinvinds = sfemp['invinds']
-        sb_mat, u_masmat = cou.get_inp_opa(cdcoo=sfemp['cdcoo'], V=sfemp['V'],
-                                           NU=NU, xcomp=sfemp['uspacedep'])
-        sb_mat = sb_mat[sinvinds, :][:, :]
+        if bccontrol:
+            sstokesmatsc['A'] = sstokesmatsc['A'] +\
+                1./palpha*sstokesmatsc['Arob']
+            sb_mat = 1./palpha*sstokesmatsc['Brob']
+            u_masmat = sps.eye(b_mat.shape[1], format='csr')
+
+        else:
+            sb_mat, u_masmat = cou.get_inp_opa(cdcoo=sfemp['cdcoo'],
+                                               V=sfemp['V'], NU=NU,
+                                               xcomp=sfemp['uspacedep'])
+            sb_mat = sb_mat[sinvinds, :][:, :]
         sb_mat_scld = sb_mat*Rmhalf
 
         smc_mat, sy_masmat = cou.get_mout_opa(odcoo=sfemp['odcoo'],
-                                              V=sfemp['V'], mfgrid=(NY, 1))
+                                              V=sfemp['V'], mfgrid=Cgrid)
         sc_mat = lau.apply_massinv(sy_masmat, smc_mat, output='sparse')
         sc_mat = sc_mat[:, sinvinds][:, :]
 
