@@ -507,6 +507,7 @@ def lqgbt(problemname='drivencavity',
             else:
                 ydiff = c_mat.dot(curvel-velstar)
                 print('sorry, I used the full state for y=Cx ...')
+            # print('ydiff', ydiff)
             buk = cts*np.dot(obs_bk, ydiff)
             xk_old = np.dot(ipsysk_mat_inv, xk_old + buk)
             # print(obs_ck.dot(xk_old))
@@ -516,7 +517,8 @@ def lqgbt(problemname='drivencavity',
 
             return actua, memory
 
-        fv_rofb_dict = dict(cts=DT, ystar=c_mat.dot(v_ss_nse),
+        fv_rofb_dict = dict(cts=DT,
+                            ystar=c_mat.dot(v_ss_nse),
                             # velstar=v_ss_nse, c_mat=c_mat_reg,
                             b_mat=b_mat_rgscld,
                             obs_bk=obs_bk, obs_ck=obs_ck,
@@ -967,7 +969,7 @@ def lqgbt(problemname='drivencavity',
                    return_dictofvelstrs=True)
 
     # ### CHAP: define the initial values
-    shortinivstr = csh.\
+    shortinivstr, _ = csh.\
         set_inival(soldict=soldict, whichinival=whichinival, trange=trange,
                    tpp=tpp, v_ss_nse=v_ss_nse, perturbpara=perturbpara,
                    fdstr=fdstr)
@@ -1079,9 +1081,12 @@ def lqgbt(problemname='drivencavity',
         soldict.update(dict(cv_mat=sc_mat))  # needed for the output feedback
         fv_rofb_dict.update(dict(b_mat=sb_mat_scld))
 
-        shortinivstr = csh.\
+        shortinivstr, retnssnse = csh.\
             set_inival(soldict=soldict, whichinival=whichinival, trange=trange,
-                       tpp=tpp, perturbpara=perturbpara, fdstr=fdstr)
+                       tpp=tpp, perturbpara=perturbpara, fdstr=fdstr,
+                       retvssnse=True)
+
+        fv_rofb_dict.update(dict(ystar=sc_mat.dot(retnssnse)))
 
     else:
         simuxtrstr = ''
