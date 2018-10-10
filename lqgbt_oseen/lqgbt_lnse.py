@@ -971,10 +971,13 @@ def lqgbt(problemname='drivencavity',
                    return_dictofvelstrs=True)
 
     # ### CHAP: define the initial values
-    shortinivstr, _ = csh.\
-        set_inival(soldict=soldict, whichinival=whichinival, trange=trange,
-                   tpp=tpp, v_ss_nse=v_ss_nse, perturbpara=perturbpara,
-                   fdstr=fdstr)
+    if simuN == N:
+        shortinivstr, _ = csh.\
+            set_inival(soldict=soldict, whichinival=whichinival, trange=trange,
+                       tpp=tpp, v_ss_nse=v_ss_nse, perturbpara=perturbpara,
+                       fdstr=fdstr)
+        shortstring = (get_fdstr(Re, short=True) + shortclstr +
+                       shorttruncstr + shortinivstr + shortfailstr)
 
     outstr = truncstr + '{0}'.format(closed_loop) \
         + 't0{0}tE{1}Nts{2}N{3}Re{4}'.format(t0, tE, Nts, N, Re)
@@ -983,8 +986,6 @@ def lqgbt(problemname='drivencavity',
                        vfileprfx='results/vel_'+outstr,
                        pfileprfx='results/p_'+outstr)
 
-    shortstring = (get_fdstr(Re, short=True) +  # shortcontsetupstr +
-                   shortclstr + shorttruncstr + shortinivstr + shortfailstr)
     if cl_linsys:
         adjlinsys = True
         if adjlinsys:
@@ -1091,6 +1092,8 @@ def lqgbt(problemname='drivencavity',
                        fdstr=saveloadsimuinivstr, retvssnse=True)
 
         fv_rofb_dict.update(dict(ystar=sc_mat.dot(retnssnse)))
+        shortstring = (get_fdstr(Re, short=True) + shortclstr +
+                       shorttruncstr + shortinivstr + shortfailstr)
 
     else:
         simuxtrstr = ''
