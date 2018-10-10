@@ -165,8 +165,10 @@ def lqgbt(problemname='drivencavity',
         u_masmat = sps.eye(b_mat.shape[1], format='csr')
         print(' ### Robin-type boundary control palpha={0}'.format(palpha))
 
-    inivstr = '_' + whichinival if not whichinival == 'sstokes++' \
-        else '_sstokes++{0}'.format(tpp)
+    if whichinival == 'sstokes++' or whichinival == 'snse+d++':
+        inivstr = '_' + whichinival + '{0}'.format(tpp)
+    else:
+        inivstr = '_' + whichinival
 
     def get_fdstr(Re, short=False):
         if short:
