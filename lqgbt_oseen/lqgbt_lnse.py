@@ -1058,7 +1058,7 @@ def lqgbt(problemname='drivencavity',
             = dnsps.get_sysmats(problem=problemname, N=simuN, Re=Re,
                                 bccontrol=bccontrol, scheme='TH',
                                 mergerhs=True)
-        sinvinds = sfemp['invinds']
+        sinvinds, sNV = sfemp['invinds'], sstokesmatsc['A'].shape[0]
         if bccontrol:
             sstokesmatsc['A'] = sstokesmatsc['A'] +\
                 1./palpha*sstokesmatsc['Arob']
@@ -1083,10 +1083,12 @@ def lqgbt(problemname='drivencavity',
         soldict.update(dict(cv_mat=sc_mat))  # needed for the output feedback
         fv_rofb_dict.update(dict(b_mat=sb_mat_scld))
 
+        saveloadsimuinivstr = ddir + 'cw{0}Re{1}g{2}d{3}_iniv'.\
+            format(sNV, Re, gamma, perturbpara)
         shortinivstr, retnssnse = csh.\
             set_inival(soldict=soldict, whichinival=whichinival, trange=trange,
-                       tpp=tpp, perturbpara=perturbpara, fdstr=fdstr,
-                       retvssnse=True)
+                       tpp=tpp, perturbpara=perturbpara,
+                       fdstr=saveloadsimuinivstr, retvssnse=True)
 
         fv_rofb_dict.update(dict(ystar=sc_mat.dot(retnssnse)))
 
