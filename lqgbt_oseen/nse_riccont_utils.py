@@ -23,7 +23,7 @@ def get_ric_facs(fmat=None, mmat=None, jmat=None,
                  bmat=None, cmat=None,
                  ric_ini_str=None, fdstr=None,
                  nwtn_adi_dict=None,
-                 zwconly=False, hinf=False,
+                 zwconly=False, hinf=False, hinfgammainfty=False,
                  multiproc=False, pymess=False, checktheres=False):
 
     if hinf:
@@ -36,13 +36,21 @@ def get_ric_facs(fmat=None, mmat=None, jmat=None,
             from scipy.io import loadmat
             lmd = {}
             loadmat(hinfmatstr + '_output', mdict=lmd)
-            try:
-                zwc, zwo, hinfgamma = lmd['ZB'], lmd['ZC'], lmd['gam_opt']
-            except KeyError:
-                zwc, zwo, hinfgamma = (lmd['outControl'][0, 0]['Z'],
-                                       lmd['outFilter'][0, 0]['Z'],
+            if hinfgammainfty:
+                zwc, zwo, hinfgamma = (lmd['outControl'][0, 0]['Z_LQG'],
+                                       lmd['outFilter'][0, 0]['Z_LQG'],
                                        lmd['gam_opt'])
-            return zwc, zwo, hinfgamma
+                print('loaded the lqg mats from the hinf matfile')
+                return zwc, zwo, hinfgamma
+
+            else:
+                try:
+                    zwc, zwo, hinfgamma = lmd['ZB'], lmd['ZC'], lmd['gam_opt']
+                except KeyError:
+                    zwc, zwo, hinfgamma = (lmd['outControl'][0, 0]['Z'],
+                                           lmd['outFilter'][0, 0]['Z'],
+                                           lmd['gam_opt'])
+                return zwc, zwo, hinfgamma
 
         except IOError:
             print('could not load: ' + hinfmatstr + '_output')
@@ -163,7 +171,8 @@ def get_rl_projections(fdstr=None, truncstr=None,
                        zwc=None, zwo=None,
                        fmat=None, mmat=None, jmat=None,
                        bmat=None, cmat=None,
-                       cmpricfacpars={}, hinf=False,
+                       cmpricfacpars={},
+                       hinf=False, hinfgammainfty=False,
                        pymess=False,
                        trunc_lqgbtcv=None):
 
@@ -185,6 +194,7 @@ def get_rl_projections(fdstr=None, truncstr=None,
                 get_ric_facs(fdstr=fdstr, pymess=pymess,
                              fmat=fmat, mmat=mmat, jmat=jmat,
                              cmat=cmat, bmat=bmat, hinf=hinf,
+                             hinfgammainfty=hinfgammainfty,
                              **cmpricfacpars)
         tl, tr, svs = btu.\
             compute_lrbt_transfos(zfc=zwc, zfo=zwo,
@@ -199,7 +209,7 @@ def get_rl_projections(fdstr=None, truncstr=None,
 
 
 def get_prj_model(truncstr=None, fdstr=None,
-                  hinf=False,
+                  hinf=False, hinfgammainfty=False,
                   matsdict={},
                   abconly=False,
                   mmat=None, fmat=None, jmat=None, bmat=None, cmat=None,
@@ -221,6 +231,7 @@ def get_prj_model(truncstr=None, fdstr=None,
                                     fmat=fmat, mmat=mmat, jmat=jmat,
                                     cmat=cmat, bmat=bmat,
                                     pymess=pymess, hinf=hinf,
+                                    hinfgammainfty=hinfgammainfty,
                                     cmpricfacpars=cmpricfacpars,
                                     **cmprlprjpars)
         tltristhere = True

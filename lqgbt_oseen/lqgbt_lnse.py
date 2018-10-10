@@ -60,6 +60,7 @@ def lqgbt(problemname='drivencavity',
           plotit=True,
           trunc_lqgbtcv=1e-6,
           hinf=False,
+          hinfgammainfty=False,
           nwtn_adi_dict=None,
           pymess_dict=None,
           whichinival='sstate',
@@ -179,6 +180,8 @@ def lqgbt(problemname='drivencavity',
 
     fdstr = get_fdstr(Re)
     fdstr = fdstr + '_hinf' if hinf else fdstr
+    if hinf and hinfgammainfty:
+        fdstr = fdstr + 'hinf'
     fdstrini = get_fdstr(use_ric_ini) if use_ric_ini is not None else None
 
 #
@@ -427,6 +430,8 @@ def lqgbt(problemname='drivencavity',
     # ### CHAP: define the reduced output feedback
     elif closed_loop == 'red_output_fb':
         shortclstr = 'hinfrofb' if hinf else 'rofb'
+        if hinfgammainfty:
+            shortclstr = 'hinfrofbginf'
         DT = (tE - t0)/(Nts-1)
 
         ak_mat, bk_mat, ck_mat, xok, xck, hinfgamma, tl, tr = \
@@ -436,11 +441,11 @@ def lqgbt(problemname='drivencavity',
                               bmat=b_mat_rgscld, cmat=c_mat_reg,
                               cmpricfacpars=cmpricfacpars,
                               pymess=pymess,
-                              hinf=hinf,
+                              hinf=hinf, hinfgammainfty=hinfgammainfty,
                               cmprlprjpars=cmprlprjpars)
         print('Controller has dimension: {0}'.format(ak_mat.shape[0]))
 
-        if hinf:
+        if hinf and not hinfgammainfty:
             zk = np.linalg.inv(np.eye(xck.shape[0])
                                - 1./hinfgamma**2*xok.dot(xck))
             amatk = (ak_mat

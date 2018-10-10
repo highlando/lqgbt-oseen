@@ -12,8 +12,8 @@ pymess = False
 relist = [None, 5e1, 7.5e1, 1e2, 1.2e2]
 relist = [None, 5e1, 7.5e1, 9e1, 1e2]
 relist = [5e1, 7.5e1]
-max_re_only = True  # consider only the last Re for the simu
 max_re_only = False
+max_re_only = True  # consider only the last Re for the simu
 
 # the input regularization parameter
 gamma = 1e-0  # e5
@@ -22,8 +22,8 @@ gamma = 1e-0  # e5
 bccontrol = False
 bccontrol = True
 palpha = 1e-5  # parameter for the Robin penalization
-cyldim = 2
-simucyldim = 2  # the dim model used in the simulation
+cyldim = 3
+simucyldim = 3  # the dim model used in the simulation
 # where to truncate the LQGBT characteristic values
 trunclist = [1e-4]  # , 1e-2, 1e-1, 1e-0]
 # dimension of in and output spaces
@@ -44,14 +44,16 @@ robmrgnfac = 0.1
 # whether to check the performance in the linear system
 cl_linsys = True
 cl_linsys = False
+
+hinfgammainfty = True
 # closed loop def
 closed_loop = 'redmod_sdre_fb'
 closed_loop = 'red_updsdre_fb'
 closed_loop = False
 closed_loop = None
 closed_loop = 'red_output_fb'
-closed_loop = 'hinf_red_output_fb'
 closed_loop = 'full_state_fb'
+closed_loop = 'hinf_red_output_fb'
 # what inival
 whichinival = 'sstokes'  # steady state Stokes solution
 whichinival, tpp = 'sstokes++', .5  # a developed state starting from sstokes
@@ -184,6 +186,7 @@ for ctrunc in trunclist:
                          plotit=False,
                          whichinival=whichinival, tpp=tpp,
                          hinf=hinf,
+                         hinfgammainfty=hinfgammainfty,
                          trytofail=trytofail, ttf_npcrdstps=ttf_npcrdstps,
                          robit=robit, robmrgnfac=robmrgnfac,
                          closed_loop=closed_loop,
