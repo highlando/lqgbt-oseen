@@ -1103,6 +1103,8 @@ def lqgbt(problemname='drivencavity',
     else:
         simuxtrstr = ''
         sc_mat = c_mat
+        shortstring = (get_fdstr(Re, short=True) + shortclstr +
+                       shorttruncstr + shortinivstr + shortfailstr)
 
     try:
         yscomplist = dou.load_json_dicts(shortstring + robitstr + simuxtrstr +
