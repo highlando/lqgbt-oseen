@@ -10,8 +10,8 @@ import getopt
 pymess = True
 pymess = False
 relist = [None, 5e1, 7.5e1, 1e2, 1.2e2]
-relist = [None, 5e1, 7.5e1, 9e1, 1e2]
 relist = [5e1, 7.5e1]
+relist = [None, 5e1, 7.5e1, 9e1, 1e2]
 max_re_only = False
 max_re_only = True  # consider only the last Re for the simu
 
@@ -25,7 +25,7 @@ palpha = 1e-5  # parameter for the Robin penalization
 cyldim = 3
 simucyldim = 3  # the dim model used in the simulation
 # where to truncate the LQGBT characteristic values
-trunclist = [1e-4]  # , 1e-2, 1e-1, 1e-0]
+trunclist = [1e-2]  # , 1e-2, 1e-1, 1e-0]
 # dimension of in and output spaces
 NU = 3  # dimension of the distributed control
 if bccontrol:
@@ -34,9 +34,9 @@ Cgrid = (3, 1)  # grid of the sensors -- defines the C
 # to what extend we perturb the initial value
 perturbpara = 1e-5
 # whether we use a perturbed system
-trytofail = True
 trytofail = False
-ttf_npcrdstps = 3
+trytofail = True
+ttf_npcrdstps = 5
 # whether to robustify the observer
 robit = True
 robit = False
@@ -50,22 +50,22 @@ hinfgammainfty = True
 closed_loop = 'redmod_sdre_fb'
 closed_loop = 'red_updsdre_fb'
 closed_loop = False
+closed_loop = 'full_state_fb'
 closed_loop = None
 closed_loop = 'red_output_fb'
-closed_loop = 'full_state_fb'
 closed_loop = 'hinf_red_output_fb'
 # what inival
 whichinival = 'sstokes'  # steady state Stokes solution
 whichinival, tpp = 'sstokes++', .5  # a developed state starting from sstokes
-whichinival = 'sstate+d'  # sstate plus perturbation
 whichinival, tpp = 'snse+d++', 2.  # a developed state starting from sstokes
+whichinival = 'sstate+d'  # sstate plus perturbation
 tpp is tpp if whichinival == 'sstokes++' or whichinival == 'snse+d++' else None
 # number of time steps -- also define the lag in the control application
-scaletest = 5.  # for 1. we simulate till 12.
+scaletest = 1.5  # for 1. we simulate till 12.
 baset0, basetE, baseNts = 0.0, 12.0, 2.4e3+1
 t0, tE, Nts = 0.0, scaletest*basetE, np.int(scaletest*baseNts)
 
-# get command line input and overwrite standard paramters if necessary
+# get command line input and overwrite standard parameters if necessary
 options, rest = getopt.getopt(sys.argv[1:], '',
                               ['robit=',
                                'obsperturb=',
