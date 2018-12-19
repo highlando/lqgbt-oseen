@@ -36,7 +36,8 @@ perturbpara = 1e-5
 # whether we use a perturbed system
 trytofail = False
 trytofail = True
-ttf_npcrdstps = 5
+# ttf_npcrdstps = 5
+ttf_npcrdstps = 3
 # whether to robustify the observer
 robit = True
 robit = False
