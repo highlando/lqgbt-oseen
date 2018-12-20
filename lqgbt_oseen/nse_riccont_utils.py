@@ -177,7 +177,7 @@ def get_rl_projections(fdstr=None, truncstr=None,
                        trunc_lqgbtcv=None):
 
     try:
-        if debug:
+        if debug or hinfgammainfty:
             raise IOError
         tl = dou.load_npa(fdstr + truncstr + '__tl')
         tr = dou.load_npa(fdstr + truncstr + '__tr')
@@ -200,10 +200,13 @@ def get_rl_projections(fdstr=None, truncstr=None,
             compute_lrbt_transfos(zfc=zwc, zfo=zwo,
                                   mmat=mmat,
                                   trunck={'threshh': trunc_lqgbtcv})
-        dou.save_npa(tl, fdstr + truncstr + '__tl')
-        dou.save_npa(tr, fdstr + truncstr + '__tr')
-        dou.save_npa(svs, fdstr + '__svs')
-        print('... done! - computing the left and right transformations')
+        if hinfgammainfty:
+            print('we use hinf with gamma=infty -- will not save anything')
+        else:
+            dou.save_npa(tl, fdstr + truncstr + '__tl')
+            dou.save_npa(tr, fdstr + truncstr + '__tr')
+            dou.save_npa(svs, fdstr + '__svs')
+            print('... done! - computing the left and right transformations')
 
     return tl, tr
 
@@ -225,7 +228,7 @@ def get_prj_model(truncstr=None, fdstr=None,
     else:
         tltristhere = True
 
-    if not tltristhere and return_tltr:
+    if (not tltristhere and return_tltr) or hinfgammainfty:
         tl, tr = get_rl_projections(fdstr=fdstr, truncstr=truncstr,
                                     zwc=zwc, zwo=zwo,
                                     fmat=fmat, mmat=mmat, jmat=jmat,
@@ -261,9 +264,12 @@ def get_prj_model(truncstr=None, fdstr=None,
         ak_mat = np.dot(tl.T, fmat.dot(tr))
         ck_mat = cmat.dot(tr)
         bk_mat = tl.T.dot(bmat)
-        dou.save_npa(ak_mat, fdstr+truncstr+'__ak_mat')
-        dou.save_npa(ck_mat, fdstr+truncstr+'__ck_mat')
-        dou.save_npa(bk_mat, fdstr+truncstr+'__bk_mat')
+        if not hinfgammainfty:
+            dou.save_npa(ak_mat, fdstr+truncstr+'__ak_mat')
+            dou.save_npa(ck_mat, fdstr+truncstr+'__ck_mat')
+            dou.save_npa(bk_mat, fdstr+truncstr+'__bk_mat')
+        else:
+            pass
 
     if abconly:
         return ak_mat, bk_mat, ck_mat
@@ -297,9 +303,12 @@ def get_prj_model(truncstr=None, fdstr=None,
             tltm, trtm = tl.T*mmat, tr.T*mmat
             xok = np.dot(np.dot(tltm, zwo), np.dot(zwo.T, tltm.T))
             xck = np.dot(np.dot(trtm, zwc), np.dot(zwc.T, trtm.T))
-            dou.save_npa(xok, fdstr+truncstr+'__xok')
-            dou.save_npa(xck, fdstr+truncstr+'__xck')
-            dou.save_npa(np.array([hinfgamma]), fdstr+'__gamma')
+            if not hinfgammainfty:
+                dou.save_npa(xok, fdstr+truncstr+'__xok')
+                dou.save_npa(xck, fdstr+truncstr+'__xck')
+                dou.save_npa(np.array([hinfgamma]), fdstr+'__gamma')
+            else:
+                pass
 
         if return_tltr:
             return ak_mat, bk_mat, ck_mat, xok, xck, hinfgamma, tl, tr

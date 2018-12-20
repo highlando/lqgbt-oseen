@@ -180,8 +180,8 @@ def lqgbt(problemname='drivencavity',
 
     fdstr = get_fdstr(Re)
     fdstr = fdstr + '_hinf' if hinf else fdstr
-    if hinf and hinfgammainfty:
-        fdstr = fdstr + 'hinf'
+    # if hinf and hinfgammainfty:
+    #     fdstr = fdstr + 'hinf'
     fdstrini = get_fdstr(use_ric_ini) if use_ric_ini is not None else None
 
 #

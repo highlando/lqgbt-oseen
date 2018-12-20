@@ -36,8 +36,7 @@ perturbpara = 1e-5
 # whether we use a perturbed system
 trytofail = False
 trytofail = True
-# ttf_npcrdstps = 5
-ttf_npcrdstps = 3
+ttf_npcrdstps = 8
 # whether to robustify the observer
 robit = True
 robit = False
@@ -46,7 +45,9 @@ robmrgnfac = 0.1
 cl_linsys = True
 cl_linsys = False
 
+hinfgammainfty = False
 hinfgammainfty = True
+
 # closed loop def
 closed_loop = 'redmod_sdre_fb'
 closed_loop = 'red_updsdre_fb'
@@ -62,7 +63,7 @@ whichinival, tpp = 'snse+d++', 2.  # a developed state starting from sstokes
 whichinival = 'sstate+d'  # sstate plus perturbation
 tpp is tpp if whichinival == 'sstokes++' or whichinival == 'snse+d++' else None
 # number of time steps -- also define the lag in the control application
-scaletest = 1.5  # for 1. we simulate till 12.
+scaletest = .5  # for 1. we simulate till 12.
 baset0, basetE, baseNts = 0.0, 12.0, 2.4e3+1
 t0, tE, Nts = 0.0, scaletest*basetE, np.int(scaletest*baseNts)
 
