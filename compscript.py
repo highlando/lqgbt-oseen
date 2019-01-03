@@ -37,10 +37,6 @@ perturbpara = 1e-5
 trytofail = False
 trytofail = True
 ttf_npcrdstps = 6
-# whether to robustify the observer
-robit = True
-robit = False
-robmrgnfac = 0.1
 # whether to check the performance in the linear system
 cl_linsys = True
 cl_linsys = False
@@ -72,7 +68,6 @@ options, rest = getopt.getopt(sys.argv[1:], '',
                               ['robit=',
                                'obsperturb=',
                                'ttf_npcrdstps=',
-                               'robmrgnfac=',
                                'scaletest=',
                                'iniperturb=',
                                'closed_loop=',
@@ -86,8 +81,6 @@ for opt, arg in options:
         trytofail = np.bool(arg)
     elif opt == '--ttf_npcrdstps':
         ttf_npcrdstps = int(arg)
-    elif opt == '--robmrgnfac':
-        robmrgnfac = np.float(arg)
     elif opt == '--iniperturb':
         perturbpara = np.float(arg)
     elif opt == '--scaletest':
@@ -128,7 +121,6 @@ infostring = ('Re             = {0}'.format(relist) +
               '\nini_perturb    = {0}'.format(perturbpara) +
               '\nobs_perturb    = {0}'.format(trytofail) +
               '\nrobustification= {0}'.format(robit) +
-              '\nrob margin fac = {0}'.format(robmrgnfac) +
               '\nttf_npcrdstps  = {0}'.format(ttf_npcrdstps) +
               '\nt0, tE, Nts    = {0}, {1}, {2}\n'.format(t0, tE, Nts) +
               '\nlinear cl sys  = {0}'.format(cl_linsys)
@@ -190,7 +182,6 @@ for ctrunc in trunclist:
                          hinf=hinf,
                          hinfgammainfty=hinfgammainfty,
                          trytofail=trytofail, ttf_npcrdstps=ttf_npcrdstps,
-                         robit=robit, robmrgnfac=robmrgnfac,
                          closed_loop=closed_loop,
                          perturbpara=perturbpara)
 

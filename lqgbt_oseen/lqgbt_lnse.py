@@ -68,8 +68,7 @@ def lqgbt(problemname='drivencavity',
           comp_freqresp=False, comp_stepresp='nonlinear',
           closed_loop=False, multiproc=False,
           perturbpara=1e-3,
-          trytofail=False, ttf_npcrdstps=3,
-          robit=False, robmrgnfac=0.5):
+          trytofail=False, ttf_npcrdstps=3):
     """Main routine for LQGBT
 
     Parameters
@@ -1050,11 +1049,6 @@ def lqgbt(problemname='drivencavity',
             print('oseen res: {0}'.format(np.linalg.norm(nseres)))
             soldict.update(stokes_flow=True, A=-f_mat, fv=linsysrhs)
 
-    if robit:
-        robitstr = '_robmgnfac{0}'.format(robmrgnfac)
-    else:
-        robitstr = ''
-
     timediscstr = 't{0}{1}Nts{2}'.format(t0, tE, Nts)
 
     # ### CHAP: the simulation
@@ -1108,9 +1102,9 @@ def lqgbt(problemname='drivencavity',
                        shorttruncstr + shortinivstr + shortfailstr)
 
     try:
-        yscomplist = dou.load_json_dicts(shortstring + robitstr + simuxtrstr +
+        yscomplist = dou.load_json_dicts(shortstring + simuxtrstr +
                                          timediscstr)['outsig']
-        print('loaded the outputs from: ' + shortstring + robitstr)
+        print('loaded the outputs from: ' + shortstring)
 
     except IOError:
         soldict.update(data_prfx=shortstring + simuxtrstr)
@@ -1120,8 +1114,7 @@ def lqgbt(problemname='drivencavity',
                                         c_mat=sc_mat, load_data=dou.load_npa)
 
     dou.save_output_json(dict(tmesh=trange.tolist(), outsig=yscomplist),
-                         fstring=(shortstring + simuxtrstr
-                                  + robitstr + timediscstr))
+                         fstring=(shortstring + simuxtrstr + timediscstr))
 
     if plotit:
         dou.plot_outp_sig(tmesh=trange, outsig=yscomplist)
