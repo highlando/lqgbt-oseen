@@ -50,6 +50,8 @@ def get_ric_facs(fmat=None, mmat=None, jmat=None,
                     zwc, zwo, hinfgamma = (lmd['outControl'][0, 0]['Z'],
                                            lmd['outFilter'][0, 0]['Z'],
                                            lmd['gam_opt'])
+                print('loaded the hinf mats from the hinf matfile')
+                print('gamma_opt = {0}'.format(hinfgamma))
                 return zwc, zwo, hinfgamma
 
         except IOError:

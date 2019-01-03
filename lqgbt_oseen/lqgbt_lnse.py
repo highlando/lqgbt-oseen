@@ -446,6 +446,7 @@ def lqgbt(problemname='drivencavity',
         print('Controller has dimension: {0}'.format(ak_mat.shape[0]))
 
         if hinf and not hinfgammainfty:
+            print('hinf red fb: gamma={0}'.format(hinfgamma))
             zk = np.linalg.inv(np.eye(xck.shape[0])
                                - 1./hinfgamma**2*xok.dot(xck))
             amatk = (ak_mat
