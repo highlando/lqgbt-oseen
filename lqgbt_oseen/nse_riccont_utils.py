@@ -242,7 +242,7 @@ def get_prj_model(truncstr=None, fdstr=None,
         tltristhere = True
 
     try:
-        if debug:
+        if debug or hinfgammainfty:
             raise IOError
         ak_mat = dou.load_npa(fdstr+truncstr+'__ak_mat')
         ck_mat = dou.load_npa(fdstr+truncstr+'__ck_mat')
@@ -260,6 +260,7 @@ def get_prj_model(truncstr=None, fdstr=None,
                                         cmat=cmat, bmat=bmat,
                                         cmpricfacpars=cmpricfacpars,
                                         hinf=hinf,
+                                        hinfgammainfty=hinfgammainfty,
                                         **cmprlprjpars)
             tltristhere = True
 
@@ -277,8 +278,9 @@ def get_prj_model(truncstr=None, fdstr=None,
         return ak_mat, bk_mat, ck_mat
 
     else:
+        print('loading/computing the reduced Gramians... ')
         try:
-            if debug:
+            if debug or hinfgammainfty:
                 raise IOError
             xok = dou.load_npa(fdstr+truncstr+'__xok')
             xck = dou.load_npa(fdstr+truncstr+'__xck')
@@ -290,6 +292,7 @@ def get_prj_model(truncstr=None, fdstr=None,
                 zwc, zwo, hinfgamma = \
                     get_ric_facs(fdstr=fdstr, fmat=fmat, mmat=mmat, jmat=jmat,
                                  cmat=cmat, bmat=bmat, hinf=hinf,
+                                 hinfgammainfty=hinfgammainfty,
                                  **cmpricfacpars)
 
             if tltristhere:
