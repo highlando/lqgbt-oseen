@@ -70,7 +70,8 @@ options, rest = getopt.getopt(sys.argv[1:], '',
                                'scaletest=',
                                'iniperturb=',
                                'closed_loop=',
-                               'max_re_only='])
+                               'max_re_only=',
+                               're='])
 for opt, arg in options:
     if opt == '--obsperturb':
         trytofail = int(arg)
@@ -95,13 +96,17 @@ for opt, arg in options:
         elif np.int(arg) == 4:
                 closed_loop = 'hinf_red_output_fb'
 
-    elif opt == '--Re':
-        simure = int(arg)
+    elif opt == '--re':
+        simure = np.float(arg)
         relist = [None, simure]
 
     elif opt == '--max_re_only':
             max_re_only = int(arg)
             max_re_only = np.bool(max_re_only)
+
+    # elif opt == '--logtofile':
+    #         logtofile = int(arg)
+    #         logtofile = np.bool(logtofile)
 
 if max_re_only:
     relist = relist[-2:]
@@ -120,7 +125,6 @@ infostring = ('Re             = {0}'.format(relist) +
               '\ntrunc at       = {0}'.format(trunclist[0]) +
               '\nini_perturb    = {0}'.format(perturbpara) +
               '\nobs_perturb    = {0}'.format(trytofail) +
-              '\nrobustification= {0}'.format(robit) +
               '\nttf_npcrdstps  = {0}'.format(ttf_npcrdstps) +
               '\nt0, tE, Nts    = {0}, {1}, {2}\n'.format(t0, tE, Nts) +
               '\nlinear cl sys  = {0}'.format(cl_linsys)
@@ -152,9 +156,11 @@ logstr = 'logs/log_cyldim{0}NU{1}C{2[0]}{2[1]}gamma{3}'.\
     'Re{2}to{3}kappa{0}to{1}eps{4}'.format(trunclist[0], trunclist[-1],
                                            relist[0], relist[-1], perturbpara)
 
-# print 'log goes ' + logstr
-# print 'how about \ntail -f '+logstr
-# sys.stdout = open(logstr, 'a', 0)
+# if logtofile:
+#     print('log goes ' + logstr)
+#     print('how about \ntail -f ' + logstr)
+#     sys.stdout = open(logstr, 'a', 0)
+
 print(('{0}'*10 + '\n log started at {1} \n' + '{0}'*10).
       format('X', str(datetime.datetime.now())))
 
