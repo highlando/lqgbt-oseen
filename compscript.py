@@ -65,18 +65,14 @@ t0, tE, Nts = 0.0, scaletest*basetE, np.int(scaletest*baseNts)
 
 # get command line input and overwrite standard parameters if necessary
 options, rest = getopt.getopt(sys.argv[1:], '',
-                              ['robit=',
-                               'obsperturb=',
+                              ['obsperturb=',
                                'ttf_npcrdstps=',
                                'scaletest=',
                                'iniperturb=',
                                'closed_loop=',
                                'max_re_only='])
 for opt, arg in options:
-    if opt == '--robit':
-        robit = int(arg)
-        robit = np.bool(robit)
-    elif opt == '--obsperturb':
+    if opt == '--obsperturb':
         trytofail = int(arg)
         trytofail = np.bool(arg)
     elif opt == '--ttf_npcrdstps':
@@ -98,11 +94,15 @@ for opt, arg in options:
                 closed_loop = 'red_sdre_fb'
         elif np.int(arg) == 4:
                 closed_loop = 'hinf_red_output_fb'
+
+    elif opt == '--Re':
+        simure = int(arg)
+        relist = [None, simure]
+
     elif opt == '--max_re_only':
             max_re_only = int(arg)
             max_re_only = np.bool(max_re_only)
 
-print('max_re_only={0}'.format(max_re_only))
 if max_re_only:
     relist = relist[-2:]
 
