@@ -41,8 +41,7 @@ ttf_npcrdstps = 6
 cl_linsys = True
 cl_linsys = False
 
-hinfgammainfty = False
-hinfgammainfty = True
+hinf = False  # hinf only need for reduced output feedback
 
 # closed loop def
 closed_loop = 'redmod_sdre_fb'
@@ -61,7 +60,6 @@ tpp is tpp if whichinival == 'sstokes++' or whichinival == 'snse+d++' else None
 # number of time steps -- also define the lag in the control application
 scaletest = .5  # for 1. we simulate till 12.
 baset0, basetE, baseNts = 0.0, 12.0, 2.4e3+1
-t0, tE, Nts = 0.0, scaletest*basetE, np.int(scaletest*baseNts)
 
 # get command line input and overwrite standard parameters if necessary
 options, rest = getopt.getopt(sys.argv[1:], '',
@@ -71,7 +69,9 @@ options, rest = getopt.getopt(sys.argv[1:], '',
                                'iniperturb=',
                                'closed_loop=',
                                'max_re_only=',
-                               're='])
+                               'cyldim=',
+                               're=',
+                               'truncat='])
 for opt, arg in options:
     if opt == '--obsperturb':
         trytofail = int(arg)
@@ -79,6 +79,7 @@ for opt, arg in options:
     elif opt == '--ttf_npcrdstps':
         ttf_npcrdstps = int(arg)
     elif opt == '--iniperturb':
+        whichinival = 'sstate+d'  # override whichinival
         perturbpara = np.float(arg)
     elif opt == '--scaletest':
         scaletest = np.float(arg)
@@ -95,26 +96,38 @@ for opt, arg in options:
                 closed_loop = 'red_sdre_fb'
         elif np.int(arg) == 4:
                 closed_loop = 'hinf_red_output_fb'
+                hinfgammainfty = False
+        elif np.int(arg) == 5:
+                closed_loop = 'hinf_red_output_fb'
+                hinfgammainfty = True
 
     elif opt == '--re':
         simure = np.float(arg)
         relist = [None, simure]
 
+    elif opt == '--truncat':
+        truncat = np.float(arg)
+        trunclist = [truncat]
+
     elif opt == '--max_re_only':
             max_re_only = int(arg)
             max_re_only = np.bool(max_re_only)
 
-    # elif opt == '--logtofile':
-    #         logtofile = int(arg)
-    #         logtofile = np.bool(logtofile)
+    elif opt == '--cyldim':
+            cyldim = int(arg)
+            simucyldim = cyldim
 
 if max_re_only:
     relist = relist[-2:]
 
-hinf = False  # hinf only need for reduced output feedback
+t0, tE, Nts = 0.0, scaletest*basetE, np.int(scaletest*baseNts)
+
 if closed_loop == 'hinf_red_output_fb':
     closed_loop = 'red_output_fb'
     hinf = True
+hinfgammainfty = pymess
+# hinfgammainfty = False
+
 
 # print reynolds number and discretization lvl
 infostring = ('Re             = {0}'.format(relist) +
