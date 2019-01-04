@@ -7,8 +7,8 @@ import sys
 import getopt
 
 # to compute stabilizing initial values for higher Re numbers
-pymess = True
 pymess = False
+pymess = True
 relist = [None, 5e1, 7.5e1, 1e2, 1.2e2]
 relist = [5e1, 7.5e1]
 relist = [None, 5e1, 7.5e1, 9e1, 1e2]
@@ -49,8 +49,8 @@ closed_loop = 'red_updsdre_fb'
 closed_loop = False
 closed_loop = 'full_state_fb'
 closed_loop = None
-closed_loop = 'red_output_fb'
 closed_loop = 'hinf_red_output_fb'
+closed_loop = 'red_output_fb'
 # what inival
 whichinival = 'sstokes'  # steady state Stokes solution
 whichinival, tpp = 'sstokes++', .5  # a developed state starting from sstokes
@@ -71,11 +71,14 @@ options, rest = getopt.getopt(sys.argv[1:], '',
                                'max_re_only=',
                                'cyldim=',
                                're=',
+                               'pymess=',
                                'truncat='])
 for opt, arg in options:
     if opt == '--obsperturb':
         trytofail = int(arg)
         trytofail = np.bool(arg)
+    if opt == '--pymess':
+        pymess = np.bool(arg)
     elif opt == '--ttf_npcrdstps':
         ttf_npcrdstps = int(arg)
     elif opt == '--iniperturb':
@@ -96,10 +99,6 @@ for opt, arg in options:
                 closed_loop = 'red_sdre_fb'
         elif np.int(arg) == 4:
                 closed_loop = 'hinf_red_output_fb'
-                hinfgammainfty = False
-        elif np.int(arg) == 5:
-                closed_loop = 'hinf_red_output_fb'
-                hinfgammainfty = True
 
     elif opt == '--re':
         simure = np.float(arg)
@@ -125,9 +124,6 @@ t0, tE, Nts = 0.0, scaletest*basetE, np.int(scaletest*baseNts)
 if closed_loop == 'hinf_red_output_fb':
     closed_loop = 'red_output_fb'
     hinf = True
-hinfgammainfty = pymess
-# hinfgammainfty = False
-
 
 # print reynolds number and discretization lvl
 infostring = ('Re             = {0}'.format(relist) +
@@ -199,7 +195,6 @@ for ctrunc in trunclist:
                          plotit=False,
                          whichinival=whichinival, tpp=tpp,
                          hinf=hinf,
-                         hinfgammainfty=hinfgammainfty,
                          trytofail=trytofail, ttf_npcrdstps=ttf_npcrdstps,
                          closed_loop=closed_loop,
                          perturbpara=perturbpara)

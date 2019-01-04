@@ -15,10 +15,12 @@ RE=100
 CYLDIM=3
 INIPERTURB=0.0001
 TRUNCAT=0.01
-FBTYPE=5
+FBTYPE=3
+PYMESS=1
 NUMPICARDS=6
 SCALETEST=1.
 
-LOGFILE=logs/N${CYLDIM}re${RE}fbt${FBTYPE}nps${NUMPICARDS}trnc${TRUNCAT}sspd${INIPERTURB}st${SCALETEST}
+LOGFILE=logs/N${CYLDIM}re${RE}fbt${FBTYPE}pm${PYMESS}nps${NUMPICARDS}trnc${TRUNCAT}sspd${INIPERTURB}st${SCALETEST}
+
 echo tail -f $LOGFILE
-python3 compscript.py --obsperturb=1 --iniperturb=${INIPERTURB} --re=${RE} --closed_loop=${FBTYPE}  --ttf_npcrdstps=${NUMPICARDS} --scaletest=${SCALETEST} --truncat=${TRUNCAT} --cyldim=${CYLDIM} >> $LOGFILE
+python3 compscript.py --obsperturb=1 --iniperturb=${INIPERTURB} --re=${RE} --closed_loop=${FBTYPE}  --ttf_npcrdstps=${NUMPICARDS} --pymess=${PYMESS} --scaletest=${SCALETEST} --truncat=${TRUNCAT} --cyldim=${CYLDIM} >> $LOGFILE

@@ -23,10 +23,10 @@ def get_ric_facs(fmat=None, mmat=None, jmat=None,
                  bmat=None, cmat=None,
                  ric_ini_str=None, fdstr=None,
                  nwtn_adi_dict=None,
-                 zwconly=False, hinf=False, hinfgammainfty=False,
+                 zwconly=False, hinf=False,
                  multiproc=False, pymess=False, checktheres=False):
 
-    if hinf:
+    if hinf or pymess:
         # we can't compute we can only import export
         # other directory than `data`
         # hinfmatstr = 'oc-hinf-data/outputs/' + \
@@ -36,7 +36,7 @@ def get_ric_facs(fmat=None, mmat=None, jmat=None,
             from scipy.io import loadmat
             lmd = {}
             loadmat(hinfmatstr + '_output', mdict=lmd)
-            if hinfgammainfty:
+            if not hinf:
                 zwc, zwo, hinfgamma = (lmd['outControl'][0, 0]['Z_LQG'],
                                        lmd['outFilter'][0, 0]['Z_LQG'],
                                        lmd['gam_opt'])
@@ -174,12 +174,12 @@ def get_rl_projections(fdstr=None, truncstr=None,
                        fmat=None, mmat=None, jmat=None,
                        bmat=None, cmat=None,
                        cmpricfacpars={},
-                       hinf=False, hinfgammainfty=False,
+                       hinf=False,
                        pymess=False,
                        trunc_lqgbtcv=None):
 
     try:
-        if debug or hinfgammainfty:
+        if debug:
             raise IOError
         tl = dou.load_npa(fdstr + truncstr + '__tl')
         tr = dou.load_npa(fdstr + truncstr + '__tr')
@@ -196,25 +196,21 @@ def get_rl_projections(fdstr=None, truncstr=None,
                 get_ric_facs(fdstr=fdstr, pymess=pymess,
                              fmat=fmat, mmat=mmat, jmat=jmat,
                              cmat=cmat, bmat=bmat, hinf=hinf,
-                             hinfgammainfty=hinfgammainfty,
                              **cmpricfacpars)
         tl, tr, svs = btu.\
             compute_lrbt_transfos(zfc=zwc, zfo=zwo,
                                   mmat=mmat,
                                   trunck={'threshh': trunc_lqgbtcv})
-        if hinfgammainfty:
-            print('we use hinf with gamma=infty -- will not save anything')
-        else:
-            dou.save_npa(tl, fdstr + truncstr + '__tl')
-            dou.save_npa(tr, fdstr + truncstr + '__tr')
-            dou.save_npa(svs, fdstr + '__svs')
-            print('... done! - computing the left and right transformations')
+        dou.save_npa(tl, fdstr + truncstr + '__tl')
+        dou.save_npa(tr, fdstr + truncstr + '__tr')
+        dou.save_npa(svs, fdstr + '__svs')
+        print('... done! - computing the left and right transformations')
 
     return tl, tr
 
 
 def get_prj_model(truncstr=None, fdstr=None,
-                  hinf=False, hinfgammainfty=False,
+                  hinf=False,
                   matsdict={},
                   abconly=False,
                   mmat=None, fmat=None, jmat=None, bmat=None, cmat=None,
@@ -230,20 +226,17 @@ def get_prj_model(truncstr=None, fdstr=None,
     else:
         tltristhere = True
 
-    if (not tltristhere and return_tltr) or hinfgammainfty:
+    if (not tltristhere and return_tltr):
         tl, tr = get_rl_projections(fdstr=fdstr, truncstr=truncstr,
                                     zwc=zwc, zwo=zwo,
                                     fmat=fmat, mmat=mmat, jmat=jmat,
                                     cmat=cmat, bmat=bmat,
                                     pymess=pymess, hinf=hinf,
-                                    hinfgammainfty=hinfgammainfty,
                                     cmpricfacpars=cmpricfacpars,
                                     **cmprlprjpars)
         tltristhere = True
 
     try:
-        if debug or hinfgammainfty:
-            raise IOError
         ak_mat = dou.load_npa(fdstr+truncstr+'__ak_mat')
         ck_mat = dou.load_npa(fdstr+truncstr+'__ck_mat')
         bk_mat = dou.load_npa(fdstr+truncstr+'__bk_mat')
@@ -255,24 +248,20 @@ def get_prj_model(truncstr=None, fdstr=None,
             pass
         else:
             tl, tr = get_rl_projections(fdstr=fdstr, truncstr=truncstr,
-                                        zwc=zwc, zwo=zwo,
+                                        zwc=zwc, zwo=zwo, pymess=pymess,
                                         fmat=fmat, mmat=mmat, jmat=jmat,
                                         cmat=cmat, bmat=bmat,
                                         cmpricfacpars=cmpricfacpars,
                                         hinf=hinf,
-                                        hinfgammainfty=hinfgammainfty,
                                         **cmprlprjpars)
             tltristhere = True
 
         ak_mat = np.dot(tl.T, fmat.dot(tr))
         ck_mat = cmat.dot(tr)
         bk_mat = tl.T.dot(bmat)
-        if not hinfgammainfty:
-            dou.save_npa(ak_mat, fdstr+truncstr+'__ak_mat')
-            dou.save_npa(ck_mat, fdstr+truncstr+'__ck_mat')
-            dou.save_npa(bk_mat, fdstr+truncstr+'__bk_mat')
-        else:
-            pass
+        dou.save_npa(ak_mat, fdstr+truncstr+'__ak_mat')
+        dou.save_npa(ck_mat, fdstr+truncstr+'__ck_mat')
+        dou.save_npa(bk_mat, fdstr+truncstr+'__bk_mat')
 
     if abconly:
         return ak_mat, bk_mat, ck_mat
@@ -280,7 +269,7 @@ def get_prj_model(truncstr=None, fdstr=None,
     else:
         print('loading/computing the reduced Gramians... ')
         try:
-            if debug or hinfgammainfty:
+            if debug:
                 raise IOError
             xok = dou.load_npa(fdstr+truncstr+'__xok')
             xck = dou.load_npa(fdstr+truncstr+'__xck')
@@ -292,15 +281,13 @@ def get_prj_model(truncstr=None, fdstr=None,
                 zwc, zwo, hinfgamma = \
                     get_ric_facs(fdstr=fdstr, fmat=fmat, mmat=mmat, jmat=jmat,
                                  cmat=cmat, bmat=bmat, hinf=hinf,
-                                 hinfgammainfty=hinfgammainfty,
-                                 **cmpricfacpars)
+                                 pymess=pymess, **cmpricfacpars)
 
             if tltristhere:
                 pass
             else:
                 tl, tr = get_rl_projections(fdstr=fdstr, truncstr=truncstr,
-                                            mmat=mmat,
-                                            zwc=zwc, zwo=zwo,
+                                            mmat=mmat, zwc=zwc, zwo=zwo,
                                             hinf=hinf,
                                             **cmprlprjpars)
                 tltristhere = True
@@ -308,12 +295,9 @@ def get_prj_model(truncstr=None, fdstr=None,
             tltm, trtm = tl.T*mmat, tr.T*mmat
             xok = np.dot(np.dot(tltm, zwo), np.dot(zwo.T, tltm.T))
             xck = np.dot(np.dot(trtm, zwc), np.dot(zwc.T, trtm.T))
-            if not hinfgammainfty:
-                dou.save_npa(xok, fdstr+truncstr+'__xok')
-                dou.save_npa(xck, fdstr+truncstr+'__xck')
-                dou.save_npa(np.array([hinfgamma]), fdstr+'__gamma')
-            else:
-                pass
+            dou.save_npa(xok, fdstr+truncstr+'__xok')
+            dou.save_npa(xck, fdstr+truncstr+'__xck')
+            dou.save_npa(np.array([hinfgamma]), fdstr+'__gamma')
 
         if return_tltr:
             return ak_mat, bk_mat, ck_mat, xok, xck, hinfgamma, tl, tr
@@ -356,10 +340,10 @@ def get_sdrgain_upd(amat, wnrm='fro', maxeps=None,
                     maxfac=None):
 
     deltaA = amat - baseA
-    nda = npla.norm(deltaA, ord=wnrm)
-    nz = npla.norm(baseZ, ord=wnrm)
-    na = npla.norm(baseA, ord=wnrm)
-    import ipdb; ipdb.set_trace()
+    # nda = npla.norm(deltaA, ord=wnrm)
+    # nz = npla.norm(baseZ, ord=wnrm)
+    # na = npla.norm(baseA, ord=wnrm)
+    # import ipdb; ipdb.set_trace()
 
     epsP = spla.solve_sylvester(amat, -baseZ, -deltaA)
     # print('debugging!!!')
