@@ -222,11 +222,6 @@ def get_prj_model(truncstr=None, fdstr=None,
     hinfgamma = None
 
     if tl is None or tr is None:
-        tltristhere = False
-    else:
-        tltristhere = True
-
-    if (not tltristhere and return_tltr):
         tl, tr = get_rl_projections(fdstr=fdstr, truncstr=truncstr,
                                     zwc=zwc, zwo=zwo,
                                     fmat=fmat, mmat=mmat, jmat=jmat,
@@ -234,34 +229,12 @@ def get_prj_model(truncstr=None, fdstr=None,
                                     pymess=pymess, hinf=hinf,
                                     cmpricfacpars=cmpricfacpars,
                                     **cmprlprjpars)
-        tltristhere = True
 
-    try:
-        ak_mat = dou.load_npa(fdstr+truncstr+'__ak_mat')
-        ck_mat = dou.load_npa(fdstr+truncstr+'__ck_mat')
-        bk_mat = dou.load_npa(fdstr+truncstr+'__bk_mat')
+    tltristhere = True
 
-    except IOError:
-        print('couldn"t load the red model - gonna compute it')
-
-        if tltristhere:
-            pass
-        else:
-            tl, tr = get_rl_projections(fdstr=fdstr, truncstr=truncstr,
-                                        zwc=zwc, zwo=zwo, pymess=pymess,
-                                        fmat=fmat, mmat=mmat, jmat=jmat,
-                                        cmat=cmat, bmat=bmat,
-                                        cmpricfacpars=cmpricfacpars,
-                                        hinf=hinf,
-                                        **cmprlprjpars)
-            tltristhere = True
-
-        ak_mat = np.dot(tl.T, fmat.dot(tr))
-        ck_mat = cmat.dot(tr)
-        bk_mat = tl.T.dot(bmat)
-        dou.save_npa(ak_mat, fdstr+truncstr+'__ak_mat')
-        dou.save_npa(ck_mat, fdstr+truncstr+'__ck_mat')
-        dou.save_npa(bk_mat, fdstr+truncstr+'__bk_mat')
+    ak_mat = np.dot(tl.T, fmat.dot(tr))
+    ck_mat = cmat.dot(tr)
+    bk_mat = tl.T.dot(bmat)
 
     if abconly:
         return ak_mat, bk_mat, ck_mat
@@ -273,9 +246,11 @@ def get_prj_model(truncstr=None, fdstr=None,
                 raise IOError
             xok = dou.load_npa(fdstr+truncstr+'__xok')
             xck = dou.load_npa(fdstr+truncstr+'__xck')
+            print('loaded' + fdstr + truncstr + '__xck/xok')
             if hinf:
                 hinfgamma = dou.load_npa(fdstr+'__gamma')
                 hinfgamma = hinfgamma.flatten()[0]
+                print('loaded' + fdstr + '__gamma: {0}'.format(hinfgamma))
         except IOError:
             if zwo is None and zwc is None:
                 zwc, zwo, hinfgamma = \
