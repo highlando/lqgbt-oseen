@@ -149,12 +149,10 @@ def lqgbt(problemname='drivencavity',
         prbstr = prbstr + '__pymess'
     # contsetupstr = 'NV{0}NU{1}NY{2}alphau{3}'.format(NV, NU, NY, alphau)
     if bccontrol:
-        import scipy.sparse as sps
         contsetupstr = 'NV{0}_bcc_NY{1}_palpha{2}'.format(NV, NY, palpha)
         shortcontsetupstr = '{0}{1}{2}'.format(NV, NY, np.int(np.log2(palpha)))
         stokesmatsc['A'] = stokesmatsc['A'] + 1./palpha*stokesmatsc['Arob']
         b_mat = 1./palpha*stokesmatsc['Brob']
-        u_masmat = sps.eye(b_mat.shape[1], format='csr')
         print(' ### Robin-type boundary control palpha={0}'.format(palpha))
     else:
         contsetupstr = 'NV{0}NU{1}NY{2}'.format(NV, NU, NY)
@@ -178,22 +176,6 @@ def lqgbt(problemname='drivencavity',
 # Prepare for control
 #
 
-    # get the control and observation operators
-    if not bccontrol:
-        try:
-            b_mat = dou.load_spa(ddir + contsetupstr + '__b_mat')
-            u_masmat = dou.load_spa(ddir + contsetupstr + '__u_masmat')
-            print('loaded `b_mat`')
-        except IOError:
-            print('computing `b_mat`...')
-            b_mat, u_masmat = cou.get_inp_opa(cdcoo=femp['cdcoo'], V=femp['V'],
-                                              NU=NU, xcomp=femp['uspacedep'])
-            dou.save_spa(b_mat, ddir + contsetupstr + '__b_mat')
-            dou.save_spa(u_masmat, ddir + contsetupstr + '__u_masmat')
-
-        b_mat = b_mat[invinds, :][:, :]
-        # tb_mat = 1./np.sqrt(alphau)
-
     b_mat_reg = lau.app_prj_via_sadpnt(amat=stokesmatsc['M'],
                                        jmat=stokesmatsc['J'],
                                        rhsv=b_mat,
@@ -203,33 +185,6 @@ def lqgbt(problemname='drivencavity',
     Rmhalf = 1./np.sqrt(gamma)
     b_mat_rgscld = b_mat_reg*Rmhalf
     # We scale the input matrix to accomodate for input weighting
-
-    try:
-        mc_mat = dou.load_spa(ddir + contsetupstr + '__mc_mat')
-        y_masmat = dou.load_spa(ddir + contsetupstr + '__y_masmat')
-        print(('loaded `c_mat` from' + ddir + contsetupstr + '...'))
-    except IOError:
-        print('computing `c_mat`...')
-        mc_mat, y_masmat = cou.get_mout_opa(odcoo=femp['odcoo'],
-                                            V=femp['V'], NY=NY)
-        dou.save_spa(mc_mat, ddir + contsetupstr + '__mc_mat')
-        dou.save_spa(y_masmat, ddir + contsetupstr + '__y_masmat')
-
-    c_mat = lau.apply_massinv(y_masmat, mc_mat, output='sparse')
-    # restrict the operators to the inner nodes
-
-    mc_mat = mc_mat[:, invinds][:, :]
-    c_mat = c_mat[:, invinds][:, :]
-    c_mat_reg = lau.app_prj_via_sadpnt(amat=stokesmatsc['M'],
-                                       jmat=stokesmatsc['J'],
-                                       rhsv=c_mat.T,
-                                       transposedprj=True).T
-
-    # c_mat_reg = np.array(c_mat.todense())
-
-    # TODO: right choice of norms for y
-    #       and necessity of regularization here
-    #       by now, we go on number save
 
 #
 # setup the system for the correction
@@ -301,121 +256,29 @@ def lqgbt(problemname='drivencavity',
                          ric_ini_str=fdstrini)
     cmprlprjpars = dict(trunc_lqgbtcv=trunc_lqgbtcv)
 
-    if plain_bt:
-        print('`plain_bt` -- this is not maintained anymore -- good luck')
-        # get_gramians = pru.solve_proj_lyap_stein
-    # else:
-    #     get_gramians = pru.proj_alg_ric_newtonadi
-
-    if comp_freqresp:
-        tl, tr = nru.get_rl_projections(fdstr=fdstr, truncstr=truncstr,
-                                        fmat=f_mat_gramians, mmat=mmat,
-                                        jmat=jmat,
-                                        bmat=b_mat_rgscld, cmat=c_mat_reg,
-                                        cmpricfacpars=cmpricfacpars,
-                                        pymess=pymess,
-                                        trunc_lqgbtcv=trunc_lqgbtcv)
-        btu.compare_freqresp(mmat=stokesmatsc['M'], amat=f_mat,
-                             jmat=stokesmatsc['J'], bmat=b_mat,
-                             cmat=c_mat, tr=tr, tl=tl,
-                             plot=True, datastr=fdstr + truncstr + '__tl')
-
-    if comp_stepresp is not False:
-        if comp_stepresp == 'nonlinear':
-            stp_rsp_nwtn = 3
-            stp_rsp_dtpr = 'nonl_stepresp_'
-        else:
-            stp_rsp_nwtn = 1
-            stp_rsp_dtpr = 'stepresp_'
-
-        def fullstepresp_lnse(bcol=None, trange=None, ini_vel=None,
-                              cmat=None, soldict=None):
-            soldict.update(fv_stbc=rhsd_stbc['fv']+bcol,
-                           vel_nwtn_stps=stp_rsp_nwtn, trange=trange,
-                           iniv=ini_vel, lin_vel_point=ini_vel,
-                           clearprvdata=True, data_prfx=stp_rsp_dtpr,
-                           return_dictofvelstrs=True)
-
-            dictofvelstrs = snu.solve_nse(**soldict)
-
-            return cou.extract_output(strdict=dictofvelstrs, tmesh=trange,
-                                      c_mat=cmat, load_data=dou.load_npa)
-
-        jsonstr = fdstr + stp_rsp_dtpr + '_Nred{0}_t0tENts{1}{2}{3}.json'.\
-            format(tl.shape[1], t0, tE, Nts)
-        btu.compare_stepresp(tmesh=np.linspace(t0, tE, Nts),
-                             a_mat=f_mat, c_mat=c_mat_reg, b_mat=b_mat,
-                             m_mat=stokesmatsc['M'],
-                             tr=tr, tl=tl, iniv=v_ss_nse,
-                             # ss_rhs=ssv_rhs,
-                             fullresp=fullstepresp_lnse, fsr_soldict=soldict,
-                             plot=True, jsonstr=jsonstr)
-
 # compute the regulated system
     trange = np.linspace(t0, tE, Nts)
     DT = (tE - t0)/(Nts-1)
+    loadhinfmatstr = 'oc-hinf-recover/outputs/' + \
+        fdstr.partition('/')[2] + '__mats'
+    loadmatmatstr = 'oc-hinf-recover/' + fdstr.partition('/')[2] + '__mats'
+    from scipy.io import loadmat
+    mmd = {}
+    loadmat(loadmatmatstr + '_output', mdict=mmd)
+    c_mat_reg = mmd['cmat']
+    lmd = {}
+    loadmat(loadhinfmatstr + '_output', mdict=lmd)
+    # try:
+    #     zwchinf, zwohinf, hinfgamma = lmd['ZB'], lmd['ZC'], lmd['gam_opt']
+    # except KeyError:
+    zwchinf, zwohinf, hinfgamma = (lmd['outControl'][0, 0]['Z'],
+                                   lmd['outFilter'][0, 0]['Z'],
+                                   lmd['gam_opt'])
+    zwclqg, zwolqg = (lmd['outControl'][0, 0]['Z_LQG'],
+                      lmd['outFilter'][0, 0]['Z_LQG'])
 
     if closed_loop is False:
         return
-
-    elif closed_loop == 'full_state_fb':
-        shortclstr = 'fsfb'
-        zwc = nru.get_ric_facs(fdstr=fdstr,
-                               fmat=f_mat_gramians, mmat=mmat,
-                               jmat=jmat, bmat=b_mat_rgscld, cmat=c_mat_reg,
-                               ric_ini_str=fdstrini,
-                               nwtn_adi_dict=nwtn_adi_dict, zwconly=True,
-                               multiproc=multiproc, pymess=pymess,
-                               checktheres=False)
-
-        mtxb = pru.get_mTzzTtb(stokesmatsc['M'].T, zwc, b_mat_rgscld)
-
-        dimu = b_mat.shape[1]
-        zerou = np.zeros((dimu, 1))
-        if switchonsfb > 0:
-            print('the feedback will switched on at ' +
-                  't={0:.4f}'.format(switchonsfb))
-
-        def fv_tmdp_fullstatefb(time=None, curvel=None,
-                                linv=None, tb_mat=None, btxm_mat=None, **kw):
-            """realizes a full state static feedback as a function
-
-            that can be passed to a solution routine for the
-            unsteady Navier-Stokes equations
-
-            Parameters
-            ----------
-            time : real
-                current time
-            curvel : (N,1) nparray
-                current velocity
-            linv : (N,1) nparray
-                linearization point for the linear model
-            tb_mat : (N,K) nparray
-                input matrix containing the input weighting
-            btxm_mat : (N,K) nparray
-                `b_mat.T * gain * mass`
-
-            Returns
-            -------
-            actua : (N,1) nparray
-                current contribution to the right-hand side
-            , : dictionary
-                dummy `{}` for consistency
-            """
-
-            if time < switchonsfb:
-                return tb_mat.dot(zerou), {}
-            else:
-                actua = -lau.comp_uvz_spdns(tb_mat, btxm_mat, curvel-linv)
-                return actua, {}
-
-        tmdp_fsfb_dict = dict(linv=v_ss_nse, tb_mat=b_mat_rgscld,
-                              btxm_mat=mtxb.T)
-
-        fv_tmdp = fv_tmdp_fullstatefb
-        fv_tmdp_params = tmdp_fsfb_dict
-        fv_tmdp_memory = None
 
     elif closed_loop == 'red_output_fb':
         shortclstr = 'hinfrofb' if hinf else 'rofb'
@@ -522,207 +385,65 @@ def lqgbt(problemname='drivencavity',
 
         # soldict.update(dict(verbose=False))
 
-    elif closed_loop == 'red_sdre_fb':
-        shortclstr = 'rdsdrfb'
+    elif closed_loop == 'full_state_fb':
+        shortclstr = 'fsfb'
+        zwc = nru.get_ric_facs(fdstr=fdstr,
+                               fmat=f_mat_gramians, mmat=mmat,
+                               jmat=jmat, bmat=b_mat_rgscld, cmat=c_mat_reg,
+                               ric_ini_str=fdstrini,
+                               nwtn_adi_dict=nwtn_adi_dict, zwconly=True,
+                               multiproc=multiproc, pymess=pymess,
+                               checktheres=False)
 
-        sdcpicard = 1.
-        vinf = v_ss_nse
-        get_cur_sdccoeff = neu.get_get_cur_extlin(vinf=vinf, amat=amat,
-                                                  picrdvsnwtn=sdcpicard,
-                                                  **femp)
-        sdre_ric_ini = fdstr
-        cmpricfacpars.update(ric_ini_str=sdre_ric_ini)
+        mtxb = pru.get_mTzzTtb(stokesmatsc['M'].T, zwc, b_mat_rgscld)
 
-        def solve_sdre(curfmat, memory=None, eps=None, time=None):
-            if memory['basePk'] is None:  # initialization
-                sdrefdstr = fdstr + inivstr + '_SDREini'
-            else:
-                sdrefdstr = (fdstr + inivstr +
-                             '_SDREeps{0}t{1:.2e}'.format(eps, time))
-            ak_mat, cur_bk, _, _, cxck, cur_tl, cur_tr = \
-                nru.get_prj_model(truncstr=truncstr, fdstr=sdrefdstr,
-                                  mmat=mmat, fmat=-curfmat, jmat=jmat,
-                                  bmat=b_mat_rgscld, cmat=c_mat_reg,
-                                  pymess=pymess,
-                                  cmpricfacpars=cmpricfacpars,
-                                  cmprlprjpars=cmprlprjpars)
-            cmpricfacpars.update(ric_ini_str=sdrefdstr)
-            baseGain = cur_bk.T.dot(cxck)
-            memory.update(baseAk=ak_mat)
-            memory.update(basePk=cxck, baseGain=baseGain)
-            memory.update(baseZk=ak_mat - cur_bk.dot(baseGain))
-            memory.update(cur_bk=cur_bk)
-            memory.update(cur_tl=cur_tl, cur_tr=cur_tr)
-            return
+        dimu = b_mat.shape[1]
+        zerou = np.zeros((dimu, 1))
+        if switchonsfb > 0:
+            print('the feedback will switched on at ' +
+                  't={0:.4f}'.format(switchonsfb))
 
-        def sdre_feedback(curvel=None, memory=None,
-                          updtthrsh=None, time=None, **kw):
-            ''' function for the SDRE feedback
+        def fv_tmdp_fullstatefb(time=None, curvel=None,
+                                linv=None, tb_mat=None, btxm_mat=None, **kw):
+            """realizes a full state static feedback as a function
+
+            that can be passed to a solution routine for the
+            unsteady Navier-Stokes equations
 
             Parameters
-            ---
-            use_ric_ini : string, optional
-                path to a stabilizing initial guess
-            '''
+            ----------
+            time : real
+                current time
+            curvel : (N,1) nparray
+                current velocity
+            linv : (N,1) nparray
+                linearization point for the linear model
+            tb_mat : (N,K) nparray
+                input matrix containing the input weighting
+            btxm_mat : (N,K) nparray
+                `b_mat.T * gain * mass`
 
-            norm = np.linalg.norm
-            print('time: {0}, |v|: {1}'.format(time, norm(curvel)))
-            print('time: {0}, |vinf|: {1}'.format(time, norm(vinf)))
-            curfmat = get_cur_sdccoeff(vcur=curvel)
+            Returns
+            -------
+            actua : (N,1) nparray
+                current contribution to the right-hand side
+            , : dictionary
+                dummy `{}` for consistency
+            """
 
-            if memory['basePk'] is None:  # initialization
-                savethev = np.copy(curvel)
-                memory.update(basev=savethev)
-                solve_sdre(curfmat, memory=memory)
-
-                redvdiff = memory['cur_tl'].T.dot(mmat*(curvel-vinf))
-                actua = -b_mat_rgscld.dot(memory['baseGain'].dot(redvdiff))
-                return actua, memory
-
-                # sdrefdstr = sdre_ric_ini  # TODO: debugging here
-                # czwc, czwo = nru.\
-                #     get_ric_facs(fdstr=sdrefdstr, fmat=-curfmat, mmat=mmat,
-                #                  jmat=jmat,
-                #                  bmat=b_mat_reg, cmat=c_mat_reg,
-                #                  ric_ini_str=sdre_ric_ini,
-                #                  Rmhalf=Rmhalf, nwtn_adi_dict=nwtn_adi_dict,
-                #                  zwconly=False, multiproc=multiproc)
-
-            # ## updated sdre feedback
-            cur_tr = memory['cur_tr']
-            cur_tl = memory['cur_tl']
-            curak = -cur_tl.T.dot(curfmat.dot(cur_tr))
-            # print('norm Ak: {0}'.format(np.linalg.norm(curak)))
-            # print('diff: `akbase-aknow`: {0}'.
-            #       format(np.linalg.norm(curak-memory['baseAk'])))
-            redvdiff = memory['cur_tl'].T.dot(mmat*(curvel-vinf))
-            print('diff: `curv-linv`: {0}'.format(np.linalg.norm(redvdiff)))
-            print('|basegain|: {0}'.format(np.linalg.norm(memory['baseGain'])))
-            pupd, elteps = nru.\
-                get_sdrefb_upd(curak, time, fbtype='sylvupdfb', wnrm=2,
-                               baseA=memory['baseAk'], baseZ=memory['baseZk'],
-                               baseP=memory['basePk'],
-                               maxfac=None, maxeps=updtthrsh)
-
-            if elteps:  # E less than eps
-                updGain = memory['cur_bk'].T.dot(pupd)
-                redvdiff = memory['cur_tl'].T.dot(mmat*(curvel-vinf))
-                actua = -b_mat_rgscld.dot(updGain.dot(redvdiff))
-                return actua, memory
-
+            if time < switchonsfb:
+                return tb_mat.dot(zerou), {}
             else:
-                tl = memory['cur_tl']
-                tr = memory['cur_tr']
-                prvvel = memory['basev']
-                prvfmat = get_cur_sdccoeff(vcur=prvvel)
-                prvak = -tl.T.dot(prvfmat.dot(tr))
-                basak = memory['baseAk']
-                print('|prv Ak|: {0}'.format(norm(prvak)))
-                print('|cur Ak|: {0}'.format(norm(curak)))
-                print('|bas Ak|: {0}'.format(norm(basak)))
+                actua = -lau.comp_uvz_spdns(tb_mat, btxm_mat, curvel-linv)
+                return actua, {}
 
-                savethev = np.copy(curvel)
-                memory.update(basev=savethev)
-                # memory.update(basev=curvel)
-                solve_sdre(curfmat, memory=memory, eps=updtthrsh, time=time)
-                redvdiff = memory['cur_tl'].T.dot(mmat*(curvel-vinf))
-                actua = -b_mat_rgscld.dot(memory['baseGain'].dot(redvdiff))
-                return actua, memory
+        tmdp_fsfb_dict = dict(linv=v_ss_nse, tb_mat=b_mat_rgscld,
+                              btxm_mat=mtxb.T)
 
-            # zwc = memory['czwc']
+        fv_tmdp = fv_tmdp_fullstatefb
+        fv_tmdp_params = tmdp_fsfb_dict
+        fv_tmdp_memory = None
 
-            # btxm_mat = pru.get_mTzzTtb(stokesmatsc['M'].T, zwc, b_mat_reg).T
-            # actua = -lau.comp_uvz_spdns(b_mat_reg, btxm_mat, curvel-vinf)
-            # actua = -lau.comp_uvz_spdns(b_mat_reg, cur_f,
-            #                             cur_tl.T.dot(mmat*(curvel-vinf)))
-            # diffv = curvel-vinf
-            # rldiffv = cur_tr.dot(cur_tr.T.dot(mmat*(diffv)))
-            # nrmrldiffv = np.linalg.norm(rldiffv)
-            # print('norm of prj/lfd veldiff: {0}'.format(nrmrldiffv))
-            # import ipdb; ipdb.set_trace()
-            return actua, memory
-
-        fv_sdre_dict = dict(updtthrsh=.9)
-
-        fv_tmdp = sdre_feedback
-        fv_tmdp_params = fv_sdre_dict
-        fv_tmdp_memory = dict(basePk=None)
-
-        # 1. prelims
-        #    * func:get Riccati Grams at current state
-        #    * get reduced model (func: Ak(vdelta(t)))
-        # 2. func: sdre_fblaw
-        #    compute E -- solve sylvester
-        #    reset Grams and Ak, Bk, etc
-
-    elif closed_loop == 'redmod_sdre_fb':
-        shortclstr = 'rdmdsdrfb'
-
-        ak_mat, bk_mat, ck_mat, _, _, basetl, basetr = \
-            nru.get_prj_model(truncstr=truncstr, fdstr=fdstr,
-                              mmat=mmat, fmat=-f_mat_gramians, jmat=jmat,
-                              bmat=b_mat_rgscld, cmat=c_mat_reg,
-                              cmpricfacpars=cmpricfacpars,
-                              pymess=pymess,
-                              cmprlprjpars=cmprlprjpars)
-        cktck = ck_mat.T.dot(ck_mat)
-
-        sdcpicard = 1.
-        vinf = v_ss_nse
-        get_cur_sdccoeff = neu.get_get_cur_extlin(vinf=vinf, amat=amat,
-                                                  picrdvsnwtn=sdcpicard,
-                                                  **femp)
-
-        sdre_ric_ini = fdstr
-        cmpricfacpars.update(ric_ini_str=sdre_ric_ini)
-
-        def redsdre_feedback(curvel=None, memory=None,
-                             updtthrsh=None, time=None, **kw):
-            ''' function for the SDRE feedback
-
-            '''
-
-            norm = np.linalg.norm
-            # print('time: {0}, |v|: {1}'.format(time, norm(curvel)))
-            # print('time: {0}, |vinf|: {1}'.format(time, norm(vinf)))
-            curfmat = get_cur_sdccoeff(vcur=curvel)
-            curak = -basetl.T.dot(curfmat.dot(basetr))
-            redvdiff = basetl.T.dot(mmat*(curvel-vinf))
-
-            print('time: {0:.5f} -- reddiff: `curv-linv`: {1}'.
-                  format(time, norm(redvdiff)))
-
-            pupd, elteps = nru.\
-                get_sdrefb_upd(curak, time, fbtype='sylvupdfb', wnrm=2,
-                               baseA=memory['baseAk'], baseZ=memory['baseZk'],
-                               baseP=memory['basePk'],
-                               B=bk_mat, Q=cktck,
-                               maxfac=None, maxeps=updtthrsh)
-
-            # if time > 0.006:
-            #     prvvel = memory['prevvel']
-            #     difftopv = prvvel - curvel
-            #     difff = get_cur_sdccoeff(vcur=curvel) - \
-            #         get_cur_sdccoeff(vcur=prvvel)
-            #     diffak = -basetl.T.dot(difff.dot(basetr))
-            #     ndiffak = norm(diffak)
-            #     import ipdb; ipdb.set_trace()
-
-            actua = -b_mat_rgscld.dot(bk_mat.T.dot(pupd.dot(redvdiff)))
-
-            if not elteps:
-                baseZk = curak - bk_mat.dot(bk_mat.T.dot(pupd))
-                memory.update(dict(basePk=pupd, baseAk=curak, baseZk=baseZk))
-
-            memory.update(prevvel=curvel)
-
-            return actua, memory
-
-        fv_sdre_dict = dict(updtthrsh=.9)
-
-        fv_tmdp = redsdre_feedback
-        fv_tmdp_params = fv_sdre_dict
-        fv_tmdp_memory = dict(basePk=None, baseAk=None, baseZk=None)
 
     else:
         fv_tmdp = None
