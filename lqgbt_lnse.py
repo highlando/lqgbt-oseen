@@ -153,8 +153,8 @@ def lqgbt(problemname='drivencavity',
         contsetupstr = 'NV{0}NU{1}NY{2}'.format(NV, NU, NY)
         shortcontsetupstr = '{0}{1}{2}'.format(NV, NU, NY)
 
-    inivstr = '_' + whichinival if not whichinival == 'sstokes++' \
-        else '_sstokes++{0}'.format(tpp)
+    # inivstr = '_' + whichinival if not whichinival == 'sstokes++' \
+    #     else '_sstokes++{0}'.format(tpp)
 
     def get_fdstr(Re, short=False):
         if short:
@@ -165,7 +165,6 @@ def lqgbt(problemname='drivencavity',
 
     fdstr = get_fdstr(Re)
     fdstr = fdstr + '_hinf' if hinf else fdstr
-    fdstrini = get_fdstr(use_ric_ini) if use_ric_ini is not None else None
 
 #
 # Prepare for control
@@ -199,12 +198,10 @@ def lqgbt(problemname='drivencavity',
                    fp=rhsd_stbc['fp']+rhsd_vfrc['fpr'],
                    N=N, nu=nu, data_prfx=veldatastr)
 
-    vp_ss_nse, list_norm_nwtnupd = snu.\
+    v_ss_nse, _ = snu.\
         solve_steadystate_nse(vel_pcrd_stps=npcrdstps, return_vp=True,
                               clearprvdata=debug, **soldict)
 
-    v_ss_nse = vp_ss_nse[:NV]
-    p_ss_nse = vp_ss_nse[NV:]
     (convc_mat, rhs_con,
      rhsv_conbc) = snu.get_v_conv_conts(prev_v=v_ss_nse, invinds=invinds,
                                         V=femp['V'], diribcs=femp['diribcs'])
@@ -217,10 +214,10 @@ def lqgbt(problemname='drivencavity',
     # MAF -- need to change the convc_mat, i.e. we need another v_ss_nse
     # MAF -- need to change the f_mat, i.e. we need another convc_mat
     if trytofail:
-        v_ss_nse_MAF, _ = snu.\
-            solve_steadystate_nse(vel_pcrd_stps=ttf_npcrdstps, vel_nwtn_stps=0,
-                                  vel_pcrd_tol=1e-15,
-                                  clearprvdata=True, **soldict)
+        v_ss_nse_MAF = snu.solve_steadystate_nse(vel_pcrd_stps=ttf_npcrdstps,
+                                                 vel_nwtn_stps=0,
+                                                 vel_pcrd_tol=1e-15,
+                                                 clearprvdata=True, **soldict)
         diffv = v_ss_nse - v_ss_nse_MAF
         convc_mat_MAF, _, _ = \
             snu.get_v_conv_conts(prev_v=v_ss_nse_MAF, invinds=invinds,
@@ -251,15 +248,21 @@ def lqgbt(problemname='drivencavity',
 # compute the regulated system
     trange = np.linspace(t0, tE, Nts)
     DT = (tE - t0)/(Nts-1)
-    loadhinfmatstr = 'oc-hinf-recover/outputs/' + \
+    loadhinfmatstr = 'oc-hinf-recover/output/' + \
         fdstr.partition('/')[2] + '__mats'
-    loadmatmatstr = 'oc-hinf-recover/' + fdstr.partition('/')[2] + '__mats'
+    loadmatmatstr = 'oc-hinf-recover/cylinderwake_Re{0}_gamma1.0_'.format(Re) +\
+        'NV{0}_bcc_NY3_palpha1e-05_lqgbt_hinf_MAF_'.format(NV) +\
+        'ttfnpcrds{0}__mats'.format(ttf_npcrdstps)
+    loadhinfmatstr = 'oc-hinf-recover/output/' +\
+        'cylinderwake_Re{0}_gamma1.0_'.format(Re) +\
+        'NV{0}_bcc_NY3_palpha1e-05_lqgbt_hinf_MAF_'.format(NV) +\
+        'ttfnpcrds{0}__mats_output'.format(ttf_npcrdstps)
     from scipy.io import loadmat
     mmd = {}
-    loadmat(loadmatmatstr + '_output', mdict=mmd)
+    loadmat(loadmatmatstr, mdict=mmd)
     c_mat_reg = mmd['cmat']
     lmd = {}
-    loadmat(loadhinfmatstr + '_output', mdict=lmd)
+    loadmat(loadhinfmatstr, mdict=lmd)
     # try:
     #     zwchinf, zwohinf, hinfgamma = lmd['ZB'], lmd['ZC'], lmd['gam_opt']
     # except KeyError:
@@ -269,9 +272,11 @@ def lqgbt(problemname='drivencavity',
     zwclqg, zwolqg = (lmd['outControl'][0, 0]['Z_LQG'],
                       lmd['outFilter'][0, 0]['Z_LQG'])
     if hinf:
+        print('we use the hinf-Riccatis, gamma={0}'.format(hinfgamma))
         zwc, zwo = zwchinf, zwohinf
     else:
         zwc, zwo = zwclqg, zwolqg
+        print('we use the lqg-Riccatis')
 
     if closed_loop is False:
         return
@@ -280,13 +285,15 @@ def lqgbt(problemname='drivencavity',
         shortclstr = 'hinfrofb' if hinf else 'rofb'
         DT = (tE - t0)/(Nts-1)
 
-        ak_mat, bk_mat, ck_mat, xok, xck, hinfgamma, tl, tr = \
+        ak_mat, bk_mat, ck_mat, xok, xck = \
             nru.get_prj_model(mmat=mmat, fmat=f_mat_gramians, jmat=jmat,
+                              zwo=zwo, zwc=zwc,
                               bmat=b_mat_rgscld, cmat=c_mat_reg,
                               cmprlprjpars=cmprlprjpars)
         print('Controller has dimension: {0}'.format(ak_mat.shape[0]))
 
         if hinf:
+            print('hinf-feedback!!')
             zk = np.linalg.inv(np.eye(xck.shape[0])
                                - 1./hinfgamma**2*xok.dot(xck))
             amatk = (ak_mat
@@ -296,6 +303,7 @@ def lqgbt(problemname='drivencavity',
             obs_ck = -np.dot(bk_mat.T.dot(xck), zk)
 
         else:
+            print('lqg-feedback!!')
             amatk = (ak_mat - np.dot(np.dot(xok, ck_mat.T), ck_mat) -
                      np.dot(bk_mat, np.dot(bk_mat.T, xck)))
             obs_ck = -bk_mat.T.dot(xck)
@@ -371,20 +379,13 @@ def lqgbt(problemname='drivencavity',
 
         fv_tmdp = fv_tmdp_redoutpfb
         fv_tmdp_params = fv_rofb_dict
-        fv_tmdp_memory = dict(xk_old=np.zeros((tl.shape[1], 1)),
+        fv_tmdp_memory = dict(xk_old=np.zeros((amatk.shape[1], 1)),
                               actualist=[])
 
         # soldict.update(dict(verbose=False))
 
     elif closed_loop == 'full_state_fb':
         shortclstr = 'fsfb'
-        zwc = nru.get_ric_facs(fdstr=fdstr,
-                               fmat=f_mat_gramians, mmat=mmat,
-                               jmat=jmat, bmat=b_mat_rgscld, cmat=c_mat_reg,
-                               ric_ini_str=fdstrini,
-                               nwtn_adi_dict=nwtn_adi_dict, zwconly=True,
-                               multiproc=multiproc, pymess=pymess,
-                               checktheres=False)
 
         mtxb = pru.get_mTzzTtb(stokesmatsc['M'].T, zwc, b_mat_rgscld)
 

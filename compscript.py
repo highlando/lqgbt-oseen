@@ -23,7 +23,7 @@ bccontrol = True
 palpha = 1e-5  # parameter for the Robin penalization
 cyldim = 3
 # where to truncate the LQGBT characteristic values
-trunclist = [1e-1]  # , 1e-3, 1e-2, 1e-1, 1e-0]
+trunclist = [1e-2]  # , 1e-3, 1e-2, 1e-1, 1e-0]
 # dimension of in and output spaces
 NU, NY = 3, 3
 # to what extend we perturb the initial value
@@ -44,15 +44,15 @@ closed_loop = 'redmod_sdre_fb'
 closed_loop = 'red_sdre_fb'
 closed_loop = False
 closed_loop = 'full_state_fb'
-closed_loop = 'red_output_fb'
 closed_loop = None
 closed_loop = 'hinf_red_output_fb'
+closed_loop = 'red_output_fb'
 # what inival
 whichinival = 'sstokes'  # steady state Stokes solution
 whichinival = 'sstokes++'  # a developed state starting from sstokes
 whichinival = 'sstate+d'  # sstate plus perturbation
 # number of time steps -- also define the lag in the control application
-scaletest = .1  # .5  # .5  # for 1. we simulate till 12.
+scaletest = 1.  # .5  # for 1. we simulate till 12.
 baset0, basetE, baseNts = 0.0, 12.0, 2.4e3+1
 t0, tE, Nts = 0.0, scaletest*basetE, np.int(scaletest*baseNts)
 

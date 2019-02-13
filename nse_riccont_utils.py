@@ -27,12 +27,7 @@ def get_rl_projections(zwc=None, zwo=None, mmat=None,
 def get_prj_model(mmat=None, fmat=None, jmat=None, bmat=None, cmat=None,
                   zwo=None, zwc=None, cmprlprjpars={}):
 
-    hinfgamma = None
-
-    tl, tr = get_rl_projections(zwc=zwc, zwo=zwo,
-                                fmat=fmat, mmat=mmat, jmat=jmat,
-                                cmat=cmat, bmat=bmat,
-                                **cmprlprjpars)
+    tl, tr = get_rl_projections(zwc=zwc, zwo=zwo, mmat=mmat, **cmprlprjpars)
 
     ak_mat = np.dot(tl.T, fmat.dot(tr))
     ck_mat = cmat.dot(tr)
@@ -42,4 +37,4 @@ def get_prj_model(mmat=None, fmat=None, jmat=None, bmat=None, cmat=None,
     xok = np.dot(np.dot(tltm, zwo), np.dot(zwo.T, tltm.T))
     xck = np.dot(np.dot(trtm, zwc), np.dot(zwc.T, trtm.T))
 
-    return ak_mat, bk_mat, ck_mat, xok, xck, hinfgamma
+    return ak_mat, bk_mat, ck_mat, xok, xck
