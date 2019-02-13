@@ -52,7 +52,7 @@ whichinival = 'sstokes'  # steady state Stokes solution
 whichinival = 'sstokes++'  # a developed state starting from sstokes
 whichinival = 'sstate+d'  # sstate plus perturbation
 # number of time steps -- also define the lag in the control application
-scaletest = 1.5  # .5  # for 1. we simulate till 12.
+scaletest = .1  # .5  # .5  # for 1. we simulate till 12.
 baset0, basetE, baseNts = 0.0, 12.0, 2.4e3+1
 t0, tE, Nts = 0.0, scaletest*basetE, np.int(scaletest*baseNts)
 
@@ -163,10 +163,7 @@ for ctrunc in trunclist:
                          Re=relist[cre], plain_bt=False,
                          trunc_lqgbtcv=ctrunc,
                          t0=t0, tE=tE, Nts=Nts,
-                         nwtn_adi_dict=nwtn_adi_dict,
                          paraoutput=False, multiproc=True,
-                         comp_freqresp=False, comp_stepresp=False,
-                         pymess=pymess,
                          gamma=gamma,
                          # closed_loop='red_output_fb',
                          # closed_loop=None,

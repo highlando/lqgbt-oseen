@@ -8,12 +8,10 @@ import dolfin_navier_scipy.problem_setups as dnsps
 
 import sadptprj_riclyap_adi.lin_alg_utils as lau
 import sadptprj_riclyap_adi.proj_ric_utils as pru
-import sadptprj_riclyap_adi.bal_trunc_utils as btu
 
 import distr_control_fenics.cont_obs_utils as cou
 
 import nse_riccont_utils as nru
-import nse_extlin_utils as neu
 
 debug = False
 
@@ -57,11 +55,8 @@ def lqgbt(problemname='drivencavity',
           plotit=True,
           trunc_lqgbtcv=1e-6,
           hinf=False,
-          nwtn_adi_dict=None,
-          pymess_dict=None,
           whichinival='sstate',
           tpp=5.,  # time to add on Stokes inival for `sstokes++`
-          comp_freqresp=False, comp_stepresp='nonlinear',
           closed_loop=False, multiproc=False,
           perturbpara=1e-3,
           trytofail=False, ttf_npcrdstps=3,
@@ -217,7 +212,6 @@ def lqgbt(problemname='drivencavity',
     f_mat = - stokesmatsc['A'] - convc_mat
     # the robin term `arob` has been added before
     mmat = stokesmatsc['M']
-    amat = stokesmatsc['A']
     jmat = stokesmatsc['J']
 
     # MAF -- need to change the convc_mat, i.e. we need another v_ss_nse
@@ -252,8 +246,6 @@ def lqgbt(problemname='drivencavity',
         truncstr = '_'
         shorttruncstr = '_'
 
-    cmpricfacpars = dict(multiproc=multiproc, nwtn_adi_dict=nwtn_adi_dict,
-                         ric_ini_str=fdstrini)
     cmprlprjpars = dict(trunc_lqgbtcv=trunc_lqgbtcv)
 
 # compute the regulated system
@@ -276,6 +268,10 @@ def lqgbt(problemname='drivencavity',
                                    lmd['gam_opt'])
     zwclqg, zwolqg = (lmd['outControl'][0, 0]['Z_LQG'],
                       lmd['outFilter'][0, 0]['Z_LQG'])
+    if hinf:
+        zwc, zwo = zwchinf, zwohinf
+    else:
+        zwc, zwo = zwclqg, zwolqg
 
     if closed_loop is False:
         return
@@ -285,13 +281,8 @@ def lqgbt(problemname='drivencavity',
         DT = (tE - t0)/(Nts-1)
 
         ak_mat, bk_mat, ck_mat, xok, xck, hinfgamma, tl, tr = \
-            nru.get_prj_model(truncstr=truncstr, fdstr=fdstr,
-                              abconly=False,
-                              mmat=mmat, fmat=f_mat_gramians, jmat=jmat,
+            nru.get_prj_model(mmat=mmat, fmat=f_mat_gramians, jmat=jmat,
                               bmat=b_mat_rgscld, cmat=c_mat_reg,
-                              cmpricfacpars=cmpricfacpars,
-                              pymess=pymess,
-                              hinf=hinf,
                               cmprlprjpars=cmprlprjpars)
         print('Controller has dimension: {0}'.format(ak_mat.shape[0]))
 
@@ -444,7 +435,6 @@ def lqgbt(problemname='drivencavity',
         fv_tmdp_params = tmdp_fsfb_dict
         fv_tmdp_memory = None
 
-
     else:
         fv_tmdp = None
         fv_tmdp_params = {}
@@ -561,69 +551,12 @@ def lqgbt(problemname='drivencavity',
 
     shortstring = (get_fdstr(Re, short=True) +  # shortcontsetupstr +
                    shortclstr + shorttruncstr + shortinivstr + shortfailstr)
-    if cl_linsys:
-        adjlinsys = True
-        if adjlinsys:
-
-            # XXX: only works if `closed_loop == 'full_state_fb'`
-            zwc, zwo = nru.get_ric_facs(fdstr=fdstr,
-                                        fmat=f_mat_gramians, mmat=mmat,
-                                        jmat=jmat, bmat=b_mat_rgscld,
-                                        cmat=c_mat_reg, ric_ini_str=fdstrini,
-                                        nwtn_adi_dict=nwtn_adi_dict,
-                                        multiproc=multiproc, pymess=pymess,
-                                        checktheres=False)
-            mtxct = pru.get_mTzzTtb(stokesmatsc['M'].T, zwo, c_mat_reg.T)
-            adj_fsfb_dict = dict(linv=v_ss_nse, tb_mat=c_mat_reg.T,
-                                 btxm_mat=mtxct.T)
-
-            adj_fv_tmdp = fv_tmdp_fullstatefb
-            adj_fv_tmdp_params = adj_fsfb_dict
-            adj_fv_tmdp_memory = None
-            # TODO: we only solve the difference system
-            # the full system will require the proper right hand sides
-            adjlinsysrhs = 0*soldict['fv']
-            adjlinsysrhsfp = 0*soldict['fp']
-            # adjiniv = soldict['iniv']
-            # adjiniv_reg = lau.app_prj_via_sadpnt(amat=stokesmatsc['M'],
-            #                                      jmat=stokesmatsc['J'],
-            #                                      rhsv=adjiniv,
-            #                                      transposedprj=False)
-            # soldict.update(iniv=adjiniv_reg)
-
-            soldict.update(fv_tmdp=adj_fv_tmdp,
-                           comp_nonl_semexp=True,
-                           fv_tmdp_params=adj_fv_tmdp_params,
-                           fv_tmdp_memory=adj_fv_tmdp_memory)
-
-            soldict.update(stokes_flow=True, A=-f_mat.T,
-                           fv=adjlinsysrhs,
-                           fp=adjlinsysrhsfp)
-            soldict.update(data_prfx=shortstring + '_adj')
-            print('norm fp: {0}'.format(np.linalg.norm(soldict['fp'])))
-            print('norm fv: {0}'.format(np.linalg.norm(soldict['fv'])))
-            dictofvelstrs = snu.solve_nse(**soldict)
-
-            yscomplist = cou.\
-                extract_output(strdict=dictofvelstrs, tmesh=trange,
-                               c_mat=b_mat_rgscld.T, load_data=dou.load_npa)
-            dou.save_output_json(dict(tmesh=trange.tolist(),
-                                      outsig=yscomplist),
-                                 fstring=shortstring + '_adj')
-            return
-
-        else:
-            linsysrhs = soldict['fv'] + rhs_con + rhsv_conbc
-            shortstring = shortstring + '_linclsys'
-            nseres = -f_mat*v_ss_nse - jmat.T*p_ss_nse - linsysrhs
-            print('oseen res: {0}'.format(np.linalg.norm(nseres)))
-            soldict.update(stokes_flow=True, A=-f_mat, fv=linsysrhs)
 
     soldict.update(data_prfx=shortstring)
     dictofvelstrs = snu.solve_nse(**soldict)
 
     yscomplist = cou.extract_output(strdict=dictofvelstrs, tmesh=trange,
-                                    c_mat=c_mat, load_data=dou.load_npa)
+                                    c_mat=c_mat_reg, load_data=dou.load_npa)
 
     if robit:
         robitstr = '_robmgnfac{0}'.format(robmrgnfac)
