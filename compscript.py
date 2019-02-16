@@ -32,7 +32,7 @@ perturbpara = 1e-5
 # whether we use a perturbed system
 trytofail = False
 trytofail = True
-ttf_npcrdstps = 6
+ttf_npcrdstps = 4
 # whether to check the performance in the linear system
 hinf = False  # hinf only need for reduced output feedback
 
@@ -42,8 +42,8 @@ closed_loop = 'red_updsdre_fb'
 closed_loop = False
 closed_loop = 'full_state_fb'
 closed_loop = None
-closed_loop = 'red_output_fb'
 closed_loop = 'hinf_red_output_fb'
+closed_loop = 'red_output_fb'
 # what inival
 whichinival = 'sstokes'  # steady state Stokes solution
 whichinival, tpp = 'sstokes++', .5  # a developed state starting from sstokes
@@ -89,10 +89,7 @@ for opt, arg in options:
                 closed_loop = 'red_sdre_fb'
         elif np.int(arg) == 4:
                 closed_loop = 'hinf_red_output_fb'
-                hinfgammainfty = False
-        elif np.int(arg) == 5:
-                closed_loop = 'hinf_red_output_fb'
-                hinfgammainfty = True
+                hinf = True
 
     elif opt == '--re':
         simure = np.float(arg)

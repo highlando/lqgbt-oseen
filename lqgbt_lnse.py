@@ -19,6 +19,22 @@ checktheres = True  # whether to check the Riccati Residuals
 checktheres = False
 
 switchonsfb = 0  # 1.5
+addinputd = True
+
+
+def _get_inputd(ta=None, tb=None, uvec=None, ampltd=1.):
+
+    intvl = tb - ta
+
+    def _inputd(t):
+        if t < ta or t > tb:
+            return 0*uvec
+        else:
+            s = (t - ta)/intvl
+            du = np.sin(s*2*np.pi)
+            return ampltd*du*uvec
+    return _inputd
+
 
 # TODO: clear distinction of target state, linearization point, initial value
 # TODO: maybe redefine: by now we need to use -fmat all the time (but +ak_mat)
@@ -260,9 +276,11 @@ def lqgbt(problemname='drivencavity',
     from scipy.io import loadmat
     mmd = {}
     loadmat(loadmatmatstr, mdict=mmd)
+    print('loaded: ' + loadmatmatstr)
     c_mat_reg = mmd['cmat']
     lmd = {}
     loadmat(loadhinfmatstr, mdict=lmd)
+    print('loaded: ' + loadhinfmatstr)
     # try:
     #     zwchinf, zwohinf, hinfgamma = lmd['ZB'], lmd['ZC'], lmd['gam_opt']
     # except KeyError:
@@ -277,6 +295,13 @@ def lqgbt(problemname='drivencavity',
     else:
         zwc, zwo = zwclqg, zwolqg
         print('we use the lqg-Riccatis')
+
+    if addinputd:
+        ampltd = 0.01
+        print('input is disturbed in [0, 1] to trigger instabilities')
+        print('ampltd used: {0}'.format(ampltd))
+        inputd = _get_inputd(ta=0., tb=1., ampltd=ampltd,
+                             uvec=np.array([1, -1]).reshape((2, 1)))
 
     if closed_loop is False:
         return
@@ -359,16 +384,18 @@ def lqgbt(problemname='drivencavity',
 
             """
             xk_old = memory['xk_old']
-            buk = cts*np.dot(obs_bk,
-                             lau.mm_dnssps(c_mat, (curvel-linvel)))
+            buk = cts*np.dot(obs_bk, c_mat.dot(curvel-linvel))
             xk_old = np.dot(ipsysk_mat_inv, xk_old + buk)
             memory['xk_old'] = xk_old
-            actua = lau.mm_dnssps(b_mat, obs_ck.dot(xk_old))
+            actua = b_mat.dot(obs_ck.dot(xk_old))
             # if np.mod(np.int(time/DT), np.int(tE/DT)/100) == 0:
             #     print(('time now: {0}, end time: {1}'.format(time, tE)))
             #     print('\nnorm of deviation', np.linalg.norm(curvel-linvel))
             #     print('norm of actuation {0}'.format(np.linalg.norm(actua)))
             memory['actualist'].append(actua)
+
+            if addinputd:
+                actua = actua + b_mat.dot(inputd(time))
 
             return actua, memory
 
@@ -437,8 +464,13 @@ def lqgbt(problemname='drivencavity',
         fv_tmdp_memory = None
 
     else:
-        fv_tmdp = None
-        fv_tmdp_params = {}
+        if addinputd:
+            def fv_tmdp(time=None, curvel=None, inputd=None, b_mat=None, **kw):
+                return b_mat.dot(inputd(time)), {}
+            fv_tmdp_params = dict(b_mat=b_mat, inputd=inputd)
+        else:
+            fv_tmdp = None
+            fv_tmdp_params = {}
         fv_tmdp_memory = {}
         shortclstr = '_'
 
@@ -491,57 +523,6 @@ def lqgbt(problemname='drivencavity',
             dou.save_npa(sstokspp, stksppdtstr)
         soldict.update(dict(iniv=sstokspp))
         shortinivstr = 'sk{0}'.format(tpp)
-
-    # checkdaredmod = True
-    # checkdaredmod = False
-    # if checkdaredmod:
-    #     import spacetime_galerkin_pod.gen_pod_utils as gpu
-    #     # akm = basetl.T.dot(amat*basetr)
-    #     # nk = basetl.shape[1]
-
-    #     redmod = False
-    #     redmod = True
-    #     if redmod:
-    #         curiniv = basetl.T.dot(mmat*(soldict['iniv']-vinf))
-    #         nk = basetr.shape[1]
-
-    #         def rednonl(vvec, t):
-    #             inflv = basetr.dot(vvec.reshape((nk, 1)))
-    #             curcoeff = get_cur_sdccoeff(vdelta=inflv)
-    #             returval = basetl.T.dot(curcoeff.dot(inflv))
-    #             return returval.flatten()
-    #         curnonl = rednonl
-    #         tstrunstr = 'testdaredmod'
-    #         mmatforlsoda = None
-    #         tstc = ck_mat
-
-    #     else:
-    #         curiniv = soldict['iniv'] - vinf
-    #         NV = mmat.shape[0]
-
-    #         def fulnonl(vvec, t):
-    #             curcoeff = get_cur_sdccoeff(vvec.reshape((NV, 1)))
-    #             apconv = curcoeff.dot(vvec.reshape((NV, 1)))
-    #             prjapc = lau.app_prj_via_sadpnt(amat=mmat, jmat=jmat,
-    #                                             rhsv=apconv)
-    #             return prjapc.flatten()
-    #         mmatforlsoda = mmat
-    #         curnonl = fulnonl
-    #         tstrunstr = 'testdafulmod'
-    #         tstc = c_mat
-
-    #     print('doing the `lsoda` integration...')
-    #     tstsol = gpu.time_int_semil(tmesh=trange, A=None, M=mmatforlsoda,
-    #                                 nfunc=curnonl, iniv=curiniv)
-
-    #     print('done with the `lsoda` integration!')
-    #     outptlst = []
-    #     for kline in range(tstsol.shape[0]):
-    #         # outptlst.append((ck_mat.dot(redsol[k, :])).tolist())
-    #         outptlst.append((tstc.dot(tstsol[kline, :])).tolist())
-    #     dou.save_output_json(dict(tmesh=trange.tolist(), outsig=outptlst),
-    #                          fstring=tstrunstr)
-    #     import ipdb; ipdb.set_trace()
 
     outstr = truncstr + '{0}'.format(closed_loop) \
         + 't0{0}tE{1}Nts{2}N{3}Re{4}'.format(t0, tE, Nts, N, Re)

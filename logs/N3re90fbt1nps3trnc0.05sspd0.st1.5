@@ -1,0 +1,94 @@
+Re             = [None, 90.0]
+cyldim         = 3
+pymess         = False
+closed_loop    = red_output_fb
+H_infty        = False
+trunc at       = 0.05
+ini_perturb    = 0.0
+obs_perturb    = True
+ttf_npcrdstps  = 3
+t0, tE, Nts    = 0.0, 18.0, 3601
+
+Re             = [None, 90.0]
+cyldim         = 3
+pymess         = False
+closed_loop    = red_output_fb
+H_infty        = False
+trunc at       = 0.05
+ini_perturb    = 0.0
+obs_perturb    = True
+ttf_npcrdstps  = 3
+t0, tE, Nts    = 0.0, 18.0, 3601
+
+XXXXXXXXXX
+ log started at 2019-02-15 18:20:58.233918 
+XXXXXXXXXX
+
+ ### We solve the LQG-BT problem for the cylinderwake at Re=90.0 ###
+
+ ### The control is weighted with Gamma=1.0
+cylinderwake: pressure need not be pinned
+ ### Robin-type boundary control palpha=1e-05
+Picard iteration: 1 -- norm of update: [ 0.13253282]
+Picard iteration: 2 -- norm of update: [ 0.12095829]
+Picard iteration: 3 -- norm of update: [ 0.06559513]
+Picard iteration: 4 -- norm of update: [ 0.0372692]
+Picard iteration: 5 -- norm of update: [ 0.01977282]
+Picard iteration: 6 -- norm of update: [ 0.00960631]
+Picard iteration: 7 -- norm of update: [ 0.00483608]
+Picard iteration: 8 -- norm of update: [ 0.0025984]
+Steady State NSE: Newton iteration: 0-- norm of update: [ 0.00156713]
+Steady State NSE: Newton iteration: 1-- norm of update: [  1.57456420e-05]
+Steady State NSE: Newton iteration: 2-- norm of update: [  1.88899526e-09]
+Steady State NSE: Newton iteration: 3-- norm of update: [  1.73939991e-15]
+Picard iteration: 1 -- norm of update: [ 0.13253282]
+Picard iteration: 2 -- norm of update: [ 0.12095829]
+Picard iteration: 3 -- norm of update: [ 0.06559513]
+No Newton steps = steady state probably not well converged
+relative difference to linearization: [[ 0.07764457]]
+loaded: oc-hinf-recover/cylinderwake_Re90.0_gamma1.0_NV9384_bcc_NY3_palpha1e-05_lqgbt_hinf_MAF_ttfnpcrds3__mats
+loaded: oc-hinf-recover/output/cylinderwake_Re90.0_gamma1.0_NV9384_bcc_NY3_palpha1e-05_lqgbt_hinf_MAF_ttfnpcrds3__mats_output
+we use the lqg-Riccatis
+computing the left and right transformations
+... done! - computing the left and right transformations
+Controller has dimension: 7
+lqg-feedback!!
+input is disturbed in [0, 1] to trigger instabilities
+solve the NSE on the interval [0.0, 18.0]
+No Newton iterations - explicit treatment of the nonlinearity
+doing the time integration...
+runtime: 12.2 - t/tE: 0.00 - t: 0.0050
+runtime: 231.4 - t/tE: 0.10 - t: 1.8000
+runtime: 462.4 - t/tE: 0.20 - t: 3.6000
+runtime: 703.0 - t/tE: 0.30 - t: 5.4000
+runtime: 952.9 - t/tE: 0.40 - t: 7.2000
+runtime: 1197.7 - t/tE: 0.50 - t: 9.0000
+runtime: 1455.0 - t/tE: 0.60 - t: 10.8000
+runtime: 1699.0 - t/tE: 0.70 - t: 12.6000
+runtime: 1945.5 - t/tE: 0.80 - t: 14.4000
+runtime: 2193.1 - t/tE: 0.90 - t: 16.2000
+runtime: 2427.5 - t/tE: 1.00 - t: 18.0000
+
+norm of current Newton update: None
+output saved to data/cw90.01.0_93843-16rofb0.05ssd0.0maf3
+
+ to plot run the commands 
+
+from dolfin_navier_scipy.data_output_utils import plot_outp_sig
+plot_outp_sig("data/cw90.01.0_93843-16rofb0.05ssd0.0maf3")
+
+ to plot w/o tikz: 
+
+from dolfin_navier_scipy.data_output_utils import plot_outp_sig
+plot_outp_sig("data/cw90.01.0_93843-16rofb0.05ssd0.0maf3", notikz=True)
+Re             = [None, 90.0]
+cyldim         = 3
+pymess         = False
+closed_loop    = red_output_fb
+H_infty        = False
+trunc at       = 0.05
+ini_perturb    = 0.0
+obs_perturb    = True
+ttf_npcrdstps  = 3
+t0, tE, Nts    = 0.0, 18.0, 3601
+
