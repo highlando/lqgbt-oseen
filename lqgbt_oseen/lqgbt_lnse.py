@@ -259,8 +259,8 @@ def lqgbt(problemname='drivencavity',
         solve_steadystate_nse(vel_pcrd_stps=npcrdstps, return_vp=True,
                               clearprvdata=debug, **soldict)
 
-    v_ss_nse = vp_ss_nse[:NV]
-    p_ss_nse = vp_ss_nse[NV:]
+    v_ss_nse = vp_ss_nse[0]
+    p_ss_nse = vp_ss_nse[1]
     (convc_mat, rhs_con,
      rhsv_conbc) = snu.get_v_conv_conts(prev_v=v_ss_nse, invinds=invinds,
                                         V=femp['V'], diribcs=femp['diribcs'])

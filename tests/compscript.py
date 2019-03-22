@@ -7,8 +7,8 @@ import sys
 import getopt
 
 # to compute stabilizing initial values for higher Re numbers
-pymess = False
 pymess = True
+pymess = False
 relist = [None, 5e1, 7.5e1, 1e2, 1.2e2]
 relist = [5e1, 7.5e1]
 relist = [None, 5e1, 7.5e1, 9e1, 1e2]
@@ -49,8 +49,8 @@ closed_loop = 'red_updsdre_fb'
 closed_loop = False
 closed_loop = 'full_state_fb'
 closed_loop = None
-closed_loop = 'hinf_red_output_fb'
 closed_loop = 'red_output_fb'
+closed_loop = 'hinf_red_output_fb'
 # what inival
 whichinival = 'sstokes'  # steady state Stokes solution
 whichinival, tpp = 'sstokes++', .5  # a developed state starting from sstokes
