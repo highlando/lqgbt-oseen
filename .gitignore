@@ -2,8 +2,7 @@ data
 results
 testexps
 docs/_build
-oc-hinf-data
-ottodata
+external-data/
 logs
 log*
 *.xml
