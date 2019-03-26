@@ -164,47 +164,17 @@ def get_ric_facs(fmat=None, mmat=None, jmat=None,
         print('... done with checking the Riccati residuals!')
 
     if zwconly:
-        return zwc
+        return zwc, None, None
     else:
         return zwc, zwo, None
 
 
-def get_rl_projections(fdstr=None, truncstr=None,
-                       zwc=None, zwo=None,
-                       fmat=None, mmat=None, jmat=None,
-                       bmat=None, cmat=None,
-                       cmpricfacpars={},
-                       hinf=False,
-                       pymess=False,
-                       trunc_lqgbtcv=None):
+def get_rl_projections(zwc=None, zwo=None,
+                       mmat=None, trunc_lqgbtcv=None):
 
-    try:
-        if debug:
-            raise IOError
-        tl = dou.load_npa(fdstr + truncstr + '__tl')
-        tr = dou.load_npa(fdstr + truncstr + '__tr')
-        print(('loaded the left and right transformations: \n' +
-               fdstr + truncstr + '__tl/__tr'))
-        # if robit:
-        #     svs = dou.load_npa(fdstr + '__svs')
-
-    except IOError:
-        print(('computing the left and right transformations' +
-               ' and saving to: \n' + fdstr + truncstr + '__tl/__tr'))
-        if zwc is None or zwo is None:
-            zwc, zwo, hinfgamma = \
-                get_ric_facs(fdstr=fdstr, pymess=pymess,
-                             fmat=fmat, mmat=mmat, jmat=jmat,
-                             cmat=cmat, bmat=bmat, hinf=hinf,
-                             **cmpricfacpars)
-        tl, tr, svs = btu.\
-            compute_lrbt_transfos(zfc=zwc, zfo=zwo,
-                                  mmat=mmat,
-                                  trunck={'threshh': trunc_lqgbtcv})
-        dou.save_npa(tl, fdstr + truncstr + '__tl')
-        dou.save_npa(tr, fdstr + truncstr + '__tr')
-        dou.save_npa(svs, fdstr + '__svs')
-        print('... done! - computing the left and right transformations')
+    tl, tr, svs = btu.\
+        compute_lrbt_transfos(zfc=zwc, zfo=zwo, mmat=mmat,
+                              trunck={'threshh': trunc_lqgbtcv})
 
     return tl, tr
 

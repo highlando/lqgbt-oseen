@@ -302,49 +302,13 @@ def lqgbt(problemname='drivencavity',
         truncstr = '_'
         shorttruncstr = '_'
 
-    cmpricfacpars = dict(multiproc=multiproc, nwtn_adi_dict=nwtn_adi_dict,
-                         ric_ini_str=fdstrini)
-    cmprlprjpars = dict(trunc_lqgbtcv=trunc_lqgbtcv)
+    # cmpricfacpars = dict(multiproc=multiproc, nwtn_adi_dict=nwtn_adi_dict,
+    #                      ric_ini_str=fdstrini)
+    # cmprlprjpars = dict(trunc_lqgbtcv=trunc_lqgbtcv)
 
 # compute the regulated system
     trange = np.linspace(t0, tE, Nts)
     DT = (tE - t0)/(Nts-1)
-    loadhinfmatstr = 'oc-hinf-recover/output/' + \
-        fdstr.partition('/')[2] + '__mats'
-    loadmatmatstr = 'oc-hinf-recover/cylinderwake_Re{0}_gamma1.0_'.format(Re) +\
-        'NV{0}_bcc_NY3_palpha1e-05_lqgbt_hinf_MAF_'.format(NV) +\
-        'ttfnpcrds{0}__mats'.format(ttf_npcrdstps)
-    loadhinfmatstr = 'oc-hinf-recover/output/' +\
-        'cylinderwake_Re{0}_gamma1.0_'.format(Re) +\
-        'NV{0}_bcc_NY3_palpha1e-05_lqgbt_hinf_MAF_'.format(NV) +\
-        'ttfnpcrds{0}__mats_output'.format(ttf_npcrdstps)
-    from scipy.io import loadmat
-    mmd = {}
-    loadmat(loadmatmatstr, mdict=mmd)
-    print('loaded: ' + loadmatmatstr)
-    c_mat_reg = mmd['cmat']
-    lmd = {}
-    loadmat(loadhinfmatstr, mdict=lmd)
-    print('loaded: ' + loadhinfmatstr)
-    # try:
-    #     zwchinf, zwohinf, hinfgamma = lmd['ZB'], lmd['ZC'], lmd['gam_opt']
-    # except KeyError:
-    zwchinf, zwohinf, hinfgamma = (lmd['outControl'][0, 0]['Z'],
-                                   lmd['outFilter'][0, 0]['Z'],
-                                   lmd['gam_opt'])
-    zwclqg, zwolqg = (lmd['outControl'][0, 0]['Z_LQG'],
-                      lmd['outFilter'][0, 0]['Z_LQG'])
-
-    if zwolqg is zwohinf:
-        print('this is for checking')
-    if hinf:
-        print('we use the hinf-Riccatis, gamma={0}'.format(hinfgamma))
-        zwc = zwchinf
-        # zwo = zwohinf
-    else:
-        zwc = zwclqg
-        # zwo = zwolqg
-        print('we use the lqg-Riccatis')
 
     if addinputd:
         ampltd = 0.01
@@ -356,15 +320,26 @@ def lqgbt(problemname='drivencavity',
     if closed_loop is False:
         return
 
+    if closed_loop is not None:
+        zwconly = (closed_loop == 'full_state_fb')
+        comploadricfacsdct = dict(fdstr=fdstr, fmat=f_mat_gramians,
+                                  mmat=mmat, jmat=jmat, bmat=b_mat_rgscld,
+                                  cmat=c_mat_reg,
+                                  ric_ini_str=fdstrini,
+                                  nwtn_adi_dict=nwtn_adi_dict,
+                                  zwconly=zwconly, hinf=hinf,
+                                  multiproc=multiproc, pymess=pymess,
+                                  checktheres=False)
+        zwc, zwo, hinfgamma = nru.get_ric_facs(**comploadricfacsdct)
+
+        if closed_loop == 'red_output_fb':
+            import sadptprj_riclyap_adi.bal_trunc_utils as btu
+            tl, tr, _ = btu.\
+                compute_lrbt_transfos(zfc=zwc, zfo=zwo, mmat=mmat,
+                                      trunck={'threshh': trunc_lqgbtcv})
+
     elif closed_loop == 'full_state_fb':
         shortclstr = 'fsfb'
-        zwc = nru.get_ric_facs(fdstr=fdstr,
-                               fmat=f_mat_gramians, mmat=mmat,
-                               jmat=jmat, bmat=b_mat_rgscld, cmat=c_mat_reg,
-                               ric_ini_str=fdstrini,
-                               nwtn_adi_dict=nwtn_adi_dict, zwconly=True,
-                               multiproc=multiproc, pymess=pymess,
-                               checktheres=False)
 
         mtxb = pru.get_mTzzTtb(stokesmatsc['M'].T, zwc, b_mat_rgscld)
 
@@ -420,15 +395,9 @@ def lqgbt(problemname='drivencavity',
         shortclstr = 'hinfrofb' if hinf else 'rofb'
         DT = (tE - t0)/(Nts-1)
 
-        ak_mat, bk_mat, ck_mat, xok, xck, hinfgamma, tl, tr = \
-            nru.get_prj_model(truncstr=truncstr, fdstr=fdstr,
-                              abconly=False,
-                              mmat=mmat, fmat=f_mat_gramians, jmat=jmat,
-                              bmat=b_mat_rgscld, cmat=c_mat_reg,
-                              cmpricfacpars=cmpricfacpars,
-                              pymess=pymess,
-                              hinf=hinf,
-                              cmprlprjpars=cmprlprjpars)
+        ak_mat, bk_mat, ck_mat, xok, xck = nru.\
+            get_prj_model(mmat=mmat, fmat=f_mat_gramians, jmat=jmat,
+                          bmat=b_mat_rgscld, cmat=c_mat_reg)
         print('Controller has dimension: {0}'.format(ak_mat.shape[0]))
 
         if hinf:
