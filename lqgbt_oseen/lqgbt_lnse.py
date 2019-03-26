@@ -307,56 +307,6 @@ def lqgbt(problemname='drivencavity',
                          ric_ini_str=fdstrini)
     cmprlprjpars = dict(trunc_lqgbtcv=trunc_lqgbtcv)
 
-    if plain_bt:
-        print('`plain_bt` -- this is not maintained anymore -- good luck')
-        # get_gramians = pru.solve_proj_lyap_stein
-    # else:
-    #     get_gramians = pru.proj_alg_ric_newtonadi
-
-    if comp_freqresp:
-        tl, tr = nru.get_rl_projections(fdstr=fdstr, truncstr=truncstr,
-                                        fmat=f_mat_gramians, mmat=mmat,
-                                        jmat=jmat,
-                                        bmat=b_mat_rgscld, cmat=c_mat_reg,
-                                        cmpricfacpars=cmpricfacpars,
-                                        pymess=pymess,
-                                        trunc_lqgbtcv=trunc_lqgbtcv)
-        btu.compare_freqresp(mmat=stokesmatsc['M'], amat=f_mat,
-                             jmat=stokesmatsc['J'], bmat=b_mat,
-                             cmat=c_mat, tr=tr, tl=tl,
-                             plot=True, datastr=fdstr + truncstr + '__tl')
-
-    if comp_stepresp is not False:
-        if comp_stepresp == 'nonlinear':
-            stp_rsp_nwtn = 3
-            stp_rsp_dtpr = 'nonl_stepresp_'
-        else:
-            stp_rsp_nwtn = 1
-            stp_rsp_dtpr = 'stepresp_'
-
-        def fullstepresp_lnse(bcol=None, trange=None, ini_vel=None,
-                              cmat=None, soldict=None):
-            soldict.update(fv_stbc=rhsd_stbc['fv']+bcol,
-                           vel_nwtn_stps=stp_rsp_nwtn, trange=trange,
-                           iniv=ini_vel, lin_vel_point=ini_vel,
-                           clearprvdata=True, data_prfx=stp_rsp_dtpr,
-                           return_dictofvelstrs=True)
-
-            dictofvelstrs = snu.solve_nse(**soldict)
-
-            return cou.extract_output(strdict=dictofvelstrs, tmesh=trange,
-                                      c_mat=cmat, load_data=dou.load_npa)
-
-        jsonstr = fdstr + stp_rsp_dtpr + '_Nred{0}_t0tENts{1}{2}{3}.json'.\
-            format(tl.shape[1], t0, tE, Nts)
-        btu.compare_stepresp(tmesh=np.linspace(t0, tE, Nts),
-                             a_mat=f_mat, c_mat=c_mat_reg, b_mat=b_mat,
-                             m_mat=stokesmatsc['M'],
-                             tr=tr, tl=tl, iniv=v_ss_nse,
-                             # ss_rhs=ssv_rhs,
-                             fullresp=fullstepresp_lnse, fsr_soldict=soldict,
-                             plot=True, jsonstr=jsonstr)
-
 # compute the regulated system
     trange = np.linspace(t0, tE, Nts)
     DT = (tE - t0)/(Nts-1)
