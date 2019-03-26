@@ -8,12 +8,10 @@ import dolfin_navier_scipy.problem_setups as dnsps
 
 import sadptprj_riclyap_adi.lin_alg_utils as lau
 import sadptprj_riclyap_adi.proj_ric_utils as pru
-import sadptprj_riclyap_adi.bal_trunc_utils as btu
 
 import distr_control_fenics.cont_obs_utils as cou
 
 import lqgbt_oseen.nse_riccont_utils as nru
-import lqgbt_oseen.nse_extlin_utils as neu
 import lqgbt_oseen.cntrl_simu_helpers as csh
 
 debug = False
@@ -185,6 +183,8 @@ def lqgbt(problemname='drivencavity',
     else:
         inivstr = '_' + whichinival
 
+    print(inivstr)
+
     def get_fdstr(Re, short=False):
         if short:
             return ddir + 'cw' + '{0}{1}_'.format(Re, gamma) + \
@@ -260,7 +260,6 @@ def lqgbt(problemname='drivencavity',
                               clearprvdata=debug, **soldict)
 
     v_ss_nse = vp_ss_nse[0]
-    p_ss_nse = vp_ss_nse[1]
     (convc_mat, rhs_con,
      rhsv_conbc) = snu.get_v_conv_conts(prev_v=v_ss_nse, invinds=invinds,
                                         V=femp['V'], diribcs=femp['diribcs'])
@@ -268,7 +267,7 @@ def lqgbt(problemname='drivencavity',
     f_mat = - stokesmatsc['A'] - convc_mat
     # the robin term `arob` has been added before
     mmat = stokesmatsc['M']
-    amat = stokesmatsc['A']
+    # amat = stokesmatsc['A']
     jmat = stokesmatsc['J']
 
     # MAF -- need to change the convc_mat, i.e. we need another v_ss_nse
@@ -335,11 +334,16 @@ def lqgbt(problemname='drivencavity',
                                    lmd['gam_opt'])
     zwclqg, zwolqg = (lmd['outControl'][0, 0]['Z_LQG'],
                       lmd['outFilter'][0, 0]['Z_LQG'])
+
+    if zwolqg is zwohinf:
+        print('this is for checking')
     if hinf:
         print('we use the hinf-Riccatis, gamma={0}'.format(hinfgamma))
-        zwc, zwo = zwchinf, zwohinf
+        zwc = zwchinf
+        # zwo = zwohinf
     else:
-        zwc, zwo = zwclqg, zwolqg
+        zwc = zwclqg
+        # zwo = zwolqg
         print('we use the lqg-Riccatis')
 
     if addinputd:
@@ -519,7 +523,6 @@ def lqgbt(problemname='drivencavity',
         fv_tmdp_params = fv_rofb_dict
         fv_tmdp_memory = dict(xk_old=np.zeros((tl.shape[1], 1)),
                               actualist=[])
-
 
     else:
         if addinputd:
