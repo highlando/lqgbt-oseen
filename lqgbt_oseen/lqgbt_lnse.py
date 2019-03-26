@@ -22,6 +22,22 @@ checktheres = True  # whether to check the Riccati Residuals
 checktheres = False
 
 switchonsfb = 0  # 1.5
+addinputd = True
+
+
+def _get_inputd(ta=None, tb=None, uvec=None, ampltd=1.):
+
+    intvl = tb - ta
+
+    def _inputd(t):
+        if t < ta or t > tb:
+            return 0*uvec
+        else:
+            s = (t - ta)/intvl
+            du = np.sin(s*2*np.pi)
+            return ampltd*du*uvec
+    return _inputd
+
 
 # TODO: clear distinction of target state, linearization point, initial value
 # TODO: maybe redefine: by now we need to use -fmat all the time (but +ak_mat)
@@ -183,22 +199,6 @@ def lqgbt(problemname='drivencavity',
 #
 # ### CHAP: Prepare for control
 #
-
-    # get the control and observation operators
-    if not bccontrol:
-        try:
-            b_mat = dou.load_spa(ddir + contsetupstr + '__b_mat')
-            u_masmat = dou.load_spa(ddir + contsetupstr + '__u_masmat')
-            print('loaded `b_mat`')
-        except IOError:
-            print('computing `b_mat`...')
-            b_mat, u_masmat = cou.get_inp_opa(cdcoo=femp['cdcoo'], V=femp['V'],
-                                              NU=NU, xcomp=femp['uspacedep'])
-            dou.save_spa(b_mat, ddir + contsetupstr + '__b_mat')
-            dou.save_spa(u_masmat, ddir + contsetupstr + '__u_masmat')
-
-        b_mat = b_mat[invinds, :][:, :]
-        # tb_mat = 1./np.sqrt(alphau)
 
     b_mat_reg = lau.app_prj_via_sadpnt(amat=stokesmatsc['M'],
                                        jmat=stokesmatsc['J'],
