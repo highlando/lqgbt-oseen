@@ -310,6 +310,44 @@ def lqgbt(problemname='drivencavity',
 # compute the regulated system
     trange = np.linspace(t0, tE, Nts)
     DT = (tE - t0)/(Nts-1)
+    loadhinfmatstr = 'oc-hinf-recover/output/' + \
+        fdstr.partition('/')[2] + '__mats'
+    loadmatmatstr = 'oc-hinf-recover/cylinderwake_Re{0}_gamma1.0_'.format(Re) +\
+        'NV{0}_bcc_NY3_palpha1e-05_lqgbt_hinf_MAF_'.format(NV) +\
+        'ttfnpcrds{0}__mats'.format(ttf_npcrdstps)
+    loadhinfmatstr = 'oc-hinf-recover/output/' +\
+        'cylinderwake_Re{0}_gamma1.0_'.format(Re) +\
+        'NV{0}_bcc_NY3_palpha1e-05_lqgbt_hinf_MAF_'.format(NV) +\
+        'ttfnpcrds{0}__mats_output'.format(ttf_npcrdstps)
+    from scipy.io import loadmat
+    mmd = {}
+    loadmat(loadmatmatstr, mdict=mmd)
+    print('loaded: ' + loadmatmatstr)
+    c_mat_reg = mmd['cmat']
+    lmd = {}
+    loadmat(loadhinfmatstr, mdict=lmd)
+    print('loaded: ' + loadhinfmatstr)
+    # try:
+    #     zwchinf, zwohinf, hinfgamma = lmd['ZB'], lmd['ZC'], lmd['gam_opt']
+    # except KeyError:
+    zwchinf, zwohinf, hinfgamma = (lmd['outControl'][0, 0]['Z'],
+                                   lmd['outFilter'][0, 0]['Z'],
+                                   lmd['gam_opt'])
+    zwclqg, zwolqg = (lmd['outControl'][0, 0]['Z_LQG'],
+                      lmd['outFilter'][0, 0]['Z_LQG'])
+    if hinf:
+        print('we use the hinf-Riccatis, gamma={0}'.format(hinfgamma))
+        zwc, zwo = zwchinf, zwohinf
+    else:
+        zwc, zwo = zwclqg, zwolqg
+        print('we use the lqg-Riccatis')
+
+    if addinputd:
+        ampltd = 0.01
+        print('input is disturbed in [0, 1] to trigger instabilities')
+        print('ampltd used: {0}'.format(ampltd))
+        inputd = _get_inputd(ta=0., tb=1., ampltd=ampltd,
+                             uvec=np.array([1, -1]).reshape((2, 1)))
 
     if closed_loop is False:
         return
@@ -400,6 +438,7 @@ def lqgbt(problemname='drivencavity',
             obs_ck = -np.dot(bk_mat.T.dot(xck), zk)
 
         else:
+            print('lqg-feedback!!')
             amatk = (ak_mat - np.dot(np.dot(xok, ck_mat.T), ck_mat) -
                      np.dot(bk_mat, np.dot(bk_mat.T, xck)))
             obs_ck = -bk_mat.T.dot(xck)
