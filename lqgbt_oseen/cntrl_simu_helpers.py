@@ -25,7 +25,8 @@ def set_inival(whichinival='sstokes', soldict=None, perturbpara=None,
         shortinivstr = 'sks'
         return shortinivstr, ret_v_ss_nse
 
-    if whichinival == 'sstate+d' or whichinival == 'snse+d++':
+    if (whichinival == 'sstate+d' or
+            whichinival == 'snse+d++' or whichinival == 'sstate+du'):
         perturbini = perturbpara*np.ones((soldict['M'].shape[0], 1))
         reg_pertubini = lau.app_prj_via_sadpnt(amat=soldict['M'],
                                                jmat=soldict['J'],

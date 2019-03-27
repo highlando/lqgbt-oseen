@@ -19,7 +19,6 @@ max_re_only = False
 gamma = 1e-0  # e5
 # mesh parameter for the cylinder meshes
 # whether to do bccontrol or distributed
-bccontrol = False
 bccontrol = True
 palpha = 1e-5  # parameter for the Robin penalization
 cyldim = 3
@@ -27,9 +26,7 @@ simucyldim = 3  # the dim model used in the simulation
 # where to truncate the LQGBT characteristic values
 trunclist = [1e-2]  # , 1e-2, 1e-1, 1e-0]
 # dimension of in and output spaces
-NU = 3  # dimension of the distributed control
-if bccontrol:
-    NU = 'bcc'
+NU = 'bcc'
 Cgrid = (3, 1)  # grid of the sensors -- defines the C
 # to what extend we perturb the initial value
 perturbpara = 1e-5
@@ -37,9 +34,6 @@ perturbpara = 1e-5
 trytofail = False
 trytofail = True
 ttf_npcrdstps = 6
-# whether to check the performance in the linear system
-cl_linsys = True
-cl_linsys = False
 
 hinf = False  # hinf only need for reduced output feedback
 
@@ -58,8 +52,12 @@ whichinival, tpp = 'snse+d++', 2.  # a developed state starting from sstokes
 whichinival = 'sstate+d'  # sstate plus perturbation
 tpp is tpp if whichinival == 'sstokes++' or whichinival == 'snse+d++' else None
 # number of time steps -- also define the lag in the control application
+addinputd = False  # whether to add disturbances through the input
+
 scaletest = .5  # for 1. we simulate till 12.
 baset0, basetE, baseNts = 0.0, 12.0, 2.4e3+1
+dudict = dict(addinputd=addinputd, ta=0., tb=1., ampltd=0.01,
+              uvec=np.array([1, -1]).reshape((2, 1)))
 
 # get command line input and overwrite standard parameters if necessary
 options, rest = getopt.getopt(sys.argv[1:], '',
@@ -135,8 +133,7 @@ infostring = ('Re             = {0}'.format(relist) +
               '\nini_perturb    = {0}'.format(perturbpara) +
               '\nobs_perturb    = {0}'.format(trytofail) +
               '\nttf_npcrdstps  = {0}'.format(ttf_npcrdstps) +
-              '\nt0, tE, Nts    = {0}, {1}, {2}\n'.format(t0, tE, Nts) +
-              '\nlinear cl sys  = {0}'.format(cl_linsys)
+              '\nt0, tE, Nts    = {0}, {1}, {2}\n'.format(t0, tE, Nts)
               )
 
 print(infostring)
@@ -180,20 +177,17 @@ for ctrunc in trunclist:
         lqgbt_lnse.lqgbt(problemname='cylinderwake', N=cyldim,
                          simuN=simucyldim,
                          use_ric_ini=relist[cre-1],
-                         cl_linsys=cl_linsys,
                          NU=NU, Cgrid=Cgrid,
-                         Re=relist[cre], plain_bt=False,
+                         Re=relist[cre],
                          trunc_lqgbtcv=ctrunc,
                          t0=t0, tE=tE, Nts=Nts,
                          nwtn_adi_dict=nwtn_adi_dict,
                          paraoutput=False, multiproc=True,
-                         comp_freqresp=False, comp_stepresp=False,
                          pymess=pymess,
                          bccontrol=bccontrol, gamma=gamma,
-                         # closed_loop='red_output_fb',
-                         # closed_loop=None,
                          plotit=False,
                          whichinival=whichinival, tpp=tpp,
+                         dudict=dudict,
                          hinf=hinf,
                          trytofail=trytofail, ttf_npcrdstps=ttf_npcrdstps,
                          closed_loop=closed_loop,

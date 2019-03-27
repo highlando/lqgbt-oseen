@@ -20,10 +20,9 @@ checktheres = True  # whether to check the Riccati Residuals
 checktheres = False
 
 switchonsfb = 0  # 1.5
-addinputd = True
 
 
-def _get_inputd(ta=None, tb=None, uvec=None, ampltd=1.):
+def _get_inputd(ta=None, tb=None, uvec=None, ampltd=1., **kwargs):
 
     intvl = tb - ta
 
@@ -77,6 +76,7 @@ def lqgbt(problemname='drivencavity',
           nwtn_adi_dict=None,
           pymess_dict=None,
           whichinival='sstate',
+          dudict=dict(addinputd=False),
           tpp=5.,  # time to add on Stokes inival for `sstokes++`
           comp_freqresp=False, comp_stepresp='nonlinear',
           closed_loop=False, multiproc=False,
@@ -310,12 +310,11 @@ def lqgbt(problemname='drivencavity',
     trange = np.linspace(t0, tE, Nts)
     DT = (tE - t0)/(Nts-1)
 
-    if addinputd:
-        ampltd = 0.01
-        print('input is disturbed in [0, 1] to trigger instabilities')
-        print('ampltd used: {0}'.format(ampltd))
-        inputd = _get_inputd(ta=0., tb=1., ampltd=ampltd,
-                             uvec=np.array([1, -1]).reshape((2, 1)))
+    if dudict['addinputd']:
+        print('u disturbed in [{0}, {1}]'.format(dudict['ta'], dudict['tb']) +
+              'to trigger instabilities')
+        print('ampltd used: {0}'.format(dudict['ampltd']))
+        inputd = _get_inputd(**dudict)
 
     if closed_loop is not None:
         zwconly = (closed_loop == 'full_state_fb')
@@ -494,7 +493,7 @@ def lqgbt(problemname='drivencavity',
                               actualist=[])
 
     else:
-        if addinputd:
+        if dudict['addinputd']:
             def fv_tmdp(time=None, curvel=None, inputd=None, b_mat=None, **kw):
                 return b_mat.dot(inputd(time)), {}
             fv_tmdp_params = dict(b_mat=b_mat, inputd=inputd)
@@ -533,6 +532,11 @@ def lqgbt(problemname='drivencavity',
                        pfileprfx='results/p_'+outstr)
 
     timediscstr = 't{0}{1}Nts{2}'.format(t0, tE, Nts)
+    if dudict['addinputd']:
+        inputdstr = 'ab{0}{1}A{2}'.format(dudict['ta'], dudict['tb'],
+                                          dudict['ampltd'])
+    else:
+        inputdstr = ''
 
     # ### CHAP: the simulation
     if closed_loop == 'red_output_fb' and not simuN == N:
@@ -576,7 +580,8 @@ def lqgbt(problemname='drivencavity',
 
         fv_rofb_dict.update(dict(ystar=sc_mat.dot(retnssnse)))
         shortstring = (get_fdstr(Re, short=True) + shortclstr +
-                       shorttruncstr + shortinivstr + shortfailstr)
+                       shorttruncstr + shortinivstr + shortfailstr +
+                       inputdstr)
 
     else:
         simuxtrstr = ''
