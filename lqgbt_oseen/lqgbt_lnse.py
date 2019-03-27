@@ -317,9 +317,6 @@ def lqgbt(problemname='drivencavity',
         inputd = _get_inputd(ta=0., tb=1., ampltd=ampltd,
                              uvec=np.array([1, -1]).reshape((2, 1)))
 
-    if closed_loop is False:
-        return
-
     if closed_loop is not None:
         zwconly = (closed_loop == 'full_state_fb')
         comploadricfacsdct = dict(fdstr=fdstr, fmat=f_mat_gramians,
@@ -337,6 +334,9 @@ def lqgbt(problemname='drivencavity',
             tl, tr, _ = btu.\
                 compute_lrbt_transfos(zfc=zwc, zfo=zwo, mmat=mmat,
                                       trunck={'threshh': trunc_lqgbtcv})
+
+    if closed_loop is False:
+        return  # we only want the Gramians
 
     elif closed_loop == 'full_state_fb':
         shortclstr = 'fsfb'
