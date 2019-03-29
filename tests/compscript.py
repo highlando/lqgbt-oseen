@@ -51,7 +51,7 @@ tpp is tpp if whichinival == 'sstokes++' or whichinival == 'snse+d++' else None
 addinputd = True  # whether to add disturbances through the input
 
 scaletest = .5  # for 1. we simulate till 12.
-baset0, basetE, baseNts = 0.0, 12.0, 2.4e3+1
+baset0, basetE, baseNts = 0.0, 12.0, 4.8e3+1
 dudict = dict(addinputd=addinputd, ta=0., tb=1., ampltd=0.01,
               uvec=np.array([1, -1]).reshape((2, 1)))
 
@@ -181,7 +181,7 @@ for ctrunc in trunclist:
                          trunc_lqgbtcv=ctrunc,
                          t0=t0, tE=tE, Nts=Nts,
                          nwtn_adi_dict=nwtn_adi_dict,
-                         paraoutput=True, multiproc=True,
+                         paraoutput=False, multiproc=True,
                          pymess=pymess,
                          bccontrol=bccontrol, gamma=gamma,
                          plotit=False,
