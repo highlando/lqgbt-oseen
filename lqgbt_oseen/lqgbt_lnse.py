@@ -154,7 +154,8 @@ def lqgbt(problemname='drivencavity',
     os.chdir('..')
 
     femp, stokesmatsc, rhsd_vfrc, rhsd_stbc \
-        = dnsps.get_sysmats(problem=problemname, N=N, Re=Re,
+        = dnsps.get_sysmats(problem=problemname, Re=Re,
+                            meshparams=dict(refinement_level=N),
                             bccontrol=bccontrol, scheme='TH')
 
     # casting some parameters
@@ -312,7 +313,7 @@ def lqgbt(problemname='drivencavity',
 
     if dudict['addinputd']:
         print('u disturbed in [{0}, {1}]'.format(dudict['ta'], dudict['tb']) +
-              'to trigger instabilities')
+              ' to trigger instabilities')
         print('ampltd used: {0}'.format(dudict['ampltd']))
         inputd = _get_inputd(**dudict)
 
@@ -510,7 +511,7 @@ def lqgbt(problemname='drivencavity',
                    clearprvdata=True,
                    fv_tmdp=fv_tmdp,
                    cv_mat=c_mat,  # needed for the output feedback
-                   comp_nonl_semexp=True,
+                   treat_nonl_explct=True,
                    fv_tmdp_params=fv_tmdp_params,
                    fv_tmdp_memory=fv_tmdp_memory,
                    return_dictofvelstrs=True)

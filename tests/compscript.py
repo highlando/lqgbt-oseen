@@ -9,8 +9,6 @@ import getopt
 # to compute stabilizing initial values for higher Re numbers
 pymess = True
 pymess = False
-relist = [None, 5e1, 7.5e1, 1e2, 1.2e2]
-relist = [5e1, 7.5e1]
 relist = [None, 5e1, 7.5e1, 9e1, 1e2]
 max_re_only = True  # consider only the last Re for the simu
 max_re_only = False
@@ -31,8 +29,8 @@ Cgrid = (3, 1)  # grid of the sensors -- defines the C
 # to what extend we perturb the initial value
 perturbpara = 1e-5
 # whether we use a perturbed system
-trytofail = False
 trytofail = True
+trytofail = False
 ttf_npcrdstps = 6
 
 # closed loop def
@@ -50,7 +48,7 @@ whichinival, tpp = 'snse+d++', 2.  # a developed state starting from sstokes
 whichinival = 'sstate+d'  # sstate plus perturbation
 tpp is tpp if whichinival == 'sstokes++' or whichinival == 'snse+d++' else None
 # number of time steps -- also define the lag in the control application
-addinputd = False  # whether to add disturbances through the input
+addinputd = True  # whether to add disturbances through the input
 
 scaletest = .5  # for 1. we simulate till 12.
 baset0, basetE, baseNts = 0.0, 12.0, 2.4e3+1
@@ -70,11 +68,8 @@ options, rest = getopt.getopt(sys.argv[1:], '',
                                'pymess=',
                                'truncat='])
 for opt, arg in options:
-    if opt == '--obsperturb':
-        trytofail = int(arg)
-        trytofail = np.bool(arg)
     if opt == '--pymess':
-        pymess = np.bool(arg)
+        pymess = np.bool(np.int(arg))
     elif opt == '--ttf_npcrdstps':
         ttf_npcrdstps = int(arg)
     elif opt == '--iniperturb':
@@ -123,6 +118,11 @@ if closed_loop == 'hinf_red_output_fb':
 else:
     hinf = False
 
+if ttf_npcrdstps > 0:
+    trytofail = True
+if ttf_npcrdstps == -1:
+    trytofail = False
+
 # print reynolds number and discretization lvl
 infostring = ('Re             = {0}'.format(relist) +
               '\ncyldim         = {0}'.format(cyldim) +
@@ -138,7 +138,6 @@ infostring = ('Re             = {0}'.format(relist) +
 
 print(infostring)
 
-print(infostring)
 if pymess:
     nwtn_adi_dict = dict(verbose=True, maxit=45, aditol=1e-8,
                          nwtn_res2_tol=4e-8, linesearch=True)
@@ -182,7 +181,7 @@ for ctrunc in trunclist:
                          trunc_lqgbtcv=ctrunc,
                          t0=t0, tE=tE, Nts=Nts,
                          nwtn_adi_dict=nwtn_adi_dict,
-                         paraoutput=False, multiproc=True,
+                         paraoutput=True, multiproc=True,
                          pymess=pymess,
                          bccontrol=bccontrol, gamma=gamma,
                          plotit=False,

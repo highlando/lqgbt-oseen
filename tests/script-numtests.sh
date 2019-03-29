@@ -11,17 +11,18 @@
 
 # python3 compscript.py --iniperturb=0.0001 --re=100 --closed_loop=4
 
-RE=100
+RE=60
 CYLDIM=3
-INIPERTURB=0.0001
+INIPERTURB=0.0
 TRUNCAT=0.01
-# FBTYPE=1
-FBTYPE=4
-PYMESS=1
-NUMPICARDS=6
-SCALETEST=1.
+FBTYPE=-1
+# FBTYPE=3
+PYMESS=0
+NUMPICARDS=-1
+SCALETEST=.04
 
 LOGFILE=logs/N${CYLDIM}re${RE}fbt${FBTYPE}pm${PYMESS}nps${NUMPICARDS}trnc${TRUNCAT}sspd${INIPERTURB}st${SCALETEST}
 
 echo tail -f $LOGFILE
-python3 compscript.py --obsperturb=1 --iniperturb=${INIPERTURB} --re=${RE} --closed_loop=${FBTYPE}  --ttf_npcrdstps=${NUMPICARDS} --pymess=${PYMESS} --scaletest=${SCALETEST} --truncat=${TRUNCAT} --cyldim=${CYLDIM} # >> $LOGFILE
+source addpypath.sh
+python3 compscript.py --iniperturb=${INIPERTURB} --re=${RE} --closed_loop=${FBTYPE}  --ttf_npcrdstps=${NUMPICARDS} --pymess=${PYMESS} --scaletest=${SCALETEST} --truncat=${TRUNCAT} --cyldim=${CYLDIM}  # >> $LOGFILE
