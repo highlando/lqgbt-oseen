@@ -91,8 +91,8 @@ for opt, arg in options:
                 closed_loop = 'red_output_fb'
         elif np.int(arg) == 2:
                 closed_loop = 'full_output_fb'
-        elif np.int(arg) == 3:
-                closed_loop = 'red_sdre_fb'
+        # elif np.int(arg) == 3:
+        #         closed_loop = 'red_sdre_fb'
         elif np.int(arg) == 4:
                 closed_loop = 'hinf_red_output_fb'
 
