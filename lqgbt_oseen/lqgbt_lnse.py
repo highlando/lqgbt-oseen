@@ -476,6 +476,9 @@ def lqgbt(problemname='drivencavity',
             actua = b_mat.dot(obs_ck.dot(xk_old))
             memory['actualist'].append(actua)
 
+            if dudict['addinputd']:
+                actua = actua + b_mat.dot(inputd(time))
+
             return actua, memory
 
         fv_rofb_dict = dict(cts=DT,
@@ -529,7 +532,7 @@ def lqgbt(problemname='drivencavity',
                        vfileprfx='results/vel_'+outstr,
                        pfileprfx='results/p_'+outstr)
 
-    timediscstr = 't{0}{1}Nts{2}'.format(t0, tE, Nts)
+    timediscstr = 't{0}{1:.4f}Nts{2}'.format(t0, tE, Nts)
     if dudict['addinputd']:
         inputdstr = 'ab{0}{1}A{2}'.format(dudict['ta'], dudict['tb'],
                                           dudict['ampltd'])
@@ -587,9 +590,9 @@ def lqgbt(problemname='drivencavity',
         shortstring = (get_fdstr(Re, short=True) + shortclstr +
                        shorttruncstr + shortinivstr + shortfailstr)
 
+    ystr = shortstring + simuxtrstr + timediscstr + inputdstr
     try:
-        yscomplist = dou.load_json_dicts(shortstring + simuxtrstr +
-                                         timediscstr)['outsig']
+        yscomplist = dou.load_json_dicts(ystr)['outsig']
         print('loaded the outputs from: ' + shortstring)
 
     except IOError:
@@ -600,7 +603,7 @@ def lqgbt(problemname='drivencavity',
                                         c_mat=sc_mat, load_data=dou.load_npa)
 
     dou.save_output_json(dict(tmesh=trange.tolist(), outsig=yscomplist),
-                         fstring=(shortstring + simuxtrstr + timediscstr))
+                         fstring=(ystr))
 
     if plotit:
         dou.plot_outp_sig(tmesh=trange, outsig=yscomplist)

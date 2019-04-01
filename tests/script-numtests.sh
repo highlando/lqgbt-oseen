@@ -20,7 +20,7 @@ FBTYPE=1  # lqg-bt feedback
 # FBTYPE=4  # hinf-bt feedback
 PYMESS=0
 NUMPICARDS=-1
-SCALETEST=1.
+SCALETEST=.75
 
 LOGFILE=logs/N${CYLDIM}re${RE}fbt${FBTYPE}pm${PYMESS}nps${NUMPICARDS}trnc${TRUNCAT}sspd${INIPERTURB}st${SCALETEST}
 
