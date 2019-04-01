@@ -61,7 +61,7 @@ def nwtn_adi_params():
 
 
 def lqgbt(problemname='drivencavity',
-          N=10, Re=1e2, plain_bt=False, cl_linsys=False,
+          N=10, Re=1e2, cl_linsys=False,
           simuN=None,
           gamma=1.,
           use_ric_ini=None, t0=0.0, tE=1.0, Nts=11,
@@ -124,8 +124,6 @@ def lqgbt(problemname='drivencavity',
         (dim Y = 2*Cgrid[0]*Cgrid[1]), defaults to `(3, 1)`
     problemname : string, optional
         what problem to be solved, 'cylinderwake' or 'drivencavity'
-    plain_bt : boolean, optional
-        whether to try simple *balanced truncation*, defaults to False
     Re : real, optional
         Reynolds number, defaults to `1e2`
     t0, tE, Nts : real, real, int, optional
@@ -139,10 +137,8 @@ def lqgbt(problemname='drivencavity',
         defaults to `None`
     """
 
-    typprb = 'BT' if plain_bt else 'LQG-BT'
-
-    print('\n ### We solve the {0} problem for the {1} at Re={2} ###\n'.
-          format(typprb, problemname, Re))
+    print('\n ### We gonna regulate the {0} at Re={1} ###\n'.
+          format(problemname, Re))
     print(' ### The control is weighted with Gamma={0}'.format(gamma))
 
     # output
@@ -164,9 +160,7 @@ def lqgbt(problemname='drivencavity',
 #
 # Prepare for control
 #
-    prbstr = '_bt' if plain_bt else '_lqgbt'
-    if pymess:
-        prbstr = prbstr + '__pymess'
+    prbstr = '_pymess' if pymess else ''
 
     contsetupstr = 'NV{0}_B{3}_C{1[0]}{1[1]}_palpha{2}'.\
         format(NV, Cgrid, palpha, NU)
@@ -335,6 +329,7 @@ def lqgbt(problemname='drivencavity',
                 compute_lrbt_transfos(zfc=zwc, zfo=zwo, mmat=mmat,
                                       trunck={'threshh': trunc_lqgbtcv})
 
+
     if closed_loop is False:
         return  # we only want the Gramians
 
@@ -397,6 +392,8 @@ def lqgbt(problemname='drivencavity',
 
         ak_mat, bk_mat, ck_mat, xok, xck = nru.\
             get_prj_model(mmat=mmat, fmat=f_mat_gramians, jmat=jmat,
+                          zwo=zwo, zwc=zwc,
+                          tl=tl, tr=tr,
                           bmat=b_mat_rgscld, cmat=c_mat_reg)
         print('Controller has dimension: {0}'.format(ak_mat.shape[0]))
 

@@ -179,28 +179,10 @@ def get_rl_projections(zwc=None, zwo=None,
     return tl, tr
 
 
-def get_prj_model(truncstr=None, fdstr=None,
-                  hinf=False,
-                  matsdict={},
-                  abconly=False,
+def get_prj_model(abconly=False,
                   mmat=None, fmat=None, jmat=None, bmat=None, cmat=None,
-                  zwo=None, zwc=None, pymess=False,
-                  tl=None, tr=None,
-                  return_tltr=True,
-                  cmpricfacpars={}, cmprlprjpars={}):
-
-    hinfgamma = None
-
-    if tl is None or tr is None:
-        tl, tr = get_rl_projections(fdstr=fdstr, truncstr=truncstr,
-                                    zwc=zwc, zwo=zwo,
-                                    fmat=fmat, mmat=mmat, jmat=jmat,
-                                    cmat=cmat, bmat=bmat,
-                                    pymess=pymess, hinf=hinf,
-                                    cmpricfacpars=cmpricfacpars,
-                                    **cmprlprjpars)
-
-    tltristhere = True
+                  zwo=None, zwc=None,
+                  tl=None, tr=None):
 
     ak_mat = np.dot(tl.T, fmat.dot(tr))
     ck_mat = cmat.dot(tr)
@@ -209,46 +191,11 @@ def get_prj_model(truncstr=None, fdstr=None,
     if abconly:
         return ak_mat, bk_mat, ck_mat
 
-    else:
-        print('loading/computing the reduced Gramians... ')
-        try:
-            if debug:
-                raise IOError
-            xok = dou.load_npa(fdstr+truncstr+'__xok')
-            xck = dou.load_npa(fdstr+truncstr+'__xck')
-            print('loaded' + fdstr + truncstr + '__xck/xok')
-            if hinf:
-                hinfgamma = dou.load_npa(fdstr+'__gamma')
-                hinfgamma = hinfgamma.flatten()[0]
-                print('loaded' + fdstr + '__gamma: {0}'.format(hinfgamma))
-        except IOError:
-            if zwo is None and zwc is None:
-                zwc, zwo, hinfgamma = \
-                    get_ric_facs(fdstr=fdstr, fmat=fmat, mmat=mmat, jmat=jmat,
-                                 cmat=cmat, bmat=bmat, hinf=hinf,
-                                 pymess=pymess, **cmpricfacpars)
+    tltm, trtm = tl.T*mmat, tr.T*mmat
+    xok = np.dot(np.dot(tltm, zwo), np.dot(zwo.T, tltm.T))
+    xck = np.dot(np.dot(trtm, zwc), np.dot(zwc.T, trtm.T))
 
-            if tltristhere:
-                pass
-            else:
-                tl, tr = get_rl_projections(fdstr=fdstr, truncstr=truncstr,
-                                            mmat=mmat, zwc=zwc, zwo=zwo,
-                                            hinf=hinf,
-                                            **cmprlprjpars)
-                tltristhere = True
-
-            tltm, trtm = tl.T*mmat, tr.T*mmat
-            xok = np.dot(np.dot(tltm, zwo), np.dot(zwo.T, tltm.T))
-            xck = np.dot(np.dot(trtm, zwc), np.dot(zwc.T, trtm.T))
-            dou.save_npa(xok, fdstr+truncstr+'__xok')
-            dou.save_npa(xck, fdstr+truncstr+'__xck')
-            dou.save_npa(np.array([hinfgamma]), fdstr+'__gamma')
-
-        if return_tltr:
-            return ak_mat, bk_mat, ck_mat, xok, xck, hinfgamma, tl, tr
-
-        else:
-            return ak_mat, bk_mat, ck_mat, xok, xck, hinfgamma
+    return ak_mat, bk_mat, ck_mat, xok, xck
 
 
 def get_sdrefb_upd(amat, t, fbtype=None, wnrm=2,

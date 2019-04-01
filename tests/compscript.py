@@ -51,7 +51,7 @@ tpp is tpp if whichinival == 'sstokes++' or whichinival == 'snse+d++' else None
 addinputd = True  # whether to add disturbances through the input
 
 scaletest = .5  # for 1. we simulate till 12.
-baset0, basetE, baseNts = 0.0, 12.0, 4.8e3+1
+baset0, basetE, baseNts = 0.0, 12.0, 12*2**10+1
 dudict = dict(addinputd=addinputd, ta=0., tb=1., ampltd=0.01,
               uvec=np.array([1, -1]).reshape((2, 1)))
 
@@ -72,6 +72,11 @@ for opt, arg in options:
         pymess = np.bool(np.int(arg))
     elif opt == '--ttf_npcrdstps':
         ttf_npcrdstps = int(arg)
+        if ttf_npcrdstps > 0:
+            trytofail = True
+        if ttf_npcrdstps == -1:
+            trytofail = False
+
     elif opt == '--iniperturb':
         whichinival = 'sstate+d'  # override whichinival
         perturbpara = np.float(arg)
@@ -117,11 +122,6 @@ if closed_loop == 'hinf_red_output_fb':
     hinf = True
 else:
     hinf = False
-
-if ttf_npcrdstps > 0:
-    trytofail = True
-if ttf_npcrdstps == -1:
-    trytofail = False
 
 # print reynolds number and discretization lvl
 infostring = ('Re             = {0}'.format(relist) +
