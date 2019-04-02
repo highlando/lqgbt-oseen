@@ -188,7 +188,7 @@ def lqgbt(problemname='drivencavity',
             contsetupstr + prbstr
 
     fdstr = get_fdstr(Re)
-    fdstr = fdstr + '_hinf' if hinf else fdstr
+    # fdstr = fdstr + '_hinf' if hinf else fdstr
     fdstrini = get_fdstr(use_ric_ini) if use_ric_ini is not None else None
 
 #
@@ -328,7 +328,6 @@ def lqgbt(problemname='drivencavity',
             tl, tr, _ = btu.\
                 compute_lrbt_transfos(zfc=zwc, zfo=zwo, mmat=mmat,
                                       trunck={'threshh': trunc_lqgbtcv})
-
 
     if closed_loop is False:
         return  # we only want the Gramians

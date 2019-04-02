@@ -52,7 +52,7 @@ addinputd = True  # whether to add disturbances through the input
 
 scaletest = .5  # for 1. we simulate till 12.
 baset0, basetE, baseNts = 0.0, 12.0, 12*2**10+1
-dudict = dict(addinputd=addinputd, ta=0., tb=1., ampltd=0.01,
+dudict = dict(addinputd=addinputd, ta=0., tb=1., ampltd=0.001,
               uvec=np.array([1, -1]).reshape((2, 1)))
 
 # get command line input and overwrite standard parameters if necessary
@@ -133,7 +133,10 @@ infostring = ('Re             = {0}'.format(relist) +
               '\nini_perturb    = {0}'.format(perturbpara) +
               '\nobs_perturb    = {0}'.format(trytofail) +
               '\nttf_npcrdstps  = {0}'.format(ttf_npcrdstps) +
-              '\nt0, tE, Nts    = {0}, {1}, {2}\n'.format(t0, tE, Nts)
+              '\nt0, tE, Nts    = {0}, {1}, {2}'.format(t0, tE, Nts) +
+              '\nu_d: ta, tb, A = ' +
+              '{0}, {1}, {2}\n'.format(dudict['ta'], dudict['tb'],
+                                       dudict['ampltd'])
               )
 
 print(infostring)
