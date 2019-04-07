@@ -17,11 +17,11 @@ INIPERTURB=0.0
 TRUNCAT=0.01
 # FBTYPE=-1  # no feedback
 # FBTYPE=1  # lqg-bt feedback
+# FBTYPE=1  # lqg-bt feedback
 FBTYPE=4  # hinf-bt feedback
-FBTYPE=1  # lqg-bt feedback
 PYMESS=1
 NUMPICARDS=6
-SCALETEST=1.5
+SCALETEST=2.5
 
 LOGFILE=logs/N${CYLDIM}re${RE}fbt${FBTYPE}pm${PYMESS}nps${NUMPICARDS}trnc${TRUNCAT}sspd${INIPERTURB}st${SCALETEST}
 
