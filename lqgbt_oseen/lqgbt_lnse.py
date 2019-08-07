@@ -199,11 +199,11 @@ def lqgbt(problemname='drivencavity',
                                        jmat=stokesmatsc['J'],
                                        rhsv=b_mat,
                                        transposedprj=True)
-
-    # Rmo = 1./gamma
     Rmhalf = 1./np.sqrt(gamma)
-    b_mat_rgscld = b_mat_reg*Rmhalf
+    b_mat = Rmhalf*b_mat_reg
     # We scale the input matrix to acommodate for input weighting
+    # TODO: we should consider the u mass matrix here
+    # TODO: this regularization shouldn't be necessary
 
     try:
         mc_mat = dou.load_spa(ddir + contsetupstr + '__mc_mat')
@@ -303,7 +303,6 @@ def lqgbt(problemname='drivencavity',
 
 # compute the regulated system
     trange = np.linspace(t0, tE, Nts)
-    DT = (tE - t0)/(Nts-1)
 
     if dudict['addinputd']:
         print('u disturbed in [{0}, {1}]'.format(dudict['ta'], dudict['tb']) +
@@ -314,7 +313,7 @@ def lqgbt(problemname='drivencavity',
     if closed_loop is not None:
         zwconly = (closed_loop == 'full_state_fb')
         comploadricfacsdct = dict(fdstr=fdstr, fmat=f_mat_gramians,
-                                  mmat=mmat, jmat=jmat, bmat=b_mat_rgscld,
+                                  mmat=mmat, jmat=jmat, bmat=b_mat,
                                   cmat=c_mat_reg,
                                   ric_ini_str=fdstrini,
                                   nwtn_adi_dict=nwtn_adi_dict,
@@ -335,7 +334,7 @@ def lqgbt(problemname='drivencavity',
     elif closed_loop == 'full_state_fb':
         shortclstr = 'fsfb'
 
-        mtxb = pru.get_mTzzTtb(stokesmatsc['M'].T, zwc, b_mat_rgscld)
+        mtxb = pru.get_mTzzTtb(stokesmatsc['M'].T, zwc, b_mat)
 
         dimu = b_mat.shape[1]
         zerou = np.zeros((dimu, 1))
@@ -377,7 +376,7 @@ def lqgbt(problemname='drivencavity',
                 actua = -lau.comp_uvz_spdns(tb_mat, btxm_mat, curvel-linv)
                 return actua, {}
 
-        tmdp_fsfb_dict = dict(linv=v_ss_nse, tb_mat=b_mat_rgscld,
+        tmdp_fsfb_dict = dict(linv=v_ss_nse, tb_mat=b_mat,
                               btxm_mat=mtxb.T)
 
         fv_tmdp = fv_tmdp_fullstatefb
@@ -387,13 +386,12 @@ def lqgbt(problemname='drivencavity',
     # ### CHAP: define the reduced output feedback
     elif closed_loop == 'red_output_fb':
         shortclstr = 'hinfrofb' if hinf else 'rofb'
-        DT = (tE - t0)/(Nts-1)
 
         ak_mat, bk_mat, ck_mat, xok, xck = nru.\
             get_prj_model(mmat=mmat, fmat=f_mat_gramians, jmat=jmat,
                           zwo=zwo, zwc=zwc,
                           tl=tl, tr=tr,
-                          bmat=b_mat_rgscld, cmat=c_mat_reg)
+                          bmat=b_mat, cmat=c_mat_reg)
         print('Controller has dimension: {0}'.format(ak_mat.shape[0]))
 
         if hinf:
@@ -413,84 +411,16 @@ def lqgbt(problemname='drivencavity',
             obs_ck = -bk_mat.T.dot(xck)
 
         obs_bk = np.dot(xok, ck_mat.T)
-        sysmatk_inv = np.linalg.inv(np.eye(ak_mat.shape[1]) - DT*amatk)
+        hbystar = obs_bk.dot(c_mat.dot(v_ss_nse))
 
-        def fv_tmdp_redoutpfb(time=None, memory=None,
-                              cury=None, ystar=None,
-                              curvel=None, velstar=None, c_mat=None,
-                              ipsysk_mat_inv=None, cts=None,
-                              obs_bk=None, obs_ck=None,
-                              b_mat=None,
-                              **kw):
-            """realizes a reduced static output feedback as a function
+        def obsdrft(t):
+            return -hbystar
 
-            that can be passed to a solution routine for the
-            unsteady Navier-Stokes equations
-
-            Parameters
-            ----------
-            time : real
-                current time
-            memory : dictionary
-                contains values from previous call, in particular the
-                previous state estimate
-            curvel : (N,1) nparray
-                current velocity. For consistency, the full state can be taken
-                as input. Internally, the observation `y=c_mat*curvel` is used
-            velstar : (N,1) nparray
-                target velocity
-            ipsysk_mat_inv : (K,K) nparray
-                inverse of the system matrix that defines the update
-                of the state estimate
-            obs_bk : (K,NU) nparray
-                input matrix in the observer
-            obs_ck : (NY,K) nparray
-                output matrix in the observer
-            cts : real
-                time step length
-            b_mat : (N,NU) sparse matrix
-                input matrix of the full system
-            c_mat : (NY,N) sparse matrix
-                output matrix of the full system
-
-            Returns
-            -------
-            actua : (N,1) nparray
-                the current actuation
-            memory : dictionary
-                to be passed back in the next timestep
-
-            """
-            xk_old = memory['xk_old']
-            if cury is not None and ystar is not None:
-                ydiff = cury - ystar
-            else:
-                ydiff = c_mat.dot(curvel-velstar)
-                print('sorry, I used the full state for y=Cx ...')
-            # print('ydiff', ydiff)
-            buk = cts*np.dot(obs_bk, ydiff)
-            xk_old = np.dot(ipsysk_mat_inv, xk_old + buk)
-            # print(obs_ck.dot(xk_old))
-            memory['xk_old'] = xk_old
-            actua = b_mat.dot(obs_ck.dot(xk_old))
-            memory['actualist'].append(actua)
-
-            if dudict['addinputd']:
-                actua = actua + b_mat.dot(inputd(time))
-
-            return actua, memory
-
-        fv_rofb_dict = dict(cts=DT,
-                            ystar=c_mat.dot(v_ss_nse),
-                            # velstar=v_ss_nse, c_mat=c_mat_reg,
-                            b_mat=b_mat_rgscld,
-                            obs_bk=obs_bk, obs_ck=obs_ck,
-                            ipsysk_mat_inv=sysmatk_inv)
-
-        fv_tmdp = fv_tmdp_redoutpfb
-        fv_tmdp_params = fv_rofb_dict
-        fv_tmdp_memory = dict(xk_old=np.zeros((tl.shape[1], 1)),
-                              actualist=[])
+        linobsrvdct = dict(ha=amatk, hc=obs_ck, hb=obs_bk,
+                           drift=obsdrft, inihx=np.zeros((obs_bk.shape[1], 1)))
+        fv_tmdp = None
+        fv_tmdp_params = {}
+        soldict.update(dynamic_feedback=True, dyn_fb_dict=linobsrvdct)
 
     else:
         if dudict['addinputd']:
@@ -558,7 +488,6 @@ def lqgbt(problemname='drivencavity',
                                                V=sfemp['V'], NU=NU,
                                                xcomp=sfemp['uspacedep'])
             sb_mat = sb_mat[sinvinds, :][:, :]
-        sb_mat_scld = sb_mat*Rmhalf
 
         smc_mat, sy_masmat = cou.get_mout_opa(odcoo=sfemp['odcoo'],
                                               V=sfemp['V'], mfgrid=Cgrid)
@@ -569,7 +498,6 @@ def lqgbt(problemname='drivencavity',
         soldict.update(sfemp)  # adding V, Q, invinds, diribcs
         soldict.update(srhsd)  # right hand sides
         soldict.update(dict(cv_mat=sc_mat))  # needed for the output feedback
-        fv_rofb_dict.update(dict(b_mat=sb_mat_scld))
 
         saveloadsimuinivstr = ddir + 'cw{0}Re{1}g{2}d{3}_iniv'.\
             format(sNV, Re, gamma, perturbpara)
@@ -578,7 +506,6 @@ def lqgbt(problemname='drivencavity',
                        tpp=tpp, perturbpara=perturbpara,
                        fdstr=saveloadsimuinivstr, retvssnse=True)
 
-        fv_rofb_dict.update(dict(ystar=sc_mat.dot(retnssnse)))
         shortstring = (get_fdstr(Re, short=True) + shortclstr +
                        shorttruncstr + shortinivstr + shortfailstr +
                        inputdstr)
