@@ -32,7 +32,9 @@ def set_inival(whichinival='sstokes', soldict=None, perturbpara=None,
                                                jmat=soldict['J'],
                                                rhsv=perturbini)
         if whichinival == 'sstate+d':
-            soldict.update(dict(iniv=ret_v_ss_nse + reg_pertubini))
+            regpinibcs = np.zeros(ret_v_ss_nse.shape)
+            regpinibcs[soldict['invinds']] = reg_pertubini
+            soldict.update(dict(iniv=ret_v_ss_nse + regpinibcs))
             shortinivstr = 'ssd{0}'.format(perturbpara)
             return shortinivstr, ret_v_ss_nse
 

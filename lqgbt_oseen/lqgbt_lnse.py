@@ -4,6 +4,7 @@ import scipy.sparse as sps
 
 import dolfin_navier_scipy.data_output_utils as dou
 import dolfin_navier_scipy.stokes_navier_utils as snu
+import dolfin_navier_scipy.dolfin_to_sparrays as dts
 import dolfin_navier_scipy.problem_setups as dnsps
 
 import sadptprj_riclyap_adi.lin_alg_utils as lau
@@ -255,9 +256,11 @@ def lqgbt(problemname='drivencavity',
                               clearprvdata=debug, **soldict)
 
     v_ss_nse = vp_ss_nse[0]
+    dbcinds, dbcvals = dts.unroll_dlfn_dbcs(femp['diribcs'])
     (convc_mat, rhs_con,
-     rhsv_conbc) = snu.get_v_conv_conts(prev_v=v_ss_nse, invinds=invinds,
-                                        V=femp['V'], diribcs=femp['diribcs'])
+     rhsv_conbc) = snu.get_v_conv_conts(vvec=v_ss_nse, invinds=invinds,
+                                        dbcinds=dbcinds, dbcvals=dbcvals,
+                                        V=femp['V'])
 
     f_mat = - stokesmatsc['A'] - convc_mat
     # the robin term `arob` has been added before
@@ -411,7 +414,7 @@ def lqgbt(problemname='drivencavity',
             obs_ck = -bk_mat.T.dot(xck)
 
         obs_bk = np.dot(xok, ck_mat.T)
-        hbystar = obs_bk.dot(c_mat.dot(v_ss_nse))
+        hbystar = obs_bk.dot(c_mat.dot(v_ss_nse[invinds]))
 
         def obsdrft(t):
             return -hbystar
@@ -420,6 +423,7 @@ def lqgbt(problemname='drivencavity',
                            drift=obsdrft, inihx=np.zeros((obs_bk.shape[1], 1)))
         fv_tmdp = None
         fv_tmdp_params = {}
+        fv_tmdp_memory = {}
         soldict.update(dynamic_feedback=True, dyn_fb_dict=linobsrvdct)
 
     else:
@@ -540,7 +544,7 @@ def lqgbt(problemname='drivencavity',
 
 if __name__ == '__main__':
     # lqgbt(N=10, Re=500, use_ric_ini=None, plain_bt=False)
-    lqgbt(problemname='cylinderwake', N=3,  # use_ric_ini=2e2,
+    lqgbt(problemname='cylinderwake', N=2,  # use_ric_ini=2e2,
           Re=7.5e1, plain_bt=False,
           t0=0.0, tE=2.0, Nts=1e3+1, palpha=1e-6,
           comp_freqresp=False, comp_stepresp=False)
