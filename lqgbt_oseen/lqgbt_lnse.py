@@ -420,11 +420,12 @@ def lqgbt(problemname='drivencavity',
             return -hbystar
 
         linobsrvdct = dict(ha=amatk, hc=obs_ck, hb=obs_bk,
-                           drift=obsdrft, inihx=np.zeros((obs_bk.shape[1], 1)))
+                           drift=obsdrft, inihx=np.zeros((obs_bk.shape[0], 1)))
         fv_tmdp = None
         fv_tmdp_params = {}
         fv_tmdp_memory = {}
         soldict.update(dynamic_feedback=True, dyn_fb_dict=linobsrvdct)
+        soldict.update(dict(closed_loop=True))
 
     else:
         if dudict['addinputd']:
@@ -447,6 +448,7 @@ def lqgbt(problemname='drivencavity',
                    treat_nonl_explct=True,
                    fv_tmdp_params=fv_tmdp_params,
                    fv_tmdp_memory=fv_tmdp_memory,
+                   b_mat=b_mat,
                    return_dictofvelstrs=True)
 
     # ### CHAP: define the initial values
