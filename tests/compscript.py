@@ -52,7 +52,7 @@ tpp is tpp if whichinival == 'sstokes++' or whichinival == 'snse+d++' else None
 # number of time steps -- also define the lag in the control application
 addinputd = True  # whether to add disturbances through the input
 
-scaletest = .5  # for 1. we simulate till 12.
+scaletest = .1  # for 1. we simulate till 12.
 baset0, basetE, baseNts = 0.0, 12.0, 12*2**10+1
 dudict = dict(addinputd=addinputd, ta=0., tb=1., ampltd=0.001,
               uvec=np.array([1, -1]).reshape((2, 1)))

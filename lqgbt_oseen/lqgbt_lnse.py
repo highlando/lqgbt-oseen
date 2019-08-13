@@ -532,6 +532,7 @@ def lqgbt(problemname='drivencavity',
         dictofvelstrs = snu.solve_nse(**soldict)
 
         yscomplist = cou.extract_output(strdict=dictofvelstrs, tmesh=trange,
+                                        invinds=invinds,
                                         c_mat=sc_mat, load_data=dou.load_npa)
 
     dou.save_output_json(dict(tmesh=trange.tolist(), outsig=yscomplist),
@@ -541,7 +542,7 @@ def lqgbt(problemname='drivencavity',
         dou.plot_outp_sig(tmesh=trange, outsig=yscomplist)
 
     ymys = dou.meas_output_diff(tmesh=trange, ylist=yscomplist,
-                                ystar=c_mat.dot(v_ss_nse))
+                                ystar=c_mat.dot(v_ss_nse[femp['invinds']]))
     print('|y-y*|: {0}'.format(ymys))
 
 if __name__ == '__main__':
