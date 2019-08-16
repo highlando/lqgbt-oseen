@@ -8,7 +8,7 @@ import dolfin_navier_scipy.dolfin_to_sparrays as dts
 import dolfin_navier_scipy.problem_setups as dnsps
 
 import sadptprj_riclyap_adi.lin_alg_utils as lau
-import sadptprj_riclyap_adi.proj_ric_utils as pru
+# import sadptprj_riclyap_adi.proj_ric_utils as pru
 
 import distr_control_fenics.cont_obs_utils as cou
 
@@ -337,7 +337,7 @@ def lqgbt(problemname='drivencavity',
     elif closed_loop == 'full_state_fb':
         shortclstr = 'fsfb'
 
-        mtxb = pru.get_mTzzTtb(stokesmatsc['M'].T, zwc, b_mat)
+        # mtxb = pru.get_mTzzTtb(stokesmatsc['M'].T, zwc, b_mat)
 
         dimu = b_mat.shape[1]
         zerou = np.zeros((dimu, 1))
@@ -379,12 +379,12 @@ def lqgbt(problemname='drivencavity',
                 actua = -lau.comp_uvz_spdns(tb_mat, btxm_mat, curvel-linv)
                 return actua, {}
 
-        tmdp_fsfb_dict = dict(linv=v_ss_nse, tb_mat=b_mat,
-                              btxm_mat=mtxb.T)
+        # tmdp_fsfb_dict = dict(linv=v_ss_nse, tb_mat=b_mat,
+        #                       btxm_mat=mtxb.T)
 
-        fv_tmdp = fv_tmdp_fullstatefb
-        fv_tmdp_params = tmdp_fsfb_dict
-        fv_tmdp_memory = None
+        # fv_tmdp = fv_tmdp_fullstatefb
+        # fv_tmdp_params = tmdp_fsfb_dict
+        # fv_tmdp_memory = None
 
     # ### CHAP: define the reduced output feedback
     elif closed_loop == 'red_output_fb':
@@ -421,33 +421,25 @@ def lqgbt(problemname='drivencavity',
 
         linobsrvdct = dict(ha=amatk, hc=obs_ck, hb=obs_bk,
                            drift=obsdrft, inihx=np.zeros((obs_bk.shape[0], 1)))
-        fv_tmdp = None
-        fv_tmdp_params = {}
-        fv_tmdp_memory = {}
         soldict.update(dynamic_feedback=True, dyn_fb_dict=linobsrvdct)
         soldict.update(dict(closed_loop=True))
-
     else:
-        if dudict['addinputd']:
-            def fv_tmdp(time=None, curvel=None, inputd=None, b_mat=None, **kw):
-                return b_mat.dot(inputd(time)), {}
-            fv_tmdp_params = dict(b_mat=b_mat, inputd=inputd)
-        else:
-            fv_tmdp = None
-            fv_tmdp_params = {}
-        fv_tmdp_memory = {}
         shortclstr = '_'
+
+    if dudict['addinputd']:
+        def fvtd(t):
+            return b_mat.dot(inputd(t))
+    else:
+        fvtd = None
 
     shortclstr = shortclstr + 'pm' if pymess else shortclstr
 
     soldict.update(trange=trange,
                    lin_vel_point=None,
                    clearprvdata=True,
-                   fv_tmdp=fv_tmdp,
+                   fvtd=fvtd,
                    cv_mat=c_mat,  # needed for the output feedback
                    treat_nonl_explct=True,
-                   fv_tmdp_params=fv_tmdp_params,
-                   fv_tmdp_memory=fv_tmdp_memory,
                    b_mat=b_mat,
                    return_dictofvelstrs=True)
 
