@@ -21,8 +21,8 @@ gamma = 1e-0  # e5
 # whether to do bccontrol or distributed
 bccontrol = True
 palpha = 1e-5  # parameter for the Robin penalization
-cyldim = 2
-simucyldim = 2  # the dim model used in the simulation
+cyldim = 3
+simucyldim = 3  # the dim model used in the simulation
 # where to truncate the LQGBT characteristic values
 trunclist = [1e-2]  # , 1e-2, 1e-1, 1e-0]
 # dimension of in and output spaces
@@ -37,10 +37,10 @@ ttf_npcrdstps = 6
 
 # closed loop def
 closed_loop = 'full_state_fb'
-closed_loop = None
 closed_loop = 'hinf_red_output_fb'
 closed_loop = False
 closed_loop = 'red_output_fb'
+closed_loop = None
 # what inival
 whichinival = 'sstokes'  # steady state Stokes solution
 whichinival, tpp = 'sstokes++', .5  # a developed state starting from sstokes
@@ -50,7 +50,7 @@ tpp is tpp if whichinival == 'sstokes++' or whichinival == 'snse+d++' else None
 # number of time steps -- also define the lag in the control application
 addinputd = True  # whether to add disturbances through the input
 
-scaletest = .1  # for 1. we simulate till 12.
+scaletest = .6  # for 1. we simulate till 12.
 baset0, basetE, baseNts = 0.0, 12.0, 12*2**10+1
 dudict = dict(addinputd=addinputd, ta=0., tb=1., ampltd=0.001,
               uvec=np.array([1, -1]).reshape((2, 1)))
