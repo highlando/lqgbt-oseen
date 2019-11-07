@@ -191,7 +191,7 @@ for ctrunc in trunclist:
                          trunc_lqgbtcv=ctrunc,
                          t0=t0, tE=tE, Nts=Nts,
                          nwtn_adi_dict=nwtn_adi_dict,
-                         paraoutput=False, multiproc=False,
+                         paraoutput=False, multiproc=True,
                          pymess=pymess,
                          bccontrol=bccontrol, gamma=gamma,
                          plotit=False,
