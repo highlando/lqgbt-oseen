@@ -6,6 +6,8 @@ external-data/
 logs
 log*
 *.xml
+*.vtu
+*.pvd
 
 # special
 tags
