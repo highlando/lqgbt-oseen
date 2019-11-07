@@ -1,2 +1,2 @@
-MYHOMEPATH=/home/heiland
-export PYTHONPATH="$PYTHONPATH:$MYHOMEPATH/work/code/lqg-oseen"
+MYHOMEPATH=/scratch/vol1/heiland
+export PYTHONPATH="$PYTHONPATH:$MYHOMEPATH/lqgbt-oseen"
