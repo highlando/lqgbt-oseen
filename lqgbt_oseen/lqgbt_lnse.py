@@ -268,6 +268,7 @@ def lqgbt(Re=1e2,
         vp_ss_nse = snu.\
             solve_steadystate_nse(vel_pcrd_stps=npcrdstps, return_vp=True,
                                   vel_start_nwtn=v_init,
+                                  vel_nwtn_tol=4e-14,
                                   clearprvdata=debug, **initsssoldict)
         v_init = vp_ss_nse[0]
         if initre == Re:

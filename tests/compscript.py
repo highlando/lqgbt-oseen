@@ -17,7 +17,7 @@ geodata = meshprfx + '_geo_cntrlbc.json'
 # to compute stabilizing initial values for higher Re numbers
 pymess = True
 pymess = False
-relist = [None, 3e1, 4e1, 6e1]
+relist = [None, 1.5e1, 3e1, 4e1, 6e1]
 max_re_only = True  # consider only the last Re for the simu
 max_re_only = False
 
@@ -56,7 +56,7 @@ tpp is tpp if whichinival == 'sstokes++' or whichinival == 'snse+d++' else None
 # number of time steps -- also define the lag in the control application
 addinputd = True  # whether to add disturbances through the input
 
-scaletest = .3  # for 1. we simulate till 12.
+scaletest = 1.  # for 1. we simulate till 12.
 baset0, basetE, baseNts = 0.0, 12.0, 12*2**10+1
 dudict = dict(addinputd=addinputd, ta=0., tb=1., ampltd=0.001,
               uvec=np.array([1, -1]).reshape((2, 1)))
