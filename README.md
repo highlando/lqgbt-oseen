@@ -1,9 +1,9 @@
-LQG-BT for linearized Navier-Stokes Equations
+Hinf-LQG-BT for linearized Navier-Stokes Equations
 ---------------------------------------------
 
-Python module for application of LQG-balanced truncation for low-order controllers for the stabilization of Navier-Stokes
+Python module for application of (Hinf-)LQG-balanced truncation for low-order controllers for the stabilization of Navier-Stokes equations.
 
-As an example we consider the stabilization of the cylinder wake at moderate Reynoldsnumbers via distributed control and observation.
+As an example we consider the stabilization of the cylinder wake at moderate Reynoldsnumbers via boundary control and distributed observation.
 
 Documentation goes [here](http://lqgbt-for-flow-stabilization.readthedocs.org/en/latest/).
 
