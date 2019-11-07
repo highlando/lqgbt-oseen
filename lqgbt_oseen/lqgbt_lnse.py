@@ -1,10 +1,10 @@
 import os
 import numpy as np
-import scipy.sparse as sps
+# import scipy.sparse as sps
 
 import dolfin_navier_scipy.data_output_utils as dou
 import dolfin_navier_scipy.stokes_navier_utils as snu
-import dolfin_navier_scipy.dolfin_to_sparrays as dts
+# import dolfin_navier_scipy.dolfin_to_sparrays as dts
 import dolfin_navier_scipy.problem_setups as dnsps
 
 import sadptprj_riclyap_adi.lin_alg_utils as lau
@@ -61,14 +61,16 @@ def nwtn_adi_params():
                 check_lyap_res=False))
 
 
-def lqgbt(problemname='drivencavity',
-          N=10, Re=1e2, cl_linsys=False,
-          simuN=None,
+def lqgbt(Re=1e2,
+          # cl_linsys=False,
+          # simuN=None,
+          problemname='cylinderwake',
+          meshparams=None,
           gamma=1.,
           use_ric_ini=None, t0=0.0, tE=1.0, Nts=11,
           NU=3, Cgrid=(3, 1),
           bccontrol=True, palpha=1e-5,
-          npcrdstps=8,
+          npcrdstps=15,
           pymess=False,
           paraoutput=True,
           plotit=True,
@@ -150,10 +152,10 @@ def lqgbt(problemname='drivencavity',
         raise Warning('need "' + ddir + '" subdir for storing the data')
     os.chdir('..')
 
-    femp, stokesmatsc, rhsd_vfrc, rhsd_stbc \
-        = dnsps.get_sysmats(problem=problemname, Re=Re,
-                            meshparams=dict(refinement_level=N),
-                            bccontrol=bccontrol, scheme='TH')
+    femp, stokesmatsc, rhsd = \
+        dnsps.get_sysmats(problem='gen_bccont', Re=Re, bccontrol=True,
+                          scheme='TH', mergerhs=True,
+                          meshparams=meshparams)
 
     # casting some parameters
     invinds, NV = femp['invinds'], len(femp['invinds'])
@@ -171,7 +173,7 @@ def lqgbt(problemname='drivencavity',
     if bccontrol:
         stokesmatsc['A'] = stokesmatsc['A'] + 1./palpha*stokesmatsc['Arob']
         b_mat = 1./palpha*stokesmatsc['Brob']
-        u_masmat = sps.eye(b_mat.shape[1], format='csr')
+        # u_masmat = sps.eye(b_mat.shape[1], format='csr')
         print(' ### Robin-type boundary control palpha={0}'.format(palpha))
 
     if whichinival == 'sstokes++' or whichinival == 'snse+d++':
@@ -206,17 +208,9 @@ def lqgbt(problemname='drivencavity',
     # TODO: we should consider the u mass matrix here
     # TODO: this regularization shouldn't be necessary
 
-    try:
-        mc_mat = dou.load_spa(ddir + contsetupstr + '__mc_mat')
-        y_masmat = dou.load_spa(ddir + contsetupstr + '__y_masmat')
-        print(('loaded `c_mat` from' + ddir + contsetupstr + '...'))
-    except IOError:
-        print('computing `c_mat`...')
-        mc_mat, y_masmat = cou.get_mout_opa(odcoo=femp['odcoo'],
-                                            V=femp['V'], mfgrid=Cgrid)
-        dou.save_spa(mc_mat, ddir + contsetupstr + '__mc_mat')
-        dou.save_spa(y_masmat, ddir + contsetupstr + '__y_masmat')
-
+    print('computing `c_mat`...')
+    mc_mat, y_masmat = cou.get_mout_opa(odcoo=femp['odcoo'],
+                                        V=femp['V'], mfgrid=Cgrid)
     c_mat = lau.apply_massinv(y_masmat, mc_mat, output='sparse')
     # restrict the operators to the inner nodes
 
@@ -240,23 +234,47 @@ def lqgbt(problemname='drivencavity',
     # compute the uncontrolled steady state NSE solution for the linearization
     soldict = {}
     soldict.update(stokesmatsc)  # containing A, J, JT
-    soldict.update(femp)  # adding V, Q, invinds, diribcs
+    soldict.update(femp)  # adding V, Q, invinds, dbcinds, dbcvals
     # soldict.update(rhsd_vfrc)  # adding fvc, fpr
     veldatastr = ddir + problemname + '_Re{0}'.format(Re)
     if bccontrol:
         veldatastr = veldatastr + '__bcc_palpha{0}'.format(palpha)
 
     nu = femp['charlen']/Re
-    soldict.update(fv=rhsd_stbc['fv']+rhsd_vfrc['fvc'],
-                   fp=rhsd_stbc['fp']+rhsd_vfrc['fpr'],
-                   N=N, nu=nu, data_prfx=veldatastr)
+    soldict.update(fv=rhsd['fv'], fp=rhsd['fp'],
+                   nu=nu, data_prfx=veldatastr)
 
-    vp_ss_nse = snu.\
-        solve_steadystate_nse(vel_pcrd_stps=npcrdstps, return_vp=True,
-                              clearprvdata=debug, **soldict)
+    v_init = None
+    initssres = [40, 60, 80]
+    for initre in initssres:
+        if initre >= Re:
+            initre = Re
+        else:
+            print('Initialising the steadystate solution with Re=', initre)
+
+        initssfemp, initssstokesmatsc, initssrhsd = \
+            dnsps.get_sysmats(problem='gen_bccont', Re=initre, bccontrol=True,
+                              scheme='TH', mergerhs=True,
+                              meshparams=meshparams)
+        initssstokesmatsc['A'] = initssstokesmatsc['A'] \
+            + 1./palpha*initssstokesmatsc['Arob']
+        initsssoldict = {}
+        initsssoldict.update(initssstokesmatsc)
+        initsssoldict.update(initssfemp)
+        initssveldatastr = ddir + problemname + '_Re{0}'.format(initre)
+        initssnu = femp['charlen']/initre
+        initsssoldict.update(fv=initssrhsd['fv'], fp=initssrhsd['fp'],
+                             nu=initssnu, data_prfx=initssveldatastr)
+        vp_ss_nse = snu.\
+            solve_steadystate_nse(vel_pcrd_stps=npcrdstps, return_vp=True,
+                                  vel_start_nwtn=v_init,
+                                  clearprvdata=debug, **initsssoldict)
+        v_init = vp_ss_nse[0]
+        if initre == Re:
+            break
 
     v_ss_nse = vp_ss_nse[0]
-    dbcinds, dbcvals = dts.unroll_dlfn_dbcs(femp['diribcs'])
+    dbcinds, dbcvals = femp['dbcinds'], femp['dbcvals']
     (convc_mat, rhs_con,
      rhsv_conbc) = snu.get_v_conv_conts(vvec=v_ss_nse, invinds=invinds,
                                         dbcinds=dbcinds, dbcvals=dbcvals,
@@ -278,7 +296,7 @@ def lqgbt(problemname='drivencavity',
         diffv = v_ss_nse - v_ss_nse_MAF
         convc_mat_MAF, _, _ = \
             snu.get_v_conv_conts(prev_v=v_ss_nse_MAF, invinds=invinds,
-                                 V=femp['V'], diribcs=femp['diribcs'])
+                                 V=femp['V'], dbcinds=dbcinds, dbcvals=dbcvals)
         relnormdiffv = np.sqrt(np.dot(diffv.T, mmat*diffv) /
                                np.dot(v_ss_nse.T, mmat*v_ss_nse))
         print('relative difference to linearization: {0}'.
@@ -444,16 +462,16 @@ def lqgbt(problemname='drivencavity',
                    return_dictofvelstrs=True)
 
     # ### CHAP: define the initial values
-    if simuN == N:
-        shortinivstr, _ = csh.\
-            set_inival(soldict=soldict, whichinival=whichinival, trange=trange,
-                       tpp=tpp, v_ss_nse=v_ss_nse, perturbpara=perturbpara,
-                       fdstr=fdstr)
-        shortstring = (get_fdstr(Re, short=True) + shortclstr +
-                       shorttruncstr + shortinivstr + shortfailstr)
+    # if simuN == N:
+    shortinivstr, _ = csh.\
+        set_inival(soldict=soldict, whichinival=whichinival, trange=trange,
+                   tpp=tpp, v_ss_nse=v_ss_nse, perturbpara=perturbpara,
+                   fdstr=fdstr)
+    shortstring = (get_fdstr(Re, short=True) + shortclstr +
+                   shorttruncstr + shortinivstr + shortfailstr)
 
     outstr = truncstr + '{0}'.format(closed_loop) \
-        + 't0{0}tE{1}Nts{2}N{3}Re{4}'.format(t0, tE, Nts, N, Re)
+        + 't0{0}tE{1}Nts{2}N{3}Re{4}'.format(t0, tE, Nts, NV, Re)
     if paraoutput:
         soldict.update(paraviewoutput=True,
                        vfileprfx='results/vel_'+outstr,
@@ -467,52 +485,52 @@ def lqgbt(problemname='drivencavity',
         inputdstr = ''
 
     # ### CHAP: the simulation
-    if closed_loop == 'red_output_fb' and not simuN == N:
-        simuxtrstr = 'SN{0}'.format(simuN)
-        print('Controller with N={0}, Simulation with N={1}'.format(N, simuN))
-        sfemp, sstokesmatsc, srhsd \
-            = dnsps.get_sysmats(problem=problemname, N=simuN, Re=Re,
-                                bccontrol=bccontrol, scheme='TH',
-                                mergerhs=True)
-        sinvinds, sNV = sfemp['invinds'], sstokesmatsc['A'].shape[0]
-        if bccontrol:
-            sstokesmatsc['A'] = sstokesmatsc['A'] +\
-                1./palpha*sstokesmatsc['Arob']
-            sb_mat = 1./palpha*sstokesmatsc['Brob']
-            u_masmat = sps.eye(b_mat.shape[1], format='csr')
+    # if closed_loop == 'red_output_fb' and not simuN == N:
+    #     simuxtrstr = 'SN{0}'.format(simuN)
+    #     print('Controller with N={0}, Simulation w\ N={1}'.format(N, simuN))
+    #     sfemp, sstokesmatsc, srhsd \
+    #         = dnsps.get_sysmats(problem=problemname, N=simuN, Re=Re,
+    #                             bccontrol=bccontrol, scheme='TH',
+    #                             mergerhs=True)
+    #     sinvinds, sNV = sfemp['invinds'], sstokesmatsc['A'].shape[0]
+    #     if bccontrol:
+    #         sstokesmatsc['A'] = sstokesmatsc['A'] +\
+    #             1./palpha*sstokesmatsc['Arob']
+    #         sb_mat = 1./palpha*sstokesmatsc['Brob']
+    #         u_masmat = sps.eye(b_mat.shape[1], format='csr')
 
-        else:
-            sb_mat, u_masmat = cou.get_inp_opa(cdcoo=sfemp['cdcoo'],
-                                               V=sfemp['V'], NU=NU,
-                                               xcomp=sfemp['uspacedep'])
-            sb_mat = sb_mat[sinvinds, :][:, :]
+    #     else:
+    #         sb_mat, u_masmat = cou.get_inp_opa(cdcoo=sfemp['cdcoo'],
+    #                                            V=sfemp['V'], NU=NU,
+    #                                            xcomp=sfemp['uspacedep'])
+    #         sb_mat = sb_mat[sinvinds, :][:, :]
 
-        smc_mat, sy_masmat = cou.get_mout_opa(odcoo=sfemp['odcoo'],
-                                              V=sfemp['V'], mfgrid=Cgrid)
-        sc_mat = lau.apply_massinv(sy_masmat, smc_mat, output='sparse')
-        sc_mat = sc_mat[:, sinvinds][:, :]
+    #     smc_mat, sy_masmat = cou.get_mout_opa(odcoo=sfemp['odcoo'],
+    #                                           V=sfemp['V'], mfgrid=Cgrid)
+    #     sc_mat = lau.apply_massinv(sy_masmat, smc_mat, output='sparse')
+    #     sc_mat = sc_mat[:, sinvinds][:, :]
 
-        soldict.update(sstokesmatsc)  # containing A, J, JT
-        soldict.update(sfemp)  # adding V, Q, invinds, diribcs
-        soldict.update(srhsd)  # right hand sides
-        soldict.update(dict(cv_mat=sc_mat))  # needed for the output feedback
+    #     soldict.update(sstokesmatsc)  # containing A, J, JT
+    #     soldict.update(sfemp)  # adding V, Q, invinds, diribcs
+    #     soldict.update(srhsd)  # right hand sides
+    #     soldict.update(dict(cv_mat=sc_mat))  # needed for the output feedback
 
-        saveloadsimuinivstr = ddir + 'cw{0}Re{1}g{2}d{3}_iniv'.\
-            format(sNV, Re, gamma, perturbpara)
-        shortinivstr, retnssnse = csh.\
-            set_inival(soldict=soldict, whichinival=whichinival, trange=trange,
-                       tpp=tpp, perturbpara=perturbpara,
-                       fdstr=saveloadsimuinivstr, retvssnse=True)
+    #     saveloadsimuinivstr = ddir + 'cw{0}Re{1}g{2}d{3}_iniv'.\
+    #         format(sNV, Re, gamma, perturbpara)
+    #     shortinivstr, retnssnse = csh.\
+    #         set_inival(soldict=soldict, whichinival=whichinival,
+    #                    trange=trange, tpp=tpp, perturbpara=perturbpara,
+    #                    fdstr=saveloadsimuinivstr, retvssnse=True)
 
-        shortstring = (get_fdstr(Re, short=True) + shortclstr +
-                       shorttruncstr + shortinivstr + shortfailstr +
-                       inputdstr)
+    #     shortstring = (get_fdstr(Re, short=True) + shortclstr +
+    #                    shorttruncstr + shortinivstr + shortfailstr +
+    #                    inputdstr)
 
-    else:
-        simuxtrstr = ''
-        sc_mat = c_mat
-        shortstring = (get_fdstr(Re, short=True) + shortclstr +
-                       shorttruncstr + shortinivstr + shortfailstr)
+    # else:
+    simuxtrstr = ''
+    sc_mat = c_mat
+    shortstring = (get_fdstr(Re, short=True) + shortclstr +
+                   shorttruncstr + shortinivstr + shortfailstr)
 
     ystr = shortstring + simuxtrstr + timediscstr + inputdstr
     try:

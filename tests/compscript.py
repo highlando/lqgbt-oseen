@@ -8,12 +8,18 @@ import getopt
 
 # sys.path.insert(1, '../lqgbt_oseen')
 
+meshprfx = 'mesh/2D-outlet-meshes/karman2D-outlets'
+meshlevel = 1
+meshfile = meshprfx + '_lvl{0}.xml.gz'.format(meshlevel)
+physregs = meshprfx + '_lvl{0}_facet_region.xml.gz'.format(meshlevel)
+geodata = meshprfx + '_geo_cntrlbc.json'
+
 # to compute stabilizing initial values for higher Re numbers
 pymess = True
 pymess = False
-relist = [None, 5e1, 7.5e1, 9e1, 1e2]
-max_re_only = False
+relist = [None, 3e1, 4e1, 6e1]
 max_re_only = True  # consider only the last Re for the simu
+max_re_only = False
 
 # the input regularization parameter
 gamma = 1e-0  # e5
@@ -39,8 +45,8 @@ ttf_npcrdstps = 6
 closed_loop = 'full_state_fb'
 closed_loop = 'hinf_red_output_fb'
 closed_loop = False
-closed_loop = 'red_output_fb'
 closed_loop = None
+closed_loop = 'red_output_fb'
 # what inival
 whichinival = 'sstokes'  # steady state Stokes solution
 whichinival, tpp = 'sstokes++', .5  # a developed state starting from sstokes
@@ -50,7 +56,7 @@ tpp is tpp if whichinival == 'sstokes++' or whichinival == 'snse+d++' else None
 # number of time steps -- also define the lag in the control application
 addinputd = True  # whether to add disturbances through the input
 
-scaletest = .6  # for 1. we simulate till 12.
+scaletest = .3  # for 1. we simulate till 12.
 baset0, basetE, baseNts = 0.0, 12.0, 12*2**10+1
 dudict = dict(addinputd=addinputd, ta=0., tb=1., ampltd=0.001,
               uvec=np.array([1, -1]).reshape((2, 1)))
@@ -176,15 +182,16 @@ for ctrunc in trunclist:
     for cre in range(1, len(relist)):
         import matplotlib.pyplot as plt
         plt.close('all')
-        lqgbt_lnse.lqgbt(problemname='cylinderwake', N=cyldim,
-                         simuN=simucyldim,
+        lqgbt_lnse.lqgbt(meshparams=dict(strtomeshfile=meshfile,
+                                         strtophysicalregions=physregs,
+                                         strtobcsobs=geodata),
                          use_ric_ini=relist[cre-1],
                          NU=NU, Cgrid=Cgrid,
                          Re=relist[cre],
                          trunc_lqgbtcv=ctrunc,
                          t0=t0, tE=tE, Nts=Nts,
                          nwtn_adi_dict=nwtn_adi_dict,
-                         paraoutput=False, multiproc=True,
+                         paraoutput=False, multiproc=False,
                          pymess=pymess,
                          bccontrol=bccontrol, gamma=gamma,
                          plotit=False,
