@@ -1,4 +1,3 @@
-import os
 import numpy as np
 # import scipy.sparse as sps
 
@@ -74,6 +73,7 @@ def lqgbt(Re=1e2,
           pymess=False,
           paraoutput=True,
           plotit=True,
+          ddir='data/',
           trunc_lqgbtcv=1e-6,
           hinf=False,
           nwtn_adi_dict=None,
@@ -143,14 +143,6 @@ def lqgbt(Re=1e2,
     print('\n ### We gonna regulate the {0} at Re={1} ###\n'.
           format(problemname, Re))
     print(' ### The control is weighted with Gamma={0}'.format(gamma))
-
-    # output
-    ddir = 'data/'
-    try:
-        os.chdir(ddir)
-    except OSError:
-        raise Warning('need "' + ddir + '" subdir for storing the data')
-    os.chdir('..')
 
     femp, stokesmatsc, rhsd = \
         dnsps.get_sysmats(problem='gen_bccont', Re=Re, bccontrol=True,
@@ -268,6 +260,7 @@ def lqgbt(Re=1e2,
         vp_ss_nse = snu.\
             solve_steadystate_nse(vel_pcrd_stps=npcrdstps, return_vp=True,
                                   vel_start_nwtn=v_init,
+                                  vel_nwtn_tol=8e-15,
                                   clearprvdata=debug, **initsssoldict)
         v_init = vp_ss_nse[0]
         if initre == Re:
@@ -554,6 +547,7 @@ def lqgbt(Re=1e2,
     ymys = dou.meas_output_diff(tmesh=trange, ylist=yscomplist,
                                 ystar=c_mat.dot(v_ss_nse[femp['invinds']]))
     print('|y-y*|: {0}'.format(ymys))
+
 
 if __name__ == '__main__':
     # lqgbt(N=10, Re=500, use_ric_ini=None, plain_bt=False)

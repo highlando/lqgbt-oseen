@@ -18,8 +18,9 @@ geodata = meshprfx + '_geo_cntrlbc.json'
 pymess = True
 pymess = False
 relist = [None, 3e1, 4e1, 6e1]
-max_re_only = True  # consider only the last Re for the simu
+relist = [None, 15., 20., 25., 30., 35.]
 max_re_only = False
+max_re_only = True  # consider only the last Re for the simu
 
 # the input regularization parameter
 gamma = 1e-0  # e5
@@ -30,7 +31,7 @@ palpha = 1e-5  # parameter for the Robin penalization
 cyldim = 3
 simucyldim = 3  # the dim model used in the simulation
 # where to truncate the LQGBT characteristic values
-trunclist = [1e-2]  # , 1e-2, 1e-1, 1e-0]
+trunclist = [1e-3]  # , 1e-2, 1e-1, 1e-0]
 # dimension of in and output spaces
 NU = 'bcc'
 Cgrid = (3, 1)  # grid of the sensors -- defines the C
@@ -45,8 +46,8 @@ ttf_npcrdstps = 6
 closed_loop = 'full_state_fb'
 closed_loop = 'hinf_red_output_fb'
 closed_loop = False
-closed_loop = None
 closed_loop = 'red_output_fb'
+closed_loop = None
 # what inival
 whichinival = 'sstokes'  # steady state Stokes solution
 whichinival, tpp = 'sstokes++', .5  # a developed state starting from sstokes
@@ -56,7 +57,7 @@ tpp is tpp if whichinival == 'sstokes++' or whichinival == 'snse+d++' else None
 # number of time steps -- also define the lag in the control application
 addinputd = True  # whether to add disturbances through the input
 
-scaletest = .3  # for 1. we simulate till 12.
+scaletest = 1.  # for 1. we simulate till 12.
 baset0, basetE, baseNts = 0.0, 12.0, 12*2**10+1
 dudict = dict(addinputd=addinputd, ta=0., tb=1., ampltd=0.001,
               uvec=np.array([1, -1]).reshape((2, 1)))
@@ -90,17 +91,17 @@ for opt, arg in options:
         scaletest = np.float(arg)
     elif opt == '--closed_loop':
         if np.int(arg) == -1:
-                closed_loop = None
+            closed_loop = None
         elif np.int(arg) == 0:
-                closed_loop = False
+            closed_loop = False
         elif np.int(arg) == 1:
-                closed_loop = 'red_output_fb'
+            closed_loop = 'red_output_fb'
         elif np.int(arg) == 2:
-                closed_loop = 'full_output_fb'
+            closed_loop = 'full_output_fb'
         # elif np.int(arg) == 3:
         #         closed_loop = 'red_sdre_fb'
         elif np.int(arg) == 4:
-                closed_loop = 'hinf_red_output_fb'
+            closed_loop = 'hinf_red_output_fb'
 
     elif opt == '--re':
         simure = np.float(arg)
@@ -111,12 +112,12 @@ for opt, arg in options:
         trunclist = [truncat]
 
     elif opt == '--max_re_only':
-            max_re_only = int(arg)
-            max_re_only = np.bool(max_re_only)
+        max_re_only = int(arg)
+        max_re_only = np.bool(max_re_only)
 
     elif opt == '--cyldim':
-            cyldim = int(arg)
-            simucyldim = cyldim
+        cyldim = int(arg)
+        simucyldim = cyldim
 
 if max_re_only:
     relist = relist[-2:]
