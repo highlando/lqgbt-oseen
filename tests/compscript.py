@@ -1,12 +1,9 @@
 import numpy as np
 
 from lqgbt_oseen import lqgbt_lnse
-# import sys
 import datetime
 import sys
 import getopt
-
-# sys.path.insert(1, '../lqgbt_oseen')
 
 meshprfx = 'mesh/2D-outlet-meshes/karman2D-outlets'
 meshlevel = 1
@@ -14,6 +11,7 @@ meshfile = meshprfx + '_lvl{0}.xml.gz'.format(meshlevel)
 physregs = meshprfx + '_lvl{0}_facet_region.xml.gz'.format(meshlevel)
 geodata = meshprfx + '_geo_cntrlbc.json'
 
+ddir = '/scratch/tbd/dnsdata/'
 # to compute stabilizing initial values for higher Re numbers
 pymess = True
 pymess = False
@@ -196,6 +194,7 @@ for ctrunc in trunclist:
                          pymess=pymess,
                          bccontrol=bccontrol, gamma=gamma,
                          plotit=False,
+                         ddir=ddir,
                          whichinival=whichinival, tpp=tpp,
                          dudict=dudict,
                          hinf=hinf,
