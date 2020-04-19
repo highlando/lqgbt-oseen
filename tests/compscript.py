@@ -16,7 +16,7 @@ ddir = '/scratch/tbd/dnsdata/'
 pymess = True
 pymess = False
 relist = [None, 3e1, 4e1, 6e1]
-relist = [None, 15., 20., 25., 30., 35.]
+relist = [None, 15., 20., 25., 30., 35., 40., 45., 50., 55.]
 max_re_only = False
 max_re_only = True  # consider only the last Re for the simu
 
@@ -34,7 +34,7 @@ trunclist = [1e-3]  # , 1e-2, 1e-1, 1e-0]
 NU = 'bcc'
 Cgrid = (3, 1)  # grid of the sensors -- defines the C
 # to what extend we perturb the initial value
-perturbpara = 1e-5
+perturbpara = 0*1e-5
 # whether we use a perturbed system
 trytofail = True
 trytofail = False
@@ -44,8 +44,8 @@ ttf_npcrdstps = 6
 closed_loop = 'full_state_fb'
 closed_loop = 'hinf_red_output_fb'
 closed_loop = False
-closed_loop = 'red_output_fb'
 closed_loop = None
+closed_loop = 'red_output_fb'
 # what inival
 whichinival = 'sstokes'  # steady state Stokes solution
 whichinival, tpp = 'sstokes++', .5  # a developed state starting from sstokes
@@ -54,10 +54,11 @@ whichinival = 'sstate+d'  # sstate plus perturbation
 tpp is tpp if whichinival == 'sstokes++' or whichinival == 'snse+d++' else None
 # number of time steps -- also define the lag in the control application
 addinputd = True  # whether to add disturbances through the input
+duampltd = 1e-5
 
 scaletest = 1.  # for 1. we simulate till 12.
 baset0, basetE, baseNts = 0.0, 12.0, 12*2**10+1
-dudict = dict(addinputd=addinputd, ta=0., tb=1., ampltd=0.001,
+dudict = dict(addinputd=addinputd, ta=0., tb=1., ampltd=duampltd,
               uvec=np.array([1, -1]).reshape((2, 1)))
 
 # get command line input and overwrite standard parameters if necessary
