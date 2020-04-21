@@ -17,3 +17,10 @@
 
  * RE=50 too
  * going from 50 to 60 --- ADI did not converge
+
+## 2020-04-21 10:16:30+02:00
+
+ * plan: make it run on mechthild
+ * TODO:
+   * branch to include modules
+   * what about the output
