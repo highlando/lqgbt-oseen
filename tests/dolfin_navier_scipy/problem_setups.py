@@ -826,23 +826,20 @@ def gen_bccont_fems(scheme='TH', bccontrol=True, verbose=False,
 
     mvwdbcs = []
     mvwtvs = []
-    try:
-        for cntbc in cntbcsdata['moving walls']:
-            center = np.array(cntbc['geometry']['center'])
-            radius = cntbc['geometry']['radius']
-            if cntbc['type'] == 'circle':
-                omega = 1. if movingwallcntrl else 0.
-                rotcyl = RotatingCircle(degree=2, radius=radius,
-                                        xcenter=center, omega=omega)
-            else:
-                raise NotImplementedError()
-            mvwdbcs.append(dolfin.DirichletBC(V, rotcyl, boundaries,
-                                              cntbc['physical entity']))
-        if not movingwallcntrl:
-            diribcu.extend(mvwdbcs)  # add the moving walls to the diri bcs
-            mvwdbcs = []
-    except KeyError:
-        pass
+    for cntbc in cntbcsdata['moving walls']:
+        center = np.array(cntbc['geometry']['center'])
+        radius = cntbc['geometry']['radius']
+        if cntbc['type'] == 'circle':
+            omega = 1. if movingwallcntrl else 0.
+            rotcyl = RotatingCircle(degree=2, radius=radius,
+                                    xcenter=center, omega=omega)
+        else:
+            raise NotImplementedError()
+        mvwdbcs.append(dolfin.DirichletBC(V, rotcyl, boundaries,
+                                          cntbc['physical entity']))
+    if not movingwallcntrl:
+        diribcu.extend(mvwdbcs)  # add the moving walls to the diri bcs
+        mvwdbcs = []
 
     # Create outflow boundary condition for pressure
     # TODO XXX why zero pressure?? is this do-nothing???
@@ -944,7 +941,7 @@ def _get_cont_shape_fun2D(xi=None, xii=None, element=None, shape='parabola'):
         def value_shape(self):
             return (2,)
 
-    return GenContShape()
+    return GenContShape(element=element)
 
 
 class InflowParabola(dolfin.UserExpression):
@@ -1007,7 +1004,7 @@ class LiftDragSurfForce():
                  outflowds=None, phione=None, phitwo=None):
         self.mesh = V.mesh()
         self.n = dolfin.FacetNormal(self.mesh)
-        # self.Id = dolfin.Identity(self.mesh.geometry().dim())
+        self.I = dolfin.Identity(self.mesh.geometry().dim())
         self.ldds = ldds
         self.outflowds = outflowds
         self.nu = nu
