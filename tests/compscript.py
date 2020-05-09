@@ -110,7 +110,10 @@ for opt, arg in options:
 
     elif opt == '--ini_re':
         inire = np.float(arg)
-        clrelist[0] = inire
+        if inire > 0:
+            clrelist[0] = inire
+        else:
+            clrelist[0] = None
 
     elif opt == '--truncat':
         truncat = np.float(arg)
