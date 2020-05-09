@@ -116,8 +116,7 @@ for opt, arg in options:
             clrelist[0] = None
 
     elif opt == '--truncat':
-        truncat = np.float(arg)
-        trunclist = [truncat]
+        ctrunc = np.float(arg)
 
     elif opt == '--max_re_only':
         max_re_only = int(arg)
@@ -146,7 +145,7 @@ infostring = ('Re             = {0}'.format(relist) +
               '\npymess         = {0}'.format(pymess) +
               '\nclosed_loop    = {0}'.format(closed_loop) +
               '\nH_infty        = {0}'.format(hinf) +
-              '\ntrunc at       = {0}'.format(trunclist[0]) +
+              '\ntrunc at       = {0}'.format(ctrunc) +
               '\nini_perturb    = {0}'.format(perturbpara) +
               '\nobs_perturb    = {0}'.format(trytofail) +
               '\nttf_npcrdstps  = {0}'.format(ttf_npcrdstps) +
@@ -178,7 +177,7 @@ logstr = 'logs/log_cyldim{0}NU{1}C{2[0]}{2[1]}gamma{3}'.\
     format(cyldim, NU, Cgrid, gamma) +\
     'closedloop{0}'.format(closed_loop) +\
     't0{0}tE{1}Nts{2}'.format(t0, tE, Nts) +\
-    'Re{2}to{3}kappa{0}to{1}eps{4}'.format(trunclist[0], trunclist[-1],
+    'Re{2}to{3}kappa{0}to{1}eps{4}'.format(ctrunc, ctrunc,
                                            relist[0], relist[-1], perturbpara)
 
 # if logtofile:
