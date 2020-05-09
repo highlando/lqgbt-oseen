@@ -62,6 +62,7 @@ dudict = dict(addinputd=addinputd, ta=0., tb=1., ampltd=duampltd,
               uvec=np.array([1, -1]).reshape((2, 1)))
 
 # get command line input and overwrite standard parameters if necessary
+clrelist = [None, None]
 options, rest = getopt.getopt(sys.argv[1:], '',
                               ['obsperturb=',
                                'ttf_npcrdstps=',
@@ -71,6 +72,7 @@ options, rest = getopt.getopt(sys.argv[1:], '',
                                'max_re_only=',
                                'cyldim=',
                                're=',
+                               'ini_re=',
                                'pymess=',
                                'truncat='])
 for opt, arg in options:
@@ -104,7 +106,11 @@ for opt, arg in options:
 
     elif opt == '--re':
         simure = np.float(arg)
-        relist = [None, simure]
+        clrelist[1] = simure
+
+    elif opt == '--ini_re':
+        inire = np.float(arg)
+        clrelist[0] = inire
 
     elif opt == '--truncat':
         truncat = np.float(arg)
@@ -120,6 +126,8 @@ for opt, arg in options:
 
 if max_re_only:
     relist = relist[-2:]
+if clrelist[1] is not None:
+    relist = clrelist
 
 t0, tE, Nts = 0.0, scaletest*basetE, np.int(scaletest*baseNts)
 
