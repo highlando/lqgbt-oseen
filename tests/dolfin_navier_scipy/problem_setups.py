@@ -132,10 +132,16 @@ def get_sysmats(problem='gen_bccont', scheme=None, ppin=None,
         Re = charvel*femp['charlen']/nu
 
     if bccontrol:
-        cbshapefuns = femp['contrbcsshapefuns']
-        cbclist = femp['contrbcssubdomains']
+        try:
+            cbshapefuns = femp['contrbcsshapefuns']
+            cbclist = femp['contrbcssubdomains']
+            cbds = None
+        except KeyError:
+            cbshapefuns = femp['contrbcsshapefuns']
+            cbclist = None
+            cbds = femp['cntrbcsds']
     else:
-        cbclist, cbshapefuns = None, None
+        cbclist, cbshapefuns, cbds = None, None, None
 
     try:
         outflowds = femp['outflowds']
@@ -143,7 +149,7 @@ def get_sysmats(problem='gen_bccont', scheme=None, ppin=None,
         outflowds = None
 
     stokesmats = dts.get_stokessysmats(femp['V'], femp['Q'], nu,
-                                       cbclist=cbclist,
+                                       cbclist=cbclist, cbds=cbds,
                                        gradvsymmtrc=gradvsymmtrc,
                                        outflowds=outflowds,
                                        cbshapefuns=cbshapefuns,
@@ -181,7 +187,8 @@ def get_sysmats(problem='gen_bccont', scheme=None, ppin=None,
     rhsd_vfrc = dict(fpr=rhsd_vf['fp'], fvc=rhsd_vf['fv'][invinds, ])
     if bccontrol:
         Arob, fvrob = dts.condense_velmatsbybcs(stokesmats['amatrob'],
-                                                femp['diribcs'])
+                                                dbcinds=femp['dbcinds'],
+                                                dbcvals=femp['dbcvals'])
         if np.linalg.norm(fvrob) > 1e-15:
             raise UserWarning('diri and control bc must not intersect')
 
@@ -826,17 +833,20 @@ def gen_bccont_fems(scheme='TH', bccontrol=True, verbose=False,
 
     mvwdbcs = []
     mvwtvs = []
-    for cntbc in cntbcsdata['moving walls']:
-        center = np.array(cntbc['geometry']['center'])
-        radius = cntbc['geometry']['radius']
-        if cntbc['type'] == 'circle':
-            omega = 1. if movingwallcntrl else 0.
-            rotcyl = RotatingCircle(degree=2, radius=radius,
-                                    xcenter=center, omega=omega)
-        else:
-            raise NotImplementedError()
-        mvwdbcs.append(dolfin.DirichletBC(V, rotcyl, boundaries,
-                                          cntbc['physical entity']))
+    try:
+        for cntbc in cntbcsdata['moving walls']:
+            center = np.array(cntbc['geometry']['center'])
+            radius = cntbc['geometry']['radius']
+            if cntbc['type'] == 'circle':
+                omega = 1. if movingwallcntrl else 0.
+                rotcyl = RotatingCircle(degree=2, radius=radius,
+                                        xcenter=center, omega=omega)
+            else:
+                raise NotImplementedError()
+            mvwdbcs.append(dolfin.DirichletBC(V, rotcyl, boundaries,
+                                              cntbc['physical entity']))
+    except KeyError:
+        pass  # no moving walls defined
     if not movingwallcntrl:
         diribcu.extend(mvwdbcs)  # add the moving walls to the diri bcs
         mvwdbcs = []
@@ -872,15 +882,16 @@ def gen_bccont_fems(scheme='TH', bccontrol=True, verbose=False,
         mvwbcinds.extend(list(bcdict.keys()))
 
     # ## Control boundaries
-    bcpes, bcshapefuns = [], []
+    bcpes, bcshapefuns, bcds = [], [], []
     if bccontrol:
         for cbc in cntbcsdata['controlbcs']:
             cpe = cbc['physical entity']
-            cxi, cxii = np.array(cbc['xone']), np.array(cbc['xone'])
+            cxi, cxii = np.array(cbc['xone']), np.array(cbc['xtwo'])
             csf = _get_cont_shape_fun2D(xi=cxi, xii=cxii,
                                         element=V.ufl_element())
             bcshapefuns.append(csf)
             bcpes.append(cpe)
+            bcds.append(dolfin.Measure("ds", subdomain_data=boundaries)(cpe))
 
     # ## Lift Drag Computation
     try:
@@ -898,7 +909,12 @@ def gen_bccont_fems(scheme='TH', bccontrol=True, verbose=False,
     except KeyError:
         outflowds = None  # no domain specified for outflow
 
-    cylfems = dict(V=V,
+    try:
+        odcoo = cntbcsdata['observation-domain-coordinates']
+    except KeyError:
+        odcoo = None
+
+    gbcfems = dict(V=V,
                    Q=Q,
                    dbcinds=dbcinds,
                    dbcvals=dbcvals,
@@ -913,12 +929,14 @@ def gen_bccont_fems(scheme='TH', bccontrol=True, verbose=False,
                    contrbcmeshfunc=boundaries,
                    contrbcspes=bcpes,
                    contrbcsshapefuns=bcshapefuns,
+                   cntrbcsds=bcds,
+                   odcoo=odcoo,
                    fv=fv,
                    fp=fp,
                    charlen=cntbcsdata['characteristic length'],
                    mesh=mesh)
 
-    return cylfems
+    return gbcfems
 
 
 def _get_cont_shape_fun2D(xi=None, xii=None, element=None, shape='parabola'):
@@ -928,8 +946,9 @@ def _get_cont_shape_fun2D(xi=None, xii=None, element=None, shape='parabola'):
 
     class GenContShape(dolfin.UserExpression):
 
-        def __init__(self, degree=2):
+        def __init__(self, degree=2, element=None):
             self.degree = degree
+            self.element = element
             super().__init__()
 
         def eval(self, value, x):
