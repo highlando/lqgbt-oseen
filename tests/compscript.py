@@ -189,29 +189,25 @@ logstr = 'logs/log_cyldim{0}NU{1}C{2[0]}{2[1]}gamma{3}'.\
 print(('{0}'*10 + '\n log started at {1} \n' + '{0}'*10).
       format('X', str(datetime.datetime.now())))
 
-for ctrunc in trunclist:
-    for cre in range(1, len(relist)):
-        import matplotlib.pyplot as plt
-        plt.close('all')
-        lqgbt_lnse.lqgbt(meshparams=dict(strtomeshfile=meshfile,
-                                         strtophysicalregions=physregs,
-                                         strtobcsobs=geodata),
-                         use_ric_ini=relist[cre-1],
-                         NU=NU, Cgrid=Cgrid,
-                         Re=relist[cre],
-                         trunc_lqgbtcv=ctrunc,
-                         t0=t0, tE=tE, Nts=Nts,
-                         nwtn_adi_dict=nwtn_adi_dict,
-                         paraoutput=False, multiproc=False,
-                         pymess=pymess,
-                         bccontrol=bccontrol, gamma=gamma,
-                         plotit=False,
-                         ddir=ddir,
-                         whichinival=whichinival, tpp=tpp,
-                         dudict=dudict,
-                         hinf=hinf,
-                         trytofail=trytofail, ttf_npcrdstps=ttf_npcrdstps,
-                         closed_loop=closed_loop,
-                         perturbpara=perturbpara)
-
-    print(infostring)
+ctrunc = trunclist[-1]
+for cre in range(1, len(relist)):
+    lqgbt_lnse.lqgbt(meshparams=dict(strtomeshfile=meshfile,
+                                     strtophysicalregions=physregs,
+                                     strtobcsobs=geodata),
+                     use_ric_ini=relist[cre-1],
+                     NU=NU, Cgrid=Cgrid,
+                     Re=relist[cre],
+                     trunc_lqgbtcv=ctrunc,
+                     t0=t0, tE=tE, Nts=Nts,
+                     nwtn_adi_dict=nwtn_adi_dict,
+                     paraoutput=False, multiproc=False,
+                     pymess=pymess,
+                     bccontrol=bccontrol, gamma=gamma,
+                     plotit=False,
+                     ddir=ddir,
+                     whichinival=whichinival, tpp=tpp,
+                     dudict=dudict,
+                     hinf=hinf,
+                     trytofail=trytofail, ttf_npcrdstps=ttf_npcrdstps,
+                     closed_loop=closed_loop,
+                     perturbpara=perturbpara)
