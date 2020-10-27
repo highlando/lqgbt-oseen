@@ -10,13 +10,15 @@ meshlevel = 1
 meshfile = meshprfx + '_lvl{0}.xml.gz'.format(meshlevel)
 physregs = meshprfx + '_lvl{0}_facet_region.xml.gz'.format(meshlevel)
 geodata = meshprfx + '_geo_cntrlbc.json'
+plotit = False
+plotit = True
 
 ddir = '/scratch/tbd/dnsdata/'
 # to compute stabilizing initial values for higher Re numbers
 pymess = True
 pymess = False
 relist = [None, 3e1, 4e1, 6e1]
-relist = [None, 15., 20., 25., 30., 35., 40., 45., 50., 55.]
+relist = [None, 15., 20., 25., 30., 35., 40., 45., 50.]  # , 55.]
 max_re_only = False
 max_re_only = True  # consider only the last Re for the simu
 
@@ -44,8 +46,8 @@ ttf_npcrdstps = 6
 closed_loop = 'full_state_fb'
 closed_loop = 'hinf_red_output_fb'
 closed_loop = False
-closed_loop = None
 closed_loop = 'red_output_fb'
+closed_loop = None
 # what inival
 whichinival = 'sstokes'  # steady state Stokes solution
 whichinival, tpp = 'sstokes++', .5  # a developed state starting from sstokes
@@ -201,7 +203,7 @@ for cre in range(1, len(relist)):
                      paraoutput=False, multiproc=False,
                      pymess=pymess,
                      bccontrol=bccontrol, gamma=gamma,
-                     plotit=False,
+                     plotit=plotit,
                      ddir=ddir,
                      whichinival=whichinival, tpp=tpp,
                      dudict=dudict,
