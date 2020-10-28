@@ -262,9 +262,9 @@ def lqgbt(Re=1e2,
                                   vel_start_nwtn=v_init,
                                   vel_nwtn_tol=2e-14,
                                   clearprvdata=debug, **initsssoldict)
-        v_init = vp_ss_nse[0]
         if initre == Re:
             break
+        v_init = vp_ss_nse[0]
 
     v_ss_nse = vp_ss_nse[0]
     dbcinds, dbcvals = femp['dbcinds'], femp['dbcvals']
@@ -285,13 +285,14 @@ def lqgbt(Re=1e2,
         v_ss_nse_MAF = snu.\
             solve_steadystate_nse(vel_pcrd_stps=ttf_npcrdstps, vel_nwtn_stps=0,
                                   vel_pcrd_tol=1e-15,
+                                  vel_start_nwtn=v_init,
                                   clearprvdata=True, **soldict)
-        diffv = v_ss_nse - v_ss_nse_MAF
+        diffv = (v_ss_nse - v_ss_nse_MAF)[invinds]
         convc_mat_MAF, _, _ = \
-            snu.get_v_conv_conts(prev_v=v_ss_nse_MAF, invinds=invinds,
+            snu.get_v_conv_conts(vvec=v_ss_nse_MAF, invinds=invinds,
                                  V=femp['V'], dbcinds=dbcinds, dbcvals=dbcvals)
-        relnormdiffv = np.sqrt(np.dot(diffv.T, mmat*diffv) /
-                               np.dot(v_ss_nse.T, mmat*v_ss_nse))
+        nrmvsqrd = np.dot(v_ss_nse[invinds].T, mmat*v_ss_nse[invinds])
+        relnormdiffv = np.sqrt(np.dot(diffv.T, mmat*diffv)/nrmvsqrd)
         print('relative difference to linearization: {0}'.
               format(relnormdiffv))
         f_mat_gramians = - stokesmatsc['A'] - convc_mat_MAF
@@ -310,10 +311,6 @@ def lqgbt(Re=1e2,
     else:
         truncstr = '_'
         shorttruncstr = '_'
-
-    # cmpricfacpars = dict(multiproc=multiproc, nwtn_adi_dict=nwtn_adi_dict,
-    #                      ric_ini_str=fdstrini)
-    # cmprlprjpars = dict(trunc_lqgbtcv=trunc_lqgbtcv)
 
 # compute the regulated system
     trange = np.linspace(t0, tE, Nts)
