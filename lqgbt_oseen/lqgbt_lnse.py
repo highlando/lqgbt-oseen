@@ -295,7 +295,7 @@ def lqgbt(Re=1e2,
         relnormdiffv = np.sqrt(np.dot(diffv.T, mmat*diffv)/nrmvsqrd)
         print('relative difference to linearization: {0}'.
               format(relnormdiffv))
-        f_mat_gramians = - stokesmatsc['A'] - convc_mat_MAF
+        f_mat_gramians = -stokesmatsc['A'] - convc_mat_MAF
         fdstr = fdstr + '_MAF_ttfnpcrds{0}'.format(ttf_npcrdstps)
         shortfailstr = 'maf{0}'.format(ttf_npcrdstps)
     else:

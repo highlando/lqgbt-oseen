@@ -30,8 +30,9 @@ def get_ric_facs(fmat=None, mmat=None, jmat=None,
         # we can't compute we can only import export
         # other directory than `data`
         # hinfmatstr = 'oc-hinf-data/outputs/' + \
+        from pathlib import Path
         hinfmatstr = 'external-data/oc-hinf-data/outputs/' + \
-            fdstr.partition('/')[2] + '__mats'
+            Path(fdstr).name + '__mats'
         try:
             from scipy.io import loadmat
             lmd = {}
@@ -57,7 +58,7 @@ def get_ric_facs(fmat=None, mmat=None, jmat=None,
         except IOError:
             print('could not load: ' + hinfmatstr + '_output')
             hinfmatstr = 'external-data/oc-hinf-data/' + \
-                fdstr.partition('/')[2] + '__mats'
+                Path(fdstr).name + '__mats'
             from scipy.io import savemat
             zinic = dou.load_npa(ric_ini_str + '__zwc')
             zinio = dou.load_npa(ric_ini_str + '__zwo')
