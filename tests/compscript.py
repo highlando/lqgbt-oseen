@@ -1,9 +1,8 @@
 import numpy as np
+import argparse
 
 from lqgbt_oseen import lqgbt_lnse
 import datetime
-import sys
-import getopt
 
 meshprfx = 'mesh/2D-outlet-meshes/karman2D-outlets'
 meshlevel = 1
@@ -12,6 +11,8 @@ physregs = meshprfx + '_lvl{0}_facet_region.xml.gz'.format(meshlevel)
 geodata = meshprfx + '_geo_cntrlbc.json'
 plotit = False
 plotit = True
+paraoutput = True
+paraoutput = False
 
 ddir = '/scratch/tbd/dnsdata/'
 # to compute stabilizing initial values for higher Re numbers
@@ -38,16 +39,16 @@ Cgrid = (3, 1)  # grid of the sensors -- defines the C
 # to what extend we perturb the initial value
 perturbpara = 0*1e-5
 # whether we use a perturbed system
-trytofail = True
 trytofail = False
+trytofail = True
 ttf_npcrdstps = 6
 
 # closed loop def
 closed_loop = 'full_state_fb'
-closed_loop = 'hinf_red_output_fb'
-closed_loop = False
-closed_loop = 'red_output_fb'
 closed_loop = None
+closed_loop = 'red_output_fb'
+closed_loop = False
+closed_loop = 'hinf_red_output_fb'
 # what inival
 whichinival = 'sstokes'  # steady state Stokes solution
 whichinival, tpp = 'sstokes++', .5  # a developed state starting from sstokes
@@ -58,82 +59,51 @@ tpp is tpp if whichinival == 'sstokes++' or whichinival == 'snse+d++' else None
 addinputd = True  # whether to add disturbances through the input
 duampltd = 1e-5
 
-scaletest = 1.  # for 1. we simulate till 12.
-baset0, basetE, baseNts = 0.0, 12.0, 12*2**10+1
+scaletest = .5  # for 1. we simulate till 12.
+baset0, basetE, baseNts = 0.0, 12.0, 12*2**11+1
 dudict = dict(addinputd=addinputd, ta=0., tb=1., ampltd=duampltd,
               uvec=np.array([1, -1]).reshape((2, 1)))
 
-# get command line input and overwrite standard parameters if necessary
-clrelist = [None, None]
-options, rest = getopt.getopt(sys.argv[1:], '',
-                              ['obsperturb=',
-                               'ttf_npcrdstps=',
-                               'scaletest=',
-                               'iniperturb=',
-                               'closed_loop=',
-                               'max_re_only=',
-                               'cyldim=',
-                               're=',
-                               'ini_re=',
-                               'pymess=',
-                               'truncat='])
-for opt, arg in options:
-    if opt == '--pymess':
-        pymess = np.bool(np.int(arg))
-    elif opt == '--ttf_npcrdstps':
-        ttf_npcrdstps = int(arg)
-        if ttf_npcrdstps > 0:
-            trytofail = True
-        if ttf_npcrdstps == -1:
-            trytofail = False
+parser = argparse.ArgumentParser()
+parser.add_argument("--RE", type=float, help="Reynoldsnumber")
+parser.add_argument("--RE_ini", type=float, help="Re for initialization")
+parser.add_argument("--pymess", type=bool, help="Use pymess", default=pymess)
+parser.add_argument("--ttf_npcrdstps", type=int,
+                    help="Whether/when to break the Picard/Newton iteration",
+                    choices=range(-1, 10), default=-1)
+parser.add_argument("--tE", type=float,
+                    help="final time of the simulation", default=basetE)
+parser.add_argument("--Nts", type=float,
+                    help="number of time steps", default=baseNts)
+parser.add_argument("--scaletest", type=float,
+                    help="scale the test size", default=scaletest)
+parser.add_argument("--truncat", type=float,
+                    help="truncation threshhold for BTs", default=ctrunc)
+parser.add_argument("--strtogramfacs", type=float,
+                    help="file name where the gramian factors are stored")
+parser.add_argument("--iniperturb", type=float,
+                    help="magnitude for the perturbation of the initial value")
+parser.add_argument("--closed_loop", type=int, choices=[-1, 0, 1, 2, 4],
+                    help="-1: None,\n0: False,\n 1: 'red_output_fb'," +
+                    "\n 2:'full_output_fb',\n 4: 'hinf_red_output_fb'")
+args = parser.parse_args()
+print(args)
 
-    elif opt == '--iniperturb':
-        whichinival = 'sstate+d'  # override whichinival
-        perturbpara = np.float(arg)
-    elif opt == '--scaletest':
-        scaletest = np.float(arg)
-    elif opt == '--closed_loop':
-        if np.int(arg) == -1:
-            closed_loop = None
-        elif np.int(arg) == 0:
-            closed_loop = False
-        elif np.int(arg) == 1:
-            closed_loop = 'red_output_fb'
-        elif np.int(arg) == 2:
-            closed_loop = 'full_output_fb'
-        # elif np.int(arg) == 3:
-        #         closed_loop = 'red_sdre_fb'
-        elif np.int(arg) == 4:
-            closed_loop = 'hinf_red_output_fb'
+if args.ttf_npcrdstps > 0:
+    trytofail = True
+if args.ttf_npcrdstps == -1:
+    trytofail = False
+if args.RE is not None:
+    relist = [args.RE_ini, args.RE]
+closedloopdct = {-1: None, 0: False, 1: 'red_output_fb',
+                 2: 'full_output_fb', 4: 'hinf_red_output_fb'}
+if args.closed_loop is not None:
+    closed_loop = closedloopdct[args.closed_loop]
+if args.iniperturb is not None:
+    whichinival = 'sstate+d'  # override whichinival
+    perturbpara = np.float(args.iniperturb)
 
-    elif opt == '--re':
-        simure = np.float(arg)
-        clrelist[1] = simure
-
-    elif opt == '--ini_re':
-        inire = np.float(arg)
-        if inire > 0:
-            clrelist[0] = inire
-        else:
-            clrelist[0] = None
-
-    elif opt == '--truncat':
-        ctrunc = np.float(arg)
-
-    elif opt == '--max_re_only':
-        max_re_only = int(arg)
-        max_re_only = np.bool(max_re_only)
-
-    elif opt == '--cyldim':
-        cyldim = int(arg)
-        simucyldim = cyldim
-
-if max_re_only:
-    relist = relist[-2:]
-if clrelist[1] is not None:
-    relist = clrelist
-
-t0, tE, Nts = 0.0, scaletest*basetE, np.int(scaletest*baseNts)
+t0, tE, Nts = 0.0, args.scaletest*args.tE, np.int(args.scaletest*args.Nts)
 
 if closed_loop == 'hinf_red_output_fb':
     closed_loop = 'red_output_fb'
@@ -144,13 +114,13 @@ else:
 # print reynolds number and discretization lvl
 infostring = ('Re             = {0}'.format(relist) +
               '\ncyldim         = {0}'.format(cyldim) +
-              '\npymess         = {0}'.format(pymess) +
+              '\npymess         = {0}'.format(args.pymess) +
               '\nclosed_loop    = {0}'.format(closed_loop) +
               '\nH_infty        = {0}'.format(hinf) +
-              '\ntrunc at       = {0}'.format(ctrunc) +
+              '\ntrunc at       = {0}'.format(args.truncat) +
               '\nini_perturb    = {0}'.format(perturbpara) +
               '\nobs_perturb    = {0}'.format(trytofail) +
-              '\nttf_npcrdstps  = {0}'.format(ttf_npcrdstps) +
+              '\nttf_npcrdstps  = {0}'.format(args.ttf_npcrdstps) +
               '\nt0, tE, Nts    = {0}, {1}, {2}'.format(t0, tE, Nts) +
               '\nu_d: ta, tb, A = ' +
               '{0}, {1}, {2}\n'.format(dudict['ta'], dudict['tb'],
@@ -197,17 +167,18 @@ for cre in range(1, len(relist)):
                      use_ric_ini=relist[cre-1],
                      NU=NU, Cgrid=Cgrid,
                      Re=relist[cre],
-                     trunc_lqgbtcv=ctrunc,
+                     trunc_lqgbtcv=args.truncat,
                      t0=t0, tE=tE, Nts=Nts,
                      nwtn_adi_dict=nwtn_adi_dict,
-                     paraoutput=False, multiproc=False,
-                     pymess=pymess,
+                     paraoutput=paraoutput, multiproc=False,
+                     pymess=args.pymess,
                      bccontrol=bccontrol, gamma=gamma,
                      plotit=plotit,
                      ddir=ddir,
                      whichinival=whichinival, tpp=tpp,
                      dudict=dudict,
                      hinf=hinf,
-                     trytofail=trytofail, ttf_npcrdstps=ttf_npcrdstps,
+                     strtogramfacs=args.strtogramfacs,
+                     trytofail=trytofail, ttf_npcrdstps=args.ttf_npcrdstps,
                      closed_loop=closed_loop,
                      perturbpara=perturbpara)

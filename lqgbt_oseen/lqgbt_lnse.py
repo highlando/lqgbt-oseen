@@ -9,7 +9,7 @@ import dolfin_navier_scipy.problem_setups as dnsps
 import sadptprj_riclyap_adi.lin_alg_utils as lau
 # import sadptprj_riclyap_adi.proj_ric_utils as pru
 
-import distr_control_fenics.cont_obs_utils as cou
+import distributed_control_fenics.cont_obs_utils as cou
 
 import lqgbt_oseen.nse_riccont_utils as nru
 import lqgbt_oseen.cntrl_simu_helpers as csh
