@@ -17,21 +17,19 @@ INIPERTURB=0.0
 TRUNCAT=0.01
 FBTYPE=4  # hinf-bt feedback
 FBTYPE=2  # full state feedback
-FBTYPE=1  # lqg-bt feedback
 FBTYPE=-1  # no feedback
+FBTYPE=1  # lqg-bt feedback
 # FBTYPE=1  # lqg-bt feedback
-PYMESS=1
 NUMPICARDS=6
 SCALETEST=.3
-NTS=25000
-GRAMSFILE='/scratch/owncloud-gwdg/mpi-projects/18-hinf-lqgbt/results/cylinderwake_re50_hinf.mat%outRegulator.Z%outFilter.Z%gam'
+NTS=36000
 
 LOGFILE=logs/N${CYLDIM}re${RE}fbt${FBTYPE}pm${PYMESS}nps${NUMPICARDS}trnc${TRUNCAT}sspd${INIPERTURB}st${SCALETEST}
 
 echo tail -f $LOGFILE
 source addpypath.sh
 python3 compscript.py --iniperturb=${INIPERTURB} --RE=${RE} --RE_ini=${INIRE} \
-    --closed_loop=${FBTYPE}  --ttf_npcrdstps=${NUMPICARDS} --pymess=${PYMESS} \
-    --scaletest=${SCALETEST} --truncat=${TRUNCAT} --strtogramfacs=${GRAMSFILE} \
+    --closed_loop=${FBTYPE}  --ttf_npcrdstps=${NUMPICARDS} \
+    --scaletest=${SCALETEST} --truncat=${TRUNCAT} \
     --Nts=${NTS}
 # --cyldim=${CYLDIM}  # >> $LOGFILE

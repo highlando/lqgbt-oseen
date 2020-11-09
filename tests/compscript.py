@@ -46,8 +46,8 @@ ttf_npcrdstps = 6
 closed_loop = 'full_state_fb'
 closed_loop = None
 closed_loop = 'red_output_fb'
-closed_loop = False
 closed_loop = 'hinf_red_output_fb'
+closed_loop = False
 # what inival
 whichinival = 'sstokes'  # steady state Stokes solution
 whichinival, tpp = 'sstokes++', .5  # a developed state starting from sstokes
@@ -66,7 +66,7 @@ dudict = dict(addinputd=addinputd, ta=0., tb=1., ampltd=duampltd,
 parser = argparse.ArgumentParser()
 parser.add_argument("--RE", type=float, help="Reynoldsnumber")
 parser.add_argument("--RE_ini", type=float, help="Re for initialization")
-parser.add_argument("--pymess", type=bool, help="Use pymess", default=pymess)
+parser.add_argument("--pymess", help="Use pymess", action='store_true')
 parser.add_argument("--ttf_npcrdstps", type=int,
                     help="Whether/when to break the Picard/Newton iteration",
                     choices=range(-1, 10), default=-1)
@@ -79,7 +79,8 @@ parser.add_argument("--scaletest", type=float,
 parser.add_argument("--truncat", type=float,
                     help="truncation threshhold for BTs", default=ctrunc)
 parser.add_argument("--strtogramfacs", type=str,
-                    help="file name where the gramian factors are stored")
+                    help="info where the gramian factors are stored\n" +
+                    "use like 'fname%zwc.adress%zwo.address[%gamma.address]'")
 parser.add_argument("--iniperturb", type=float,
                     help="magnitude for the perturbation of the initial value")
 parser.add_argument("--closed_loop", type=int, choices=[-1, 0, 1, 2, 4],
@@ -101,6 +102,8 @@ if args.closed_loop is not None:
 if args.iniperturb is not None:
     whichinival = 'sstate+d'  # override whichinival
     perturbpara = np.float(args.iniperturb)
+if args.pymess:
+    pymess = True
 
 t0, tE, Nts = 0.0, args.scaletest*args.tE, np.int(args.scaletest*args.Nts)
 
