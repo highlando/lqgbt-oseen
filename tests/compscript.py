@@ -15,7 +15,6 @@ paraoutput = True
 paraoutput = False
 
 ddir = '/scratch/tbd/dnsdata/'
-# to compute stabilizing initial values for higher Re numbers
 pymess = True
 pymess = False
 relist = [None, 3e1, 4e1, 6e1]
@@ -79,7 +78,7 @@ parser.add_argument("--scaletest", type=float,
                     help="scale the test size", default=scaletest)
 parser.add_argument("--truncat", type=float,
                     help="truncation threshhold for BTs", default=ctrunc)
-parser.add_argument("--strtogramfacs", type=float,
+parser.add_argument("--strtogramfacs", type=str,
                     help="file name where the gramian factors are stored")
 parser.add_argument("--iniperturb", type=float,
                     help="magnitude for the perturbation of the initial value")
@@ -119,7 +118,7 @@ infostring = ('Re             = {0}'.format(relist) +
               '\nH_infty        = {0}'.format(hinf) +
               '\ntrunc at       = {0}'.format(args.truncat) +
               '\nini_perturb    = {0}'.format(perturbpara) +
-              '\nobs_perturb    = {0}'.format(trytofail) +
+              '\nsys_perturb    = {0}'.format(trytofail) +
               '\nttf_npcrdstps  = {0}'.format(args.ttf_npcrdstps) +
               '\nt0, tE, Nts    = {0}, {1}, {2}'.format(t0, tE, Nts) +
               '\nu_d: ta, tb, A = ' +

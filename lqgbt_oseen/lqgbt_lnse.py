@@ -1,5 +1,5 @@
-import numpy as np
 # import scipy.sparse as sps
+import numpy as np
 
 import dolfin_navier_scipy.data_output_utils as dou
 import dolfin_navier_scipy.stokes_navier_utils as snu
@@ -84,6 +84,7 @@ def lqgbt(Re=1e2,
           comp_freqresp=False, comp_stepresp='nonlinear',
           closed_loop=False, multiproc=False,
           perturbpara=1e-3,
+          strtogramfacs=None,
           trytofail=False, ttf_npcrdstps=3):
     """Main routine for LQGBT
 
@@ -330,7 +331,8 @@ def lqgbt(Re=1e2,
                                   nwtn_adi_dict=nwtn_adi_dict,
                                   zwconly=zwconly, hinf=hinf,
                                   multiproc=multiproc, pymess=pymess,
-                                  checktheres=False)
+                                  checktheres=False,
+                                  strtogramfacs=strtogramfacs)
         zwc, zwo, hinfgamma = nru.get_ric_facs(**comploadricfacsdct)
 
         if closed_loop == 'red_output_fb':

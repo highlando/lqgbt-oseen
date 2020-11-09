@@ -1,6 +1,7 @@
 import numpy as np
 import numpy.linalg as npla
 import scipy.linalg as spla
+from scipy.io import loadmat
 
 import dolfin_navier_scipy.data_output_utils as dou
 
@@ -24,7 +25,38 @@ def get_ric_facs(fmat=None, mmat=None, jmat=None,
                  ric_ini_str=None, fdstr=None,
                  nwtn_adi_dict=None,
                  zwconly=False, hinf=False,
-                 multiproc=False, pymess=False, checktheres=False):
+                 multiproc=False, pymess=False, checktheres=False,
+                 strtogramfacs=None):
+
+    if strtogramfacs is not None:
+        try:
+            (fname, zwcaddrs, zwoaddrs, gammadrs) = strtogramfacs.\
+                split(sep='%')
+        except ValueError:
+            (fname, zwcaddrs, zwoaddrs) = strtogramfacs.split(sep='%')
+            gammadrs = None
+        try:
+            lmd = {}
+            loadmat(fname, mdict=lmd)
+        except NotImplementedError:
+            import mat73
+            lmd = mat73.loadmat(fname)
+        lmd = mat73.loadmat(fname)
+        zwc, zwo, hinfgamma = lmd, lmd, lmd
+        for isitthis in zwcaddrs.split(sep='.'):
+            zwc = zwc[isitthis]
+        for isitthis in zwoaddrs.split(sep='.'):
+            zwo = zwo[isitthis]
+        print('loaded the factors from: ', fname)
+        if gammadrs is None:
+            hinfgamma = None
+            print('no gamma loaded')
+        else:
+            for isitthis in gammadrs.split(sep='.'):
+                hinfgamma = hinfgamma[isitthis]
+            hinfgamma = np.atleast_1d(hinfgamma).flatten()[0]
+            print('gamma_opt = {0}'.format(hinfgamma))
+        return zwc, zwo, hinfgamma
 
     if hinf or pymess:
         # we can't compute we can only import export
@@ -34,7 +66,6 @@ def get_ric_facs(fmat=None, mmat=None, jmat=None,
         hinfmatstr = 'external-data/oc-hinf-data/outputs/' + \
             Path(fdstr).name + '__mats'
         try:
-            from scipy.io import loadmat
             lmd = {}
             loadmat(hinfmatstr + '_output', mdict=lmd)
             if not hinf:
