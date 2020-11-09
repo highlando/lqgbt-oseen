@@ -1,6 +1,8 @@
 # import scipy.sparse as sps
 import numpy as np
 
+from pathlib import Path
+
 import dolfin_navier_scipy.data_output_utils as dou
 import dolfin_navier_scipy.stokes_navier_utils as snu
 # import dolfin_navier_scipy.dolfin_to_sparrays as dts
@@ -244,25 +246,33 @@ def lqgbt(Re=1e2,
             initre = Re
         else:
             print('Initialising the steadystate solution with Re=', initre)
-
-        initssfemp, initssstokesmatsc, initssrhsd = \
-            dnsps.get_sysmats(problem='gen_bccont', Re=initre, bccontrol=True,
-                              scheme='TH', mergerhs=True,
-                              meshparams=meshparams)
-        initssstokesmatsc['A'] = initssstokesmatsc['A'] \
-            + 1./palpha*initssstokesmatsc['Arob']
-        initsssoldict = {}
-        initsssoldict.update(initssstokesmatsc)
-        initsssoldict.update(initssfemp)
-        initssveldatastr = ddir + problemname + '_Re{0}'.format(initre)
-        initssnu = femp['charlen']/initre
-        initsssoldict.update(fv=initssrhsd['fv'], fp=initssrhsd['fp'],
-                             nu=initssnu, data_prfx=initssveldatastr)
-        vp_ss_nse = snu.\
-            solve_steadystate_nse(vel_pcrd_stps=npcrdstps, return_vp=True,
-                                  vel_start_nwtn=v_init,
-                                  vel_nwtn_tol=2e-14,
-                                  clearprvdata=debug, **initsssoldict)
+        cachedsss = 'cachedata/' + Path(get_fdstr(initre)).name + '_sssol.npy'
+        try:
+            vp_ss_nse = (np.load(cachedsss),
+                         None)
+            print('loaded sssol from: ', cachedsss)
+        except IOError:
+            print("couldn't load sssol from: ", cachedsss)
+            initssfemp, initssstokesmatsc, initssrhsd = \
+                dnsps.get_sysmats(problem='gen_bccont', Re=initre,
+                                  bccontrol=True, scheme='TH', mergerhs=True,
+                                  meshparams=meshparams)
+            initssstokesmatsc['A'] = initssstokesmatsc['A'] \
+                + 1./palpha*initssstokesmatsc['Arob']
+            initsssoldict = {}
+            initsssoldict.update(initssstokesmatsc)
+            initsssoldict.update(initssfemp)
+            initssveldatastr = ddir + problemname + '_Re{0}'.format(initre)
+            initssnu = femp['charlen']/initre
+            initsssoldict.update(fv=initssrhsd['fv'], fp=initssrhsd['fp'],
+                                 nu=initssnu, data_prfx=initssveldatastr)
+            vp_ss_nse = snu.\
+                solve_steadystate_nse(vel_pcrd_stps=npcrdstps, return_vp=True,
+                                      vel_start_nwtn=v_init,
+                                      vel_nwtn_tol=2e-14,
+                                      clearprvdata=debug, **initsssoldict)
+            np.save(cachedsss, vp_ss_nse[0])
+            print('saved sssol to: ', cachedsss)
         if initre == Re:
             break
         v_init = vp_ss_nse[0]
