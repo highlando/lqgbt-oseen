@@ -20,7 +20,7 @@ FBTYPE=2  # full state feedback
 FBTYPE=-1  # no feedback
 FBTYPE=1  # lqg-bt feedback
 # FBTYPE=1  # lqg-bt feedback
-NUMPICARDS=6
+NUMPICARDS=-1
 SCALETEST=.6
 NTS=25000
 
