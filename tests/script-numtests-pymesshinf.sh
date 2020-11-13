@@ -6,10 +6,10 @@ export PYTHONPATH="$PYTHONPATH:$MYHOMEPATH/work/code/lqgbt-oseen"
 RE=20
 # CYLDIM=3
 INIPERTURB=0.0
-TRUNCAT=0.01
+TRUNCAT=1.0
 FBTYPE=-1  # no feedback
-FBTYPE=1  # lqg-bt feedback
 FBTYPE=2  # full state feedback
+FBTYPE=1  # lqg-bt feedback
 FBTYPE=4  # hinf-bt feedback
 # FBTYPE=1  # lqg-bt feedback
 PYMESS=1
@@ -21,9 +21,10 @@ GRAMSFILE='/scratch/owncloud-gwdg/mpi-projects/18-hinf-lqgbt/results/cylinderwak
 GRAMSFILE='/scratch/owncloud-gwdg/mpi-projects/18-hinf-lqgbt/results/cylinderwake_re20_hinf.mat%outRegulator.Z%outFilter.Z%gam'
 
 # LOGFILE=logs/N${CYLDIM}re${RE}fbt${FBTYPE}pm${PYMESS}nps${NUMPICARDS}trnc${TRUNCAT}sspd${INIPERTURB}st${SCALETEST}
-# echo tail -f $LOGFILE
 
+echo tail -f $LOGFILE
 python3 compscript.py --iniperturb=${INIPERTURB} --RE=${RE} \
     --closed_loop=${FBTYPE} --pymess \
     --scaletest=${SCALETEST} --truncat=${TRUNCAT} --strtogramfacs=${GRAMSFILE} \
     --Nts=${NTS}
+# --cyldim=${CYLDIM}  # >> $LOGFILE

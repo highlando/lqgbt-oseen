@@ -1,5 +1,6 @@
 # import scipy.sparse as sps
 import numpy as np
+import matplotlib.pyplot as plt
 
 from pathlib import Path
 
@@ -347,9 +348,11 @@ def lqgbt(Re=1e2,
 
         if closed_loop == 'red_output_fb':
             import sadptprj_riclyap_adi.bal_trunc_utils as btu
-            tl, tr, _ = btu.\
+            tl, tr, svs = btu.\
                 compute_lrbt_transfos(zfc=zwc, zfo=zwo, mmat=mmat,
                                       trunck={'threshh': trunc_lqgbtcv})
+            plt.semilogy(svs, 'o')
+            plt.show()
 
     if closed_loop is False:
         return  # we only want the Gramians
@@ -415,6 +418,7 @@ def lqgbt(Re=1e2,
                           zwo=zwo, zwc=zwc,
                           tl=tl, tr=tr,
                           bmat=b_mat, cmat=c_mat_reg)
+        print(xok)
         print('Controller has dimension: {0}'.format(ak_mat.shape[0]))
 
         if hinf:
@@ -426,12 +430,22 @@ def lqgbt(Re=1e2,
                                                      ck_mat)
                      - np.dot(bk_mat, np.dot(bk_mat.T, xck).dot(zk)))
             obs_ck = -np.dot(bk_mat.T.dot(xck), zk)
+            evls = np.linalg.eigvals(amatk)
+            plt.plot(np.real(evls), np.imag(evls), 'x')
+            plt.show()
+            print(evls)
+            raise UserWarning()
 
         else:
             print('lqg-feedback!!')
             amatk = (ak_mat - np.dot(np.dot(xok, ck_mat.T), ck_mat) -
                      np.dot(bk_mat, np.dot(bk_mat.T, xck)))
             obs_ck = -bk_mat.T.dot(xck)
+            evls = np.linalg.eigvals(amatk)
+            plt.plot(np.real(evls), np.imag(evls), 'x')
+            plt.show()
+            print(evls)
+            raise UserWarning()
 
         obs_bk = np.dot(xok, ck_mat.T)
         hbystar = obs_bk.dot(c_mat.dot(v_ss_nse[invinds]))
