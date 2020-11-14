@@ -1,5 +1,6 @@
 # import scipy.sparse as sps
 import numpy as np
+import scipy.linalg as spla
 
 from pathlib import Path
 
@@ -419,10 +420,15 @@ def lqgbt(Re=1e2,
 
         if hinf:
             print('hinf red fb: gamma={0}'.format(hinfgamma))
+            scfc = np.sqrt(1-1/hinfgamma**2)  # [2]
+            print('recomputing the reduced obs riccati solution...')
+            rsxok = spla.solve_continuous_are(ak_mat.T, scfc*ck_mat.T,
+                                              bk_mat.dot(bk_mat.T),
+                                              np.eye(ck_mat.shape[0]))
             zk = np.linalg.inv(np.eye(xck.shape[0])
-                               - 1./hinfgamma**2*xok.dot(xck))
+                               - 1./hinfgamma**2*rsxok.dot(xck))
             amatk = (ak_mat
-                     - (1. - 1./hinfgamma**2)*np.dot(np.dot(xok, ck_mat.T),
+                     - (1. - 1./hinfgamma**2)*np.dot(np.dot(rsxok, ck_mat.T),
                                                      ck_mat)
                      - np.dot(bk_mat, np.dot(bk_mat.T, xck).dot(zk)))
             obs_ck = -np.dot(bk_mat.T.dot(xck), zk)
@@ -461,7 +467,8 @@ def lqgbt(Re=1e2,
                    cv_mat=c_mat,  # needed for the output feedback
                    treat_nonl_explct=True,
                    b_mat=b_mat,
-                   return_dictofvelstrs=True)
+                   return_y_list=True,
+                   return_dictofvelstrs=False)
 
     # ### CHAP: define the initial values
     # if simuN == N:
@@ -530,22 +537,26 @@ def lqgbt(Re=1e2,
 
     # else:
     simuxtrstr = ''
-    sc_mat = c_mat
+    # sc_mat = c_mat
     shortstring = (get_fdstr(Re, short=True) + shortclstr +
                    shorttruncstr + shortinivstr + shortfailstr)
 
     ystr = shortstring + simuxtrstr + timediscstr + inputdstr
+
     try:
+        raise IOError()
         yscomplist = dou.load_json_dicts(ystr)['outsig']
         print('loaded the outputs from: ' + shortstring)
 
     except IOError:
         soldict.update(data_prfx=shortstring + simuxtrstr)
-        dictofvelstrs = snu.solve_nse(**soldict)
+        # dictofvelstrs = snu.solve_nse(**soldict)
+        yscomplist = snu.solve_nse(**soldict)
+        yscomplist = [ykk.flatten().tolist() for ykk in yscomplist]
 
-        yscomplist = cou.extract_output(strdict=dictofvelstrs, tmesh=trange,
-                                        invinds=invinds,
-                                        c_mat=sc_mat, load_data=dou.load_npa)
+        # yscomplist = cou.extract_output(strdict=dictofvelstrs, tmesh=trange,
+        #                                 invinds=invinds,
+        #                                 c_mat=sc_mat, load_data=dou.load_npa)
 
     dou.save_output_json(dict(tmesh=trange.tolist(), outsig=yscomplist),
                          fstring=(ystr))
