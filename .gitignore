@@ -3,6 +3,7 @@ results
 testexps
 docs/_build
 external-data/
+tests/cachedata/
 logs
 log*
 *.xml

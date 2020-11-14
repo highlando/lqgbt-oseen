@@ -25,3 +25,9 @@
    * branch to include modules
    * what about the output
    * save it as a png??
+
+## 2020-11-14 11:09:59+01:00
+
+ * TODO: check -- bmat[:, 0] === 0 
+ * branch `debugging`
+   * a.o.: matlab (by Steffen) and python scripts to test the pymess matrices
