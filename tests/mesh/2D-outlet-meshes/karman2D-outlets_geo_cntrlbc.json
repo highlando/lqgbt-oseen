@@ -1,6 +1,6 @@
 {"info": "data taken from karman2D.geo_unrolled",
 	"characteristic length": 0.05,
-	"walls": {"physical entity": [3, 4, 5, 6]},
+	"walls": {"physical entity": [3, 4, 5]},
 	"outflow": {"physical entity": 2},
 	"inflow": {"physical entity": 1,
 		"inward normal": [1.0, 0.0],
