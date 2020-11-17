@@ -19,8 +19,8 @@ pymess = True
 pymess = False
 relist = [None, 3e1, 4e1, 6e1]
 relist = [None, 15., 20., 25., 30., 35., 40., 45., 50.]  # , 55.]
-max_re_only = False
 max_re_only = True  # consider only the last Re for the simu
+max_re_only = False
 
 # the input regularization parameter
 gamma = 1e-0  # e5
