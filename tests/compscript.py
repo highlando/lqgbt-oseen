@@ -18,7 +18,9 @@ ddir = '/scratch/tbd/dnsdata/'
 pymess = True
 pymess = False
 relist = [None, 3e1, 4e1, 6e1]
-relist = [None, 15., 20., 25., 30., 35., 40., 45., 50.]  # , 55.]
+# relist = [None, 15., 20., 25., 30., 35., 40., 45., 50.]  # , 55.]
+# relist = [None, 15., 20., 25., 30., 35., 40., 45., 50., 55., 60.]
+relist = [40., 60.]
 max_re_only = True  # consider only the last Re for the simu
 max_re_only = False
 
@@ -46,8 +48,8 @@ ttf_npcrdstps = 6
 closed_loop = 'full_state_fb'
 closed_loop = None
 closed_loop = 'red_output_fb'
-closed_loop = 'hinf_red_output_fb'
 closed_loop = False
+closed_loop = 'hinf_red_output_fb'
 # what inival
 whichinival = 'sstokes'  # steady state Stokes solution
 whichinival, tpp = 'sstokes++', .5  # a developed state starting from sstokes
@@ -58,7 +60,7 @@ tpp is tpp if whichinival == 'sstokes++' or whichinival == 'snse+d++' else None
 addinputd = True  # whether to add disturbances through the input
 duampltd = 1e-5
 
-scaletest = .5  # for 1. we simulate till 12.
+scaletest = 1.  # for 1. we simulate till 12.
 baset0, basetE, baseNts = 0.0, 12.0, 12*2**11+1
 dudict = dict(addinputd=addinputd, ta=0., tb=1., ampltd=duampltd,
               uvec=np.array([1, -1]).reshape((2, 1)))
@@ -67,9 +69,10 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--RE", type=float, help="Reynoldsnumber")
 parser.add_argument("--RE_ini", type=float, help="Re for initialization")
 parser.add_argument("--pymess", help="Use pymess", action='store_true')
+parser.add_argument("--ttf", help="trytofail", action='store_true')
 parser.add_argument("--ttf_npcrdstps", type=int,
                     help="Whether/when to break the Picard/Newton iteration",
-                    choices=range(-1, 10), default=-1)
+                    choices=range(10), default=ttf_npcrdstps)
 parser.add_argument("--tE", type=float,
                     help="final time of the simulation", default=basetE)
 parser.add_argument("--Nts", type=float,
@@ -89,10 +92,8 @@ parser.add_argument("--closed_loop", type=int, choices=[-1, 0, 1, 2, 4],
 args = parser.parse_args()
 print(args)
 
-if args.ttf_npcrdstps > 0:
+if args.ttf:
     trytofail = True
-if args.ttf_npcrdstps == -1:
-    trytofail = False
 if args.RE is not None:
     relist = [args.RE_ini, args.RE]
 closedloopdct = {-1: None, 0: False, 1: 'red_output_fb',
@@ -112,6 +113,9 @@ if closed_loop == 'hinf_red_output_fb':
     hinf = True
 else:
     hinf = False
+
+if max_re_only:
+    relist = relist[-2:]
 
 # print reynolds number and discretization lvl
 infostring = ('Re             = {0}'.format(relist) +
