@@ -20,7 +20,7 @@ pymess = False
 relist = [None, 3e1, 4e1, 6e1]
 # relist = [None, 15., 20., 25., 30., 35., 40., 45., 50.]  # , 55.]
 # relist = [None, 15., 20., 25., 30., 35., 40., 45., 50., 55., 60.]
-relist = [40., 60.]
+relist = [40., 40., 60.]
 max_re_only = True  # consider only the last Re for the simu
 max_re_only = False
 
@@ -40,8 +40,8 @@ Cgrid = (3, 1)  # grid of the sensors -- defines the C
 # to what extend we perturb the initial value
 perturbpara = 0*1e-5
 # whether we use a perturbed system
-trytofail = False
 trytofail = True
+trytofail = False
 ttf_npcrdstps = 6
 
 # closed loop def
