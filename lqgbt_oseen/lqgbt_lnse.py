@@ -435,6 +435,16 @@ def lqgbt(Re=1e2,
 
         else:
             print('lqg-feedback!!')
+            if pymess:
+                scfc = 1.
+                print('recomputing the reduced gramians!!')
+                rsxok = spla.solve_continuous_are(ak_mat.T, scfc*ck_mat.T,
+                                                  bk_mat.dot(bk_mat.T),
+                                                  np.eye(ck_mat.shape[0]))
+                rsxck = spla.solve_continuous_are(ak_mat, scfc*bk_mat,
+                                                  ck_mat.T.dot(ck_mat),
+                                                  np.eye(bk_mat.T.shape[0]))
+                xok, xck = rsxok, rsxck
             amatk = (ak_mat - np.dot(np.dot(xok, ck_mat.T), ck_mat) -
                      np.dot(bk_mat, np.dot(bk_mat.T, xck)))
             obs_ck = -bk_mat.T.dot(xck)

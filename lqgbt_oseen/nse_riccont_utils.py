@@ -35,28 +35,38 @@ def get_ric_facs(fmat=None, mmat=None, jmat=None,
         except ValueError:
             (fname, zwcaddrs, zwoaddrs) = strtogramfacs.split(sep='%')
             gammadrs = None
-        try:
-            lmd = {}
-            loadmat(fname, mdict=lmd)
-        except NotImplementedError:
-            import mat73
+        if pymess:
+            try:
+                lmd = {}
+                loadmat(fname, mdict=lmd)
+            except NotImplementedError:
+                import mat73
+                lmd = mat73.loadmat(fname)
             lmd = mat73.loadmat(fname)
-        lmd = mat73.loadmat(fname)
-        zwc, zwo, hinfgamma = lmd, lmd, lmd
-        for isitthis in zwcaddrs.split(sep='.'):
-            zwc = zwc[isitthis]
-        for isitthis in zwoaddrs.split(sep='.'):
-            zwo = zwo[isitthis]
-        print('loaded the factors from: ', fname)
-        if gammadrs is None:
-            hinfgamma = None
-            print('no gamma loaded')
+            zwc, zwo, hinfgamma = lmd, lmd, lmd
+            for isitthis in zwcaddrs.split(sep='.'):
+                zwc = zwc[isitthis]
+            for isitthis in zwoaddrs.split(sep='.'):
+                zwo = zwo[isitthis]
+            print('loaded the factors from: ', fname)
+            if gammadrs is None:
+                hinfgamma = None
+                print('no gamma loaded')
+            else:
+                for isitthis in gammadrs.split(sep='.'):
+                    hinfgamma = hinfgamma[isitthis]
+                hinfgamma = np.atleast_1d(hinfgamma).flatten()[0]
+                print('gamma_opt = {0}'.format(hinfgamma))
+            return zwc, zwo, hinfgamma
         else:
-            for isitthis in gammadrs.split(sep='.'):
-                hinfgamma = hinfgamma[isitthis]
-            hinfgamma = np.atleast_1d(hinfgamma).flatten()[0]
-            print('gamma_opt = {0}'.format(hinfgamma))
-        return zwc, zwo, hinfgamma
+            hinfgamma = None
+            zwc = np.load(fname+zwcaddrs)
+            zwo = np.load(fname+zwoaddrs)
+            print('loaded the factors from: {0}+{1}/{2}'.
+                  format(fname, zwcaddrs, zwoaddrs))
+            if gammadrs is not None:
+                hinfgamma = np.load(fname+gammadrs)
+            return zwc, zwo, hinfgamma
 
     if hinf or pymess:
         # we can't compute we can only import export
@@ -109,9 +119,9 @@ def get_ric_facs(fmat=None, mmat=None, jmat=None,
     zinic, zinio = None, None
     if ric_ini_str is not None:
         try:
-            zinic = dou.load_npa(ric_ini_str + '__zwc')
+            zinic = np.load(ric_ini_str + '__zwc')
             if not zwconly:
-                zinio = dou.load_npa(ric_ini_str + '__zwo')
+                zinio = np.load(ric_ini_str + '__zwo')
             print('Initialize Newton ADI by zwc/zwo from ' + ric_ini_str)
         except IOError:
             raise UserWarning('No data at `{0}` (for init of Ric solves)'.
@@ -130,19 +140,19 @@ def get_ric_facs(fmat=None, mmat=None, jmat=None,
             zwo = get_ricadifacs(mmat=mmat.T, amat=fmat.T, jmat=jmat,
                                  bmat=cmat.T, wmat=bmat,
                                  z0=zinio, **adidict)['zfac']
-            dou.save_npa(zwo, fdstr + '__zwo')
+            np.save(zwo, fdstr + '__zwo')
         return
 
     def compcong():
         try:
-            zwc = dou.load_npa(fdstr + '__zwc')
+            zwc = np.load(fdstr + '__zwc')
             print('yeyeyeah, __zwc is there')
         except IOError:
             # XXX: why here bmat*Rmhalf and in zwo not?
             zwc = get_ricadifacs(mmat=mmat, amat=fmat, jmat=jmat,
                                  bmat=bmat, wmat=cmat.T,
                                  z0=zinic, **adidict)['zfac']
-            dou.save_npa(zwc, fdstr + '__zwc')
+            np.save(zwc, fdstr + '__zwc')
         return
 
     if multiproc:

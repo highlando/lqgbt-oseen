@@ -72,7 +72,7 @@ parser.add_argument("--pymess", help="Use pymess", action='store_true')
 parser.add_argument("--ttf", help="trytofail", action='store_true')
 parser.add_argument("--ttf_npcrdstps", type=int,
                     help="Whether/when to break the Picard/Newton iteration",
-                    choices=range(10), default=ttf_npcrdstps)
+                    choices=range(20), default=ttf_npcrdstps)
 parser.add_argument("--tE", type=float,
                     help="final time of the simulation", default=basetE)
 parser.add_argument("--Nts", type=float,
