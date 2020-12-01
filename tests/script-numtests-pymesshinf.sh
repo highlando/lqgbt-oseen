@@ -2,24 +2,25 @@ MYHOMEPATH=/home/heiland
 MYPYPATH=/home/heiland/software/gits/mypys
 export PYTHONPATH="$MYPYPATH/mat_lib_plots:$MYPYPATH/dolfin_navier_scipy"
 export PYTHONPATH="$PYTHONPATH:$MYHOMEPATH/work/code/lqgbt-oseen"
+export PYTHONPATH="$PYTHONPATH:$MYPYPATH/sadptprj_riclyap_adi"
 
-RE=40
-NTS=15000
+RE=60
+NTS=20000
 
 # RE=60
 # NTS=20000
 
 INIPERTURB=0.0
-TRUNCAT=0.01
+TRUNCAT=1.3
 FBTYPE=-1  # no feedback
 FBTYPE=2  # full state feedback
 FBTYPE=1  # lqg-bt feedback
 # FBTYPE=1  # lqg-bt feedback
 PYMESS=1
 FBTYPE=4  # hinf-bt feedback
-NUMPICARDS=18
+NUMPICARDS=20
 
-SCALETEST=1.
+SCALETEST=.25
 
 GRAMSPATH=/scratch/owncloud-gwdg/mpi-projects/18-hinf-lqgbt/results/
 HNFQR=_hinf.mat%outRegulator.Z%outFilter.Z%gam
@@ -35,5 +36,5 @@ python3 compscript.py --iniperturb=${INIPERTURB} --RE=${RE} \
     --closed_loop=${FBTYPE} --pymess \
     --scaletest=${SCALETEST} --truncat=${TRUNCAT} \
     --strtogramfacs=${GRAMSFILE} \
-    --Nts=${NTS} \
-    --ttf --ttf_npcrdstps=${NUMPICARDS}
+    --Nts=${NTS}
+    # --ttf --ttf_npcrdstps=${NUMPICARDS}

@@ -4,7 +4,7 @@ export PYTHONPATH="$MYPYPATH/mat_lib_plots:$MYPYPATH/dolfin_navier_scipy"
 export PYTHONPATH="$PYTHONPATH:$MYHOMEPATH/work/code/lqgbt-oseen"
 export PYTHONPATH="$PYTHONPATH:$MYPYPATH/sadptprj_riclyap_adi"
 
-RE=40
+RE=60
 INIPERTURB=0.0
 TRUNCAT=0.001
 FBTYPE=4  # hinf-bt feedback
@@ -12,8 +12,8 @@ FBTYPE=2  # full state feedback
 FBTYPE=-1  # no feedback
 FBTYPE=1  # lqg-bt feedback
 # FBTYPE=1  # lqg-bt feedback
-NUMPICARDS=15
-SCALETEST=.01
+NUMPICARDS=20
+SCALETEST=1.5
 NTS=15000
 
 GRAMSPATH=/scratch/tbd/dnsdata/
