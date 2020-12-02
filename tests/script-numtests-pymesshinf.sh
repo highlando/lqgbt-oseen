@@ -1,12 +1,12 @@
 MYHOMEPATH=/home/heiland
 MYPYPATH=/home/heiland/software/gits/mypys
-export PYTHONPATH="$MYPYPATH/mat_lib_plots:$MYPYPATH/dolfin_navier_scipy"
+export PYTHONPATH="$MYPYPATH/mat_lib_plots:$MYPYPATH/sadptprj_riclyap_adi"  # $MYPYPATH/dolfin_navier_scipy"
 export PYTHONPATH="$PYTHONPATH:$MYHOMEPATH/work/code/lqgbt-oseen"
 
-RE=20
+RE=60
 # CYLDIM=3
 INIPERTURB=0.0
-TRUNCAT=1.0
+TRUNCAT=0.1
 FBTYPE=-1  # no feedback
 FBTYPE=2  # full state feedback
 FBTYPE=1  # lqg-bt feedback

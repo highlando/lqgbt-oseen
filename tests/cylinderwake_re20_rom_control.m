@@ -19,7 +19,7 @@ fprintf(1, '\n');
 fprintf(1, 'Setup problem data.\n');
 fprintf(1, '-------------------\n');
 
-load('/scratch/owncloud-gwdg/mpi-projects/18-hinf-lqgbt/data/cylinderwake_Re20.0_gamma1.0_NV41700_Bbcc_C31_palpha1e-05__mats.mat');
+load('/scratch/owncloud-gwdg/mpi-projects/18-hinf-lqgbt/data/cylinderwake_Re60.0_gamma1.0_NV41718_Bbcc_C31_palpha1e-05__mats');
 
 % System sizes.
 st = size(mmat, 1);
@@ -34,7 +34,7 @@ fprintf(1, '\n');
 fprintf(1, 'Load Riccati results.\n');
 fprintf(1, '---------------------\n');
 
-load('/scratch/owncloud-gwdg/mpi-projects/18-hinf-lqgbt/results/cylinderwake_re20_hinf');
+load('/scratch/owncloud-gwdg/mpi-projects/18-hinf-lqgbt/results/cylinderwake_re60_hinf');
 
 fprintf(1, '\n');
 

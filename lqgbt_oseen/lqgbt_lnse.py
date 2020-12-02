@@ -418,11 +418,20 @@ def lqgbt(Re=1e2,
                           zwo=zwo, zwc=zwc,
                           tl=tl, tr=tr,
                           bmat=b_mat, cmat=c_mat_reg)
-        print(xok)
         print('Controller has dimension: {0}'.format(ak_mat.shape[0]))
 
         if hinf:
             print('hinf red fb: gamma={0}'.format(hinfgamma))
+            if pymess:
+                from scipy.linalg import solve_continuous_are as care
+                scfc = np.sqrt(1-1/hinfgamma**2)  # [2]
+                rsxok = care(ak_mat.T, scfc*ck_mat.T, bk_mat.dot(bk_mat.T),
+                             np.eye(ck_mat.shape[0]))
+                rsxck = care(ak_mat, scfc*bk_mat, ck_mat.T.dot(ck_mat),
+                             np.eye(bk_mat.shape[1]))
+                xok, xck = rsxok, rsxck
+                print('recomputed the reduced gramians')
+
             zk = np.linalg.inv(np.eye(xck.shape[0])
                                - 1./hinfgamma**2*xok.dot(xck))
             amatk = (ak_mat

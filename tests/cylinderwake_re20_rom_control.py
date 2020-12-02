@@ -18,7 +18,7 @@ print('Setup problem data.')
 print('-------------------')
 
 fname = '/scratch/owncloud-gwdg/mpi-projects/18-hinf-lqgbt/data/' + \
-        'cylinderwake_Re20.0_gamma1.0_NV41700_Bbcc_C31_palpha1e-05__mats.mat'
+        'cylinderwake_Re60.0_gamma1.0_NV41718_Bbcc_C31_palpha1e-05__mats'
 matdict = loadmat(fname)
 mmat = matdict['mmat']
 amat = matdict['amat']
@@ -36,7 +36,7 @@ print('Load Riccati results.')
 print('---------------------')
 
 fname = '/scratch/owncloud-gwdg/mpi-projects/18-hinf-lqgbt/results/' + \
-        'cylinderwake_re20_hinf.mat'
+        'cylinderwake_re60_hinf.mat'
 lmd = mat73.loadmat(fname)
 zwo = lmd['outRegulator']['Z']
 zwc = lmd['outFilter']['Z']
@@ -50,7 +50,7 @@ print('------------')
 
 tl, tr, svs = btu.\
     compute_lrbt_transfos(zfc=zwc, zfo=zwo, mmat=mmat,
-                          trunck={'threshh': 0.5})
+                          trunck={'threshh': 0.01})
 cntrlsz = tl.shape[1]
 plt.figure(1)
 plt.semilogy(svs[:cntrlsz], 'x')
@@ -85,7 +85,6 @@ scfc = np.sqrt(gam**2-1)/gam  # [1]
 scfc = np.sqrt(1-1/gam**2)  # [2]
 rsxok = solve_continuous_are(ak_mat.T, scfc*ck_mat.T, bk_mat.dot(bk_mat.T),
                              np.eye(ck_mat.shape[0]))
-
 ricrsores = ak_mat.dot(rsxok) + rsxok.dot(ak_mat.T) - \
     (1-1/gam)*(1+1/gam)*rsxok.dot(ck_mat.T).dot(ck_mat.dot(rsxok)) + \
     bk_mat.dot(bk_mat.T)
@@ -94,46 +93,49 @@ print(np.linalg.norm(riccres))
 print(np.linalg.norm(ricores))
 print(np.linalg.norm(ricrsores))
 
-zk = np.linalg.inv(np.eye(xck.shape[0])
-                   - 1./gam**2*rsxok.dot(xck))
+rsxck = solve_continuous_are(ak_mat, scfc*bk_mat, ck_mat.T.dot(ck_mat),
+                             np.eye(bk_mat.shape[1]))
+
+zk = np.linalg.inv(np.eye(rsxck.shape[0])
+                   - 1./gam**2*rsxok.dot(rsxck))
 amatk = (ak_mat
          - (1. - 1./gam**2)*np.dot(np.dot(rsxok, ck_mat.T), ck_mat)
-         - np.dot(bk_mat, np.dot(bk_mat.T, xck).dot(zk)))
-obs_ck = -np.dot(bk_mat.T.dot(xck), zk)
+         - np.dot(bk_mat, np.dot(bk_mat.T, rsxck).dot(zk)))
+obs_ck = -np.dot(bk_mat.T.dot(rsxck), zk)
 evls = np.linalg.eigvals(amatk)
 plt.figure(2)
 plt.plot(np.real(evls), np.imag(evls), 'x')
 plt.show()
-# print(evls)
+print(evls)
 
 # fprintf(1, '\n');
 # %% Compute controller.
 # fprintf(1, 'Compute controller.\n');
 # fprintf(1, '-------------------\n');
-# 
+#
 # scale = sqrt(gam^2 - 1) / gam;
 # Xinf  = icare(Ar, scale * Br, Cr' * Cr);
 # Yinf  = icare(Ar', scale * Cr', Br * Br');
 # Zinf  = eye(r) - (1 / gam^(2)) * (Xinf * Yinf);
-# 
+#
 # Ak = Ar - scale^2 * (Br * (Br' * Xinf)) - Zinf \ (Yinf * (Cr' * Cr));
 # Bk = Zinf \ (Yinf * Cr');
 # Ck = -Br' * Xinf;
-# 
+#
 # fprintf(1, '\n');
-# 
-# 
+#
+#
 # %% Save results.
 # fprintf(1, 'Save results.\n');
 # fprintf(1, '-------------\n');
-# 
+#
 # % save('results/cylinderwake_re20_rom_control.mat', ...
 # %     'Ar', 'Br', 'Cr', 'Ak', 'Bk', 'Ck', 'gam', ...
 # %     '-v7.3');
-# 
+#
 # fprintf(1, '\n');
-# 
-# 
+#
+#
 # %% Finished script.
 # fprintf(1, 'FINISHED SCRIPT.\n');
 # fprintf(1, '================\n');
