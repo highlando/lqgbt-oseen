@@ -418,18 +418,24 @@ def lqgbt(Re=1e2,
 
         if hinf:
             print('hinf red fb: gamma={0}'.format(hinfgamma))
-            scfc = np.sqrt(1-1/hinfgamma**2)  # [2]
-            print('recomputing the reduced obs riccati solution...')
-            rsxok = spla.solve_continuous_are(ak_mat.T, scfc*ck_mat.T,
-                                              bk_mat.dot(bk_mat.T),
-                                              np.eye(ck_mat.shape[0]))
+            # scfc = np.sqrt(1-1/hinfgamma**2)  # [2]
+            # print('recomputing the reduced obs riccati solution...')
+            # rsxok = spla.solve_continuous_are(ak_mat.T, scfc*ck_mat.T,
+            #                                   bk_mat.dot(bk_mat.T),
+            #                                   np.eye(ck_mat.shape[0]))
+            rsxok = xok
+            print('xok: ', np.diag(xok))
+            print('xck: ', np.diag(xck))
             zk = np.linalg.inv(np.eye(xck.shape[0])
                                - 1./hinfgamma**2*rsxok.dot(xck))
+            print('zk: ', np.diag(zk))
             amatk = (ak_mat
                      - (1. - 1./hinfgamma**2)*np.dot(np.dot(rsxok, ck_mat.T),
                                                      ck_mat)
                      - np.dot(bk_mat, np.dot(bk_mat.T, xck).dot(zk)))
             obs_ck = -np.dot(bk_mat.T.dot(xck), zk)
+            import pdb
+            pdb.set_trace()
 
         else:
             print('lqg-feedback!!')
