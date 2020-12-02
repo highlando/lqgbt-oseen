@@ -4,11 +4,8 @@ import argparse
 from lqgbt_oseen import lqgbt_lnse
 import datetime
 
-meshprfx = 'mesh/2D-double-rotcyl-meshes/2D-double-rotcyl'
-meshlevel = 2
-meshfile = meshprfx + '_lvl{0}.xml.gz'.format(meshlevel)
-physregs = meshprfx + '_lvl{0}_facet_region.xml.gz'.format(meshlevel)
-geodata = 'mesh/2D-double-rotcyl-meshes/2D-double-rotcyl_geo_cntrlbc.json'
+problem = 'cylinderwake'
+
 plotit = False
 plotit = True
 paraoutput = True
@@ -30,13 +27,16 @@ gamma = 1e-0  # e5
 # whether to do bccontrol or distributed
 bccontrol = True
 palpha = 1e-5  # parameter for the Robin penalization
+meshlevel = 1
+
+# ## TODO: remove this
 cyldim = 3
 simucyldim = 3  # the dim model used in the simulation
+
 # where to truncate the LQGBT characteristic values
 ctrunc = 1e-3  # , 1e-2, 1e-1, 1e-0]
 # dimension of in and output spaces
 NU = 'bcc'
-Cgrid = (4, 1)  # grid of the sensors -- defines the C
 # to what extend we perturb the initial value
 perturbpara = 0*1e-5
 # whether we use a perturbed system
@@ -77,6 +77,8 @@ parser.add_argument("--tE", type=float,
                     help="final time of the simulation", default=basetE)
 parser.add_argument("--Nts", type=float,
                     help="number of time steps", default=baseNts)
+parser.add_argument("--mesh", type=int,
+                    help="mesh parameter", default=meshlevel)
 parser.add_argument("--scaletest", type=float,
                     help="scale the test size", default=scaletest)
 parser.add_argument("--truncat", type=float,
@@ -89,6 +91,9 @@ parser.add_argument("--iniperturb", type=float,
 parser.add_argument("--closed_loop", type=int, choices=[-1, 0, 1, 2, 4],
                     help="-1: None,\n0: False,\n 1: 'red_output_fb'," +
                     "\n 2:'full_output_fb',\n 4: 'hinf_red_output_fb'")
+parser.add_argument("--problem", type=str,
+                    choices=['cylinderwake', 'dbrotcyl'],
+                    help="which setup to consider", default=problem)
 args = parser.parse_args()
 print(args)
 
@@ -117,9 +122,24 @@ else:
 if max_re_only:
     relist = relist[-2:]
 
+if args.problem == 'dbrotcyl':
+    meshprfx = 'mesh/2D-double-rotcyl-meshes/2D-double-rotcyl'
+    geodata = 'mesh/2D-double-rotcyl-meshes/2D-double-rotcyl_geo_cntrlbc.json'
+    shortname = 'drc'
+    Cgrid = (4, 1)  # grid of the sensors -- defines the C
+elif args.problem == 'cylinderwake':
+    meshprfx = 'mesh/2D-outlet-meshes/karman2D-outlets'
+    geodata = 'mesh/2D-outlet-meshes/karman2D-outlets_geo_cntrlbc.json'
+    shortname = 'cw'
+    Cgrid = (3, 1)  # grid of the sensors -- defines the C
+
+meshfile = meshprfx + '_lvl{0}.xml.gz'.format(args.mesh)
+physregs = meshprfx + '_lvl{0}_facet_region.xml.gz'.format(args.mesh)
+
 # print reynolds number and discretization lvl
-infostring = ('Re             = {0}'.format(relist) +
-              '\ncyldim         = {0}'.format(cyldim) +
+infostring = ('Problem        = {0}'.format(problem) +
+              '\nRe             = {0}'.format(relist) +
+              '\nmeshlevel      = {0}'.format(args.mesh) +
               '\npymess         = {0}'.format(args.pymess) +
               '\nclosed_loop    = {0}'.format(closed_loop) +
               '\nH_infty        = {0}'.format(hinf) +
@@ -170,7 +190,7 @@ for cre in range(1, len(relist)):
     lqgbt_lnse.lqgbt(meshparams=dict(strtomeshfile=meshfile,
                                      strtophysicalregions=physregs,
                                      strtobcsobs=geodata),
-                     problemname='dbrotcyl', shortname='drc',
+                     problemname=args.problem, shortname=shortname,
                      use_ric_ini=relist[cre-1],
                      NU=NU, Cgrid=Cgrid,
                      Re=relist[cre],

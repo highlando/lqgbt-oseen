@@ -6,12 +6,14 @@ export PYTHONPATH="$PYTHONPATH:$MYPYPATH/sadptprj_riclyap_adi"
 
 RE=60
 NTS=20000
+PROBLEM=cylinderwake
+MSHLVL=1
 
 # RE=60
 # NTS=20000
 
 INIPERTURB=0.0
-TRUNCAT=1.3
+TRUNCAT=0.1
 FBTYPE=-1  # no feedback
 FBTYPE=2  # full state feedback
 FBTYPE=1  # lqg-bt feedback
@@ -20,7 +22,7 @@ PYMESS=1
 FBTYPE=4  # hinf-bt feedback
 NUMPICARDS=20
 
-SCALETEST=.25
+SCALETEST=.005
 
 GRAMSPATH=/scratch/owncloud-gwdg/mpi-projects/18-hinf-lqgbt/results/
 HNFQR=_hinf.mat%outRegulator.Z%outFilter.Z%gam
@@ -32,7 +34,9 @@ GRAMSFILE=${GRAMSPATH}cylinderwake_re${RE}${HNFQR}
 # LOGFILE=logs/N${CYLDIM}re${RE}fbt${FBTYPE}pm${PYMESS}nps${NUMPICARDS}trnc${TRUNCAT}sspd${INIPERTURB}st${SCALETEST}
 # echo tail -f $LOGFILE
 
-python3 compscript.py --iniperturb=${INIPERTURB} --RE=${RE} \
+python3 compscript.py \
+    --problem=${PROBLEM} --mesh=${MSHLVL} \
+    --iniperturb=${INIPERTURB} --RE=${RE} \
     --closed_loop=${FBTYPE} --pymess \
     --scaletest=${SCALETEST} --truncat=${TRUNCAT} \
     --strtogramfacs=${GRAMSFILE} \
