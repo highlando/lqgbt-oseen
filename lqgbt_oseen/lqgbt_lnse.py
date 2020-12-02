@@ -64,9 +64,7 @@ def nwtn_adi_params():
 
 
 def lqgbt(Re=1e2,
-          # cl_linsys=False,
-          # simuN=None,
-          problemname='cylinderwake',
+          problemname='cylinderwake', shortname='cw',
           meshparams=None,
           gamma=1.,
           use_ric_ini=None, t0=0.0, tE=1.0, Nts=11,
@@ -181,7 +179,7 @@ def lqgbt(Re=1e2,
 
     def get_fdstr(Re, short=False):
         if short:
-            return ddir + 'cw' + '{0}{1}_'.format(Re, gamma) + \
+            return ddir + shortname + '{0}{1}_'.format(Re, gamma) + \
                 shortcontsetupstr
         return ddir + problemname + '_Re{0}_gamma{1}_'.format(Re, gamma) + \
             contsetupstr + prbstr
@@ -270,7 +268,7 @@ def lqgbt(Re=1e2,
             vp_ss_nse = snu.\
                 solve_steadystate_nse(vel_pcrd_stps=npcrdstps, return_vp=True,
                                       vel_start_nwtn=v_init,
-                                      vel_nwtn_tol=2e-14,
+                                      vel_nwtn_tol=4e-13,
                                       clearprvdata=debug, **initsssoldict)
             np.save(cachedsss, vp_ss_nse[0])
             print('saved sssol to: ', cachedsss)

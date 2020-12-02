@@ -4,11 +4,11 @@ import argparse
 from lqgbt_oseen import lqgbt_lnse
 import datetime
 
-meshprfx = 'mesh/2D-outlet-meshes/karman2D-outlets'
-meshlevel = 1
+meshprfx = 'mesh/2D-double-rotcyl-meshes/2D-double-rotcyl'
+meshlevel = 2
 meshfile = meshprfx + '_lvl{0}.xml.gz'.format(meshlevel)
 physregs = meshprfx + '_lvl{0}_facet_region.xml.gz'.format(meshlevel)
-geodata = meshprfx + '_geo_cntrlbc.json'
+geodata = 'mesh/2D-double-rotcyl-meshes/2D-double-rotcyl_geo_cntrlbc.json'
 plotit = False
 plotit = True
 paraoutput = True
@@ -17,12 +17,12 @@ paraoutput = False
 ddir = '/scratch/tbd/dnsdata/'
 pymess = True
 pymess = False
-relist = [None, 3e1, 4e1, 6e1]
-# relist = [None, 15., 20., 25., 30., 35., 40., 45., 50.]  # , 55.]
+# relist = [None, 3e1, 4e1, 6e1]
+relist = [None, 30., 35., 40., 45., 50.]  # , 55.]
 # relist = [None, 15., 20., 25., 30., 35., 40., 45., 50., 55., 60.]
-relist = [40., 40., 60.]
-max_re_only = True  # consider only the last Re for the simu
+# relist = [40., 40., 60.]
 max_re_only = False
+max_re_only = True  # consider only the last Re for the simu
 
 # the input regularization parameter
 gamma = 1e-0  # e5
@@ -36,7 +36,7 @@ simucyldim = 3  # the dim model used in the simulation
 ctrunc = 1e-3  # , 1e-2, 1e-1, 1e-0]
 # dimension of in and output spaces
 NU = 'bcc'
-Cgrid = (3, 1)  # grid of the sensors -- defines the C
+Cgrid = (4, 1)  # grid of the sensors -- defines the C
 # to what extend we perturb the initial value
 perturbpara = 0*1e-5
 # whether we use a perturbed system
@@ -46,10 +46,10 @@ ttf_npcrdstps = 6
 
 # closed loop def
 closed_loop = 'full_state_fb'
-closed_loop = None
 closed_loop = 'red_output_fb'
-closed_loop = False
 closed_loop = 'hinf_red_output_fb'
+closed_loop = False
+closed_loop = None
 # what inival
 whichinival = 'sstokes'  # steady state Stokes solution
 whichinival, tpp = 'sstokes++', .5  # a developed state starting from sstokes
@@ -60,10 +60,10 @@ tpp is tpp if whichinival == 'sstokes++' or whichinival == 'snse+d++' else None
 addinputd = True  # whether to add disturbances through the input
 duampltd = 1e-5
 
-scaletest = 1.  # for 1. we simulate till 12.
-baset0, basetE, baseNts = 0.0, 12.0, 12*2**11+1
+scaletest = 16.  # for 1. we simulate till 12.
+baset0, basetE, baseNts = 0.0, 12.0, 12*2**7
 dudict = dict(addinputd=addinputd, ta=0., tb=1., ampltd=duampltd,
-              uvec=np.array([1, -1]).reshape((2, 1)))
+              uvec=np.array([1, 1]).reshape((2, 1)))
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--RE", type=float, help="Reynoldsnumber")
@@ -139,7 +139,7 @@ if pymess:
     nwtn_adi_dict = dict(verbose=True, maxit=45, aditol=1e-8,
                          nwtn_res2_tol=4e-8, linesearch=True)
 else:
-    nwtn_adi_dict = dict(adi_max_steps=350,  # 450,
+    nwtn_adi_dict = dict(adi_max_steps=450,  # 450,
                          adi_newZ_reltol=2e-8,
                          nwtn_max_steps=30,
                          nwtn_upd_reltol=2e-8,
@@ -170,6 +170,7 @@ for cre in range(1, len(relist)):
     lqgbt_lnse.lqgbt(meshparams=dict(strtomeshfile=meshfile,
                                      strtophysicalregions=physregs,
                                      strtobcsobs=geodata),
+                     problemname='dbrotcyl', shortname='drc',
                      use_ric_ini=relist[cre-1],
                      NU=NU, Cgrid=Cgrid,
                      Re=relist[cre],

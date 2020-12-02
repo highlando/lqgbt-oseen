@@ -3,7 +3,7 @@ import numpy.linalg as npla
 import scipy.linalg as spla
 from scipy.io import loadmat
 
-import dolfin_navier_scipy.data_output_utils as dou
+# import dolfin_navier_scipy.data_output_utils as dou
 
 import sadptprj_riclyap_adi.proj_ric_utils as pru
 import sadptprj_riclyap_adi.bal_trunc_utils as btu
@@ -101,8 +101,8 @@ def get_ric_facs(fmat=None, mmat=None, jmat=None,
             hinfmatstr = 'external-data/oc-hinf-data/' + \
                 Path(fdstr).name + '__mats'
             from scipy.io import savemat
-            zinic = dou.load_npa(ric_ini_str + '__zwc')
-            zinio = dou.load_npa(ric_ini_str + '__zwo')
+            zinic = np.load(ric_ini_str + '__zwc.npy')
+            zinio = np.load(ric_ini_str + '__zwo.npy')
             savematdict = dict(mmat=mmat, amat=fmat, jmat=jmat,
                                bmat=bmat, cmat=cmat,
                                zinic=zinic, zinio=zinio)
@@ -119,9 +119,9 @@ def get_ric_facs(fmat=None, mmat=None, jmat=None,
     zinic, zinio = None, None
     if ric_ini_str is not None:
         try:
-            zinic = np.load(ric_ini_str + '__zwc')
+            zinic = np.load(ric_ini_str + '__zwc.npy')
             if not zwconly:
-                zinio = np.load(ric_ini_str + '__zwo')
+                zinio = np.load(ric_ini_str + '__zwo.npy')
             print('Initialize Newton ADI by zwc/zwo from ' + ric_ini_str)
         except IOError:
             raise UserWarning('No data at `{0}` (for init of Ric solves)'.
@@ -134,25 +134,25 @@ def get_ric_facs(fmat=None, mmat=None, jmat=None,
             print('we only compute zwc')
             return
         try:
-            zwo = dou.load_npa(fdstr + '__zwo')
+            zwo = np.load(fdstr + '__zwo.npy')
             print('yeyeyeah, __zwo is there')
         except IOError:
             zwo = get_ricadifacs(mmat=mmat.T, amat=fmat.T, jmat=jmat,
                                  bmat=cmat.T, wmat=bmat,
                                  z0=zinio, **adidict)['zfac']
-            np.save(zwo, fdstr + '__zwo')
+            np.save(fdstr + '__zwo', zwo)
         return
 
     def compcong():
         try:
-            zwc = np.load(fdstr + '__zwc')
+            zwc = np.load(fdstr + '__zwc.npy')
             print('yeyeyeah, __zwc is there')
         except IOError:
             # XXX: why here bmat*Rmhalf and in zwo not?
             zwc = get_ricadifacs(mmat=mmat, amat=fmat, jmat=jmat,
                                  bmat=bmat, wmat=cmat.T,
                                  z0=zinic, **adidict)['zfac']
-            np.save(zwc, fdstr + '__zwc')
+            np.save(fdstr + '__zwc', zwc)
         return
 
     if multiproc:
@@ -171,9 +171,9 @@ def get_ric_facs(fmat=None, mmat=None, jmat=None,
         compobsg()
         compcong()
 
-    zwc = dou.load_npa(fdstr + '__zwc')
+    zwc = np.load(fdstr + '__zwc.npy')
     if not zwconly:
-        zwo = dou.load_npa(fdstr + '__zwo')
+        zwo = np.load(fdstr + '__zwo.npy')
 
     if checktheres:
         print('checking the Riccati residuals....')
