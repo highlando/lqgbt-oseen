@@ -1,6 +1,6 @@
 # import scipy.sparse as sps
 import numpy as np
-import matplotlib.pyplot as plt
+import scipy.linalg as spla
 
 from pathlib import Path
 
@@ -64,9 +64,7 @@ def nwtn_adi_params():
 
 
 def lqgbt(Re=1e2,
-          # cl_linsys=False,
-          # simuN=None,
-          problemname='cylinderwake',
+          problemname='cylinderwake', shortname='cw',
           meshparams=None,
           gamma=1.,
           use_ric_ini=None, t0=0.0, tE=1.0, Nts=11,
@@ -181,7 +179,7 @@ def lqgbt(Re=1e2,
 
     def get_fdstr(Re, short=False):
         if short:
-            return ddir + 'cw' + '{0}{1}_'.format(Re, gamma) + \
+            return ddir + shortname + '{0}{1}_'.format(Re, gamma) + \
                 shortcontsetupstr
         return ddir + problemname + '_Re{0}_gamma{1}_'.format(Re, gamma) + \
             contsetupstr + prbstr
@@ -270,7 +268,7 @@ def lqgbt(Re=1e2,
             vp_ss_nse = snu.\
                 solve_steadystate_nse(vel_pcrd_stps=npcrdstps, return_vp=True,
                                       vel_start_nwtn=v_init,
-                                      vel_nwtn_tol=2e-14,
+                                      vel_nwtn_tol=4e-13,
                                       clearprvdata=debug, **initsssoldict)
             np.save(cachedsss, vp_ss_nse[0])
             print('saved sssol to: ', cachedsss)
@@ -431,9 +429,9 @@ def lqgbt(Re=1e2,
                              np.eye(bk_mat.shape[1]))
                 xok, xck = rsxok, rsxck
                 print('recomputed the reduced gramians')
-
             zk = np.linalg.inv(np.eye(xck.shape[0])
                                - 1./hinfgamma**2*xok.dot(xck))
+            print('zk: ', np.diag(zk))
             amatk = (ak_mat
                      - (1. - 1./hinfgamma**2)*np.dot(np.dot(xok, ck_mat.T),
                                                      ck_mat)
@@ -447,6 +445,16 @@ def lqgbt(Re=1e2,
 
         else:
             print('lqg-feedback!!')
+            if pymess:
+                scfc = 1.
+                print('recomputing the reduced gramians!!')
+                rsxok = spla.solve_continuous_are(ak_mat.T, scfc*ck_mat.T,
+                                                  bk_mat.dot(bk_mat.T),
+                                                  np.eye(ck_mat.shape[0]))
+                rsxck = spla.solve_continuous_are(ak_mat, scfc*bk_mat,
+                                                  ck_mat.T.dot(ck_mat),
+                                                  np.eye(bk_mat.T.shape[0]))
+                xok, xck = rsxok, rsxck
             amatk = (ak_mat - np.dot(np.dot(xok, ck_mat.T), ck_mat) -
                      np.dot(bk_mat, np.dot(bk_mat.T, xck)))
             obs_ck = -bk_mat.T.dot(xck)
@@ -484,7 +492,8 @@ def lqgbt(Re=1e2,
                    cv_mat=c_mat,  # needed for the output feedback
                    treat_nonl_explct=True,
                    b_mat=b_mat,
-                   return_dictofvelstrs=True)
+                   return_y_list=True,
+                   return_dictofvelstrs=False)
 
     # ### CHAP: define the initial values
     # if simuN == N:
@@ -553,22 +562,26 @@ def lqgbt(Re=1e2,
 
     # else:
     simuxtrstr = ''
-    sc_mat = c_mat
+    # sc_mat = c_mat
     shortstring = (get_fdstr(Re, short=True) + shortclstr +
                    shorttruncstr + shortinivstr + shortfailstr)
 
     ystr = shortstring + simuxtrstr + timediscstr + inputdstr
+
     try:
+        raise IOError()
         yscomplist = dou.load_json_dicts(ystr)['outsig']
         print('loaded the outputs from: ' + shortstring)
 
     except IOError:
         soldict.update(data_prfx=shortstring + simuxtrstr)
-        dictofvelstrs = snu.solve_nse(**soldict)
+        # dictofvelstrs = snu.solve_nse(**soldict)
+        yscomplist = snu.solve_nse(**soldict)
+        yscomplist = [ykk.flatten().tolist() for ykk in yscomplist]
 
-        yscomplist = cou.extract_output(strdict=dictofvelstrs, tmesh=trange,
-                                        invinds=invinds,
-                                        c_mat=sc_mat, load_data=dou.load_npa)
+        # yscomplist = cou.extract_output(strdict=dictofvelstrs, tmesh=trange,
+        #                                 invinds=invinds,
+        #                                 c_mat=sc_mat, load_data=dou.load_npa)
 
     dou.save_output_json(dict(tmesh=trange.tolist(), outsig=yscomplist),
                          fstring=(ystr))
