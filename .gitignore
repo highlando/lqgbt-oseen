@@ -4,6 +4,7 @@ testexps
 docs/_build
 external-data/
 tests/cachedata/
+tests/lapacktests/
 logs
 log*
 *.xml
