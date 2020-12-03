@@ -31,3 +31,9 @@
  * TODO: check -- bmat[:, 0] === 0 
  * branch `debugging`
    * a.o.: matlab (by Steffen) and python scripts to test the pymess matrices
+## 2020-12-03 21:59:37+01:00
+
+ * branch `debugging` checked everything seems ok with the mats
+ * overall (reduced) closed loop is stable
+ * still `hinf` explodes in no time
+ * gonna check `pymess-LQG` next
