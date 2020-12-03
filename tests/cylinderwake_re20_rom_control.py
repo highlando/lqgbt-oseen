@@ -99,7 +99,6 @@ ak_mat, bk_mat, ck_mat, xok, xck = nru.\
                   zwo=zwo, zwc=zwc,
                   tl=tl, tr=tr,
                   bmat=bmat, cmat=cmat)
-
 riccres = ak_mat.T.dot(xck) + xck.dot(ak_mat) - \
     (1-1/gam**2)*xck.dot(bk_mat).dot(bk_mat.T.dot(xck)) +\
     ck_mat.T.dot(ck_mat)
