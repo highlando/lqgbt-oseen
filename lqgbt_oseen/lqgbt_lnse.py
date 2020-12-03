@@ -346,11 +346,11 @@ def lqgbt(Re=1e2,
 
         if closed_loop == 'red_output_fb':
             import sadptprj_riclyap_adi.bal_trunc_utils as btu
+            print('|zfo|: ', np.linalg.norm(zwo))
+            print('|zfc|: ', np.linalg.norm(zwc))
             tl, tr, svs = btu.\
                 compute_lrbt_transfos(zfc=zwc, zfo=zwo, mmat=mmat,
                                       trunck={'threshh': trunc_lqgbtcv})
-            plt.semilogy(svs, 'o')
-            plt.show()
 
     if closed_loop is False:
         return  # we only want the Gramians
@@ -412,10 +412,17 @@ def lqgbt(Re=1e2,
         shortclstr = 'hinfrofb' if hinf else 'rofb'
 
         ak_mat, bk_mat, ck_mat, xok, xck = nru.\
-            get_prj_model(mmat=mmat, fmat=f_mat_gramians, jmat=jmat,
+            get_prj_model(mmat=mmat, fmat=f_mat_gramians, jmat=None,
                           zwo=zwo, zwc=zwc,
                           tl=tl, tr=tr,
                           bmat=b_mat, cmat=c_mat_reg)
+
+        print('|M|: ', np.linalg.norm(mmat.data))
+        print('|A|: ', np.linalg.norm(f_mat_gramians.data))
+        print('|B|: ', np.linalg.norm(b_mat.data))
+        print('|C|: ', np.linalg.norm(c_mat_reg.data))
+        print('|tl|: ', np.linalg.norm(tl))
+        print('|tr|: ', np.linalg.norm(tr))
         print('Controller has dimension: {0}'.format(ak_mat.shape[0]))
 
         if hinf:
@@ -427,20 +434,24 @@ def lqgbt(Re=1e2,
                              np.eye(ck_mat.shape[0]))
                 rsxck = care(ak_mat, scfc*bk_mat, ck_mat.T.dot(ck_mat),
                              np.eye(bk_mat.shape[1]))
+                print('|rsxok|: ', np.linalg.norm(rsxok), rsxok.shape)
                 xok, xck = rsxok, rsxck
                 print('recomputed the reduced gramians')
             zk = np.linalg.inv(np.eye(xck.shape[0])
                                - 1./hinfgamma**2*xok.dot(xck))
-            print('zk: ', np.diag(zk))
+            # print('zk: ', np.diag(zk))
+            # print('xok: ', np.diag(xok))
+            # print('xck: ', np.diag(xck))
             amatk = (ak_mat
                      - (1. - 1./hinfgamma**2)*np.dot(np.dot(xok, ck_mat.T),
                                                      ck_mat)
                      - np.dot(bk_mat, np.dot(bk_mat.T, xck).dot(zk)))
             obs_ck = -np.dot(bk_mat.T.dot(xck), zk)
             evls = np.linalg.eigvals(amatk)
+            print(evls)
+            import matplotlib.pyplot as plt
             plt.plot(np.real(evls), np.imag(evls), 'x')
             plt.show()
-            print(evls)
             raise UserWarning()
 
         else:

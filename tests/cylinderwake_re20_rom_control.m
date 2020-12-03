@@ -73,13 +73,20 @@ fprintf(1, 'Compute controller.\n');
 fprintf(1, '-------------------\n');
 
 scale = sqrt(gam^2 - 1) / gam;
-Xinf  = care(Ar, scale * Br, Cr' * Cr, eye(2));
-Yinf  = care(Ar', scale * Cr', Br * Br', eye(6));
+% Xinf  = care(Ar, scale * Br, Cr' * Cr, eye(2));
+% Yinf  = care(Ar', scale * Cr', Br * Br', eye(6));
+Xinf = ((T'*mmat) * outRegulator.Z ) * (outRegulator.Z' * (mmat*T));
+Yinf = ((W*mmat) * outFilter.Z) * (outFilter.Z' * (mmat*W'));
+Yinf(abs(Yinf) < 1e-14) = 0;
+Xinf(abs(Xinf) < 1e-14) = 0;
 Zinf  = eye(r) - (1 / gam^(2)) * (Xinf * Yinf);
 
 Ak = Ar - scale^2 * (Br * (Br' * Xinf)) - Zinf \ (Yinf * (Cr' * Cr));
 Bk = Zinf \ (Yinf * Cr');
 Ck = -Br' * Xinf;
+
+display('closed loop eigenvalues: ')
+display(eig(Ak))
 
 fprintf(1, '\n');
 
