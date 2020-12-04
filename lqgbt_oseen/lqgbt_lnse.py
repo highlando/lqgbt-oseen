@@ -1,6 +1,6 @@
 # import scipy.sparse as sps
 import numpy as np
-import scipy.linalg as spla
+# import scipy.linalg as spla
 
 from pathlib import Path
 
@@ -427,55 +427,49 @@ def lqgbt(Re=1e2,
 
         if hinf:
             print('hinf red fb: gamma={0}'.format(hinfgamma))
-            if pymess:
-                from scipy.linalg import solve_continuous_are as care
-                scfc = np.sqrt(1-1/hinfgamma**2)  # [2]
-                rsxok = care(ak_mat.T, scfc*ck_mat.T, bk_mat.dot(bk_mat.T),
-                             np.eye(ck_mat.shape[0]))
-                rsxck = care(ak_mat, scfc*bk_mat, ck_mat.T.dot(ck_mat),
-                             np.eye(bk_mat.shape[1]))
-                print('|rsxok|: ', np.linalg.norm(rsxok), rsxok.shape)
-                xok, xck = rsxok, rsxck
-                print('recomputed the reduced gramians')
-            zk = np.linalg.inv(np.eye(xck.shape[0])
-                               - 1./hinfgamma**2*xok.dot(xck))
-            # print('zk: ', np.diag(zk))
+            # scfc = np.sqrt(1-1/hinfgamma**2)  # [2]
+            # print('recomputing the reduced obs riccati solution...')
+            # rsxok = spla.solve_continuous_are(ak_mat.T, scfc*ck_mat.T,
+            #                                   bk_mat.dot(bk_mat.T),
+            #                                   np.eye(ck_mat.shape[0]))
+            # xok = rsxok
             # print('xok: ', np.diag(xok))
             # print('xck: ', np.diag(xck))
+            zk = np.linalg.inv(np.eye(xck.shape[0])
+                               - 1./hinfgamma**2*xok.dot(xck))
+            zkdi = np.diag(1./(1 - 1./hinfgamma**2*np.diag(xok)*np.diag(xck)))
+            # print('zk: ', np.diag(zk))
+            print(np.linalg.norm(zk-zkdi))
+            zk = zkdi
             amatk = (ak_mat
                      - (1. - 1./hinfgamma**2)*np.dot(np.dot(xok, ck_mat.T),
                                                      ck_mat)
                      - np.dot(bk_mat, np.dot(bk_mat.T, xck).dot(zk)))
             obs_ck = -np.dot(bk_mat.T.dot(xck), zk)
-            evls = np.linalg.eigvals(amatk)
+            obs_bk = xok @ ck_mat.T
+            fullrmmat = np.vstack([np.hstack([amatk, obs_bk@ck_mat]),
+                                   np.hstack([bk_mat@obs_ck, ak_mat])])
+            evls = np.linalg.eigvals(fullrmmat)
+            print(np.linalg.norm(obs_ck), np.linalg.norm(obs_bk))
             print(evls)
-            import matplotlib.pyplot as plt
-            plt.plot(np.real(evls), np.imag(evls), 'x')
-            plt.show()
-            raise UserWarning()
 
         else:
             print('lqg-feedback!!')
-            if pymess:
-                scfc = 1.
-                print('recomputing the reduced gramians!!')
-                rsxok = spla.solve_continuous_are(ak_mat.T, scfc*ck_mat.T,
-                                                  bk_mat.dot(bk_mat.T),
-                                                  np.eye(ck_mat.shape[0]))
-                rsxck = spla.solve_continuous_are(ak_mat, scfc*bk_mat,
-                                                  ck_mat.T.dot(ck_mat),
-                                                  np.eye(bk_mat.T.shape[0]))
-                xok, xck = rsxok, rsxck
+            # if pymess:
+            #     scfc = 1.
+            #     print('recomputing the reduced gramians!!')
+            #     rsxok = spla.solve_continuous_are(ak_mat.T, scfc*ck_mat.T,
+            #                                       bk_mat.dot(bk_mat.T),
+            #                                       np.eye(ck_mat.shape[0]))
+            #     rsxck = spla.solve_continuous_are(ak_mat, scfc*bk_mat,
+            #                                       ck_mat.T.dot(ck_mat),
+            #                                       np.eye(bk_mat.T.shape[0]))
+            #     xok, xck = rsxok, rsxck
             amatk = (ak_mat - np.dot(np.dot(xok, ck_mat.T), ck_mat) -
                      np.dot(bk_mat, np.dot(bk_mat.T, xck)))
             obs_ck = -bk_mat.T.dot(xck)
-            evls = np.linalg.eigvals(amatk)
-            plt.plot(np.real(evls), np.imag(evls), 'x')
-            plt.show()
-            print(evls)
-            raise UserWarning()
+            obs_bk = np.dot(xok, ck_mat.T)
 
-        obs_bk = np.dot(xok, ck_mat.T)
         hbystar = obs_bk.dot(c_mat.dot(v_ss_nse[invinds]))
 
         def obsdrft(t):
