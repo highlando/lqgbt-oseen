@@ -433,19 +433,27 @@ def lqgbt(Re=1e2,
             #                                   bk_mat.dot(bk_mat.T),
             #                                   np.eye(ck_mat.shape[0]))
             # xok = rsxok
+            from scipy.linalg import solve_continuous_are
+            scfc = np.sqrt(1-1/hinfgamma**2)
+            rcxck = solve_continuous_are(ak_mat, scfc*bk_mat, ck_mat.T@ck_mat,
+                                         np.eye(bk_mat.shape[1]))
+            rcxok = solve_continuous_are(ak_mat.T, scfc*ck_mat.T,
+                                         bk_mat@bk_mat.T,
+                                         np.eye(ck_mat.shape[0]))
+            xok, xck = rcxok, rcxck
+            print('recomputed the reduced gramians')
             # print('xok: ', np.diag(xok))
             # print('xck: ', np.diag(xck))
-            zk = np.linalg.inv(np.eye(xck.shape[0])
-                               - 1./hinfgamma**2*xok.dot(xck))
+            zk = np.linalg.inv(np.eye(xck.shape[0]) - 1./hinfgamma**2*xok@xck)
             zkdi = np.diag(1./(1 - 1./hinfgamma**2*np.diag(xok)*np.diag(xck)))
             # print('zk: ', np.diag(zk))
             print(np.linalg.norm(zk-zkdi))
-            zk = zkdi
+            # zk = zkdi
             amatk = (ak_mat
                      - (1. - 1./hinfgamma**2)*np.dot(np.dot(xok, ck_mat.T),
                                                      ck_mat)
                      - np.dot(bk_mat, np.dot(bk_mat.T, xck).dot(zk)))
-            obs_ck = -np.dot(bk_mat.T.dot(xck), zk)
+            obs_ck = -(bk_mat.T@xck) @ zk
             obs_bk = xok @ ck_mat.T
             fullrmmat = np.vstack([np.hstack([amatk, obs_bk@ck_mat]),
                                    np.hstack([bk_mat@obs_ck, ak_mat])])
