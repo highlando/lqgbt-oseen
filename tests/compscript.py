@@ -4,7 +4,8 @@ import argparse
 from lqgbt_oseen import lqgbt_lnse
 import datetime
 
-problem = 'cylinderwake'
+problem = 'dbrotcyl'
+meshlevel = 2
 
 plotit = False
 plotit = True
@@ -18,8 +19,8 @@ pymess = False
 relist = [None, 30., 35., 40., 45., 50.]  # , 55.]
 # relist = [None, 15., 20., 25., 30., 35., 40., 45., 50., 55., 60.]
 # relist = [40., 40., 60.]
-max_re_only = False
 max_re_only = True  # consider only the last Re for the simu
+max_re_only = False
 
 # the input regularization parameter
 gamma = 1e-0  # e5
@@ -27,7 +28,6 @@ gamma = 1e-0  # e5
 # whether to do bccontrol or distributed
 bccontrol = True
 palpha = 1e-5  # parameter for the Robin penalization
-meshlevel = 1
 
 # ## TODO: remove this
 cyldim = 3
@@ -48,8 +48,8 @@ ttf_npcrdstps = 6
 closed_loop = 'full_state_fb'
 closed_loop = 'red_output_fb'
 closed_loop = 'hinf_red_output_fb'
-closed_loop = False
 closed_loop = None
+closed_loop = False
 # what inival
 whichinival = 'sstokes'  # steady state Stokes solution
 whichinival, tpp = 'sstokes++', .5  # a developed state starting from sstokes
