@@ -449,13 +449,24 @@ def lqgbt(Re=1e2,
             # print('zk: ', np.diag(zk))
             print(np.linalg.norm(zk-zkdi))
             # zk = zkdi
-            amatk = (ak_mat
-                     - (1. - 1./hinfgamma**2)*np.dot(np.dot(xok, ck_mat.T),
-                                                     ck_mat)
-                     - np.dot(bk_mat, np.dot(bk_mat.T, xck).dot(zk)))
-            obs_ck = -(bk_mat.T@xck) @ zk
-            obs_bk = xok @ ck_mat.T
-            fullrmmat = np.vstack([np.hstack([amatk, obs_bk@ck_mat]),
+
+            # ## ZDG p. 412 formula
+            obs_ak = (ak_mat - ((1. - 1./hinfgamma**2)*bk_mat) @ (bk_mat.T@xck)
+                      - (zk @ (xok@ck_mat.T)) @ ck_mat)
+            obs_bk = zk @ (xok@ck_mat.T)
+            obs_ck = -bk_mat.T @ xck
+            # print('DEBUG: obs_bk = 0')
+            # evls = np.linalg.eigvals(obs_ak)
+            # print('`Ak-cl`-evls:', evls)
+
+            # ## Mustafa/Glover formula (16)
+            # amatk = (ak_mat
+            #          - (1. - 1./hinfgamma**2)*np.dot(np.dot(xok, ck_mat.T),
+            #                                          ck_mat)
+            #          - np.dot(bk_mat, np.dot(bk_mat.T, xck).dot(zk)))
+            # obs_ck = -(bk_mat.T@xck) @ zk
+            # obs_bk = xok @ ck_mat.T
+            fullrmmat = np.vstack([np.hstack([obs_ak, obs_bk@ck_mat]),
                                    np.hstack([bk_mat@obs_ck, ak_mat])])
             evls = np.linalg.eigvals(fullrmmat)
             print(np.linalg.norm(obs_ck), np.linalg.norm(obs_bk))
@@ -473,8 +484,8 @@ def lqgbt(Re=1e2,
             #                                       ck_mat.T.dot(ck_mat),
             #                                       np.eye(bk_mat.T.shape[0]))
             #     xok, xck = rsxok, rsxck
-            amatk = (ak_mat - np.dot(np.dot(xok, ck_mat.T), ck_mat) -
-                     np.dot(bk_mat, np.dot(bk_mat.T, xck)))
+            obs_ak = (ak_mat - np.dot(np.dot(xok, ck_mat.T), ck_mat) -
+                      np.dot(bk_mat, np.dot(bk_mat.T, xck)))
             obs_ck = -bk_mat.T.dot(xck)
             obs_bk = np.dot(xok, ck_mat.T)
 
@@ -483,7 +494,7 @@ def lqgbt(Re=1e2,
         def obsdrft(t):
             return -hbystar
 
-        linobsrvdct = dict(ha=amatk, hc=obs_ck, hb=obs_bk,
+        linobsrvdct = dict(ha=obs_ak, hc=obs_ck, hb=obs_bk,
                            drift=obsdrft, inihx=np.zeros((obs_bk.shape[0], 1)))
         soldict.update(dynamic_feedback=True, dyn_fb_dict=linobsrvdct)
         soldict.update(dict(closed_loop=True))

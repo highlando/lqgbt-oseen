@@ -129,12 +129,18 @@ print('rc-c-ric-res|', np.linalg.norm(rcxokres))
 zk = np.linalg.inv(np.eye(xck.shape[0])
                    - 1./gam**2*xok.dot(xck))
 # amatk = (ak_mat
-obsvakmat = (ak_mat
-             - (1. - 1./gam**2)*np.dot(np.dot(xok, ck_mat.T), ck_mat)
-             - np.dot(bk_mat, np.dot(bk_mat.T, xck).dot(zk)))
-evls = np.linalg.eigvals(obsvakmat)
-# obs_ck = -np.dot(bk_mat.T.dot(xck), zk)
-print('`Ak-cl`-evls:', evls)
+# obsvakmat = (ak_mat
+#              - (1. - 1./gam**2)*np.dot(np.dot(xok, ck_mat.T), ck_mat)
+#              - np.dot(bk_mat, np.dot(bk_mat.T, xck).dot(zk)))
+# ## ZDG p. 412 formula
+
+obs_ak = (ak_mat - ((1. - 1./gam**2)*bk_mat) @ (bk_mat.T@xck)
+          - (zk @ (xok@ck_mat.T)) @ ck_mat)
+# evls = np.linalg.eigvals(obs_ak)
+obs_bk = zk @ (xok@ck_mat.T)
+obs_ck = -bk_mat.T @ xck
+
+# print('`Ak-cl`-evls:', evls)
 # xck, xok = rcxck, rcxok
 # zk = np.linalg.inv(np.eye(xck.shape[0])
 #                    - 1./gam**2*xok.dot(xck))
@@ -144,7 +150,53 @@ print('`Ak-cl`-evls:', evls)
 # evls = np.linalg.eigvals(obsvakmat)
 # print('`rc-Ak-cl`-evls:', evls)
 
-fullrmmat = np.vstack([np.hstack([obsvakmat, (xok@ck_mat.T)@ck_mat]),
-                       np.hstack([-bk_mat@((bk_mat.T@xok)@zk), ak_mat])])
+fullrmmat = np.vstack([np.hstack([obs_ak, obs_bk@ck_mat]),
+                       np.hstack([bk_mat@obs_ck, ak_mat])])
 evls = np.linalg.eigvals(fullrmmat)
 print('`cl`-evls:', evls)
+
+hN = ak_mat.shape[0]
+tE, Nts = 10., 10000
+dt = tE/(Nts+1)
+
+expitmatevls = np.linalg.eigvals(np.eye(2*hN)+dt*fullrmmat)
+print('exp-itmats-evls:', evls)
+
+impitmat = np.linalg.inv(np.eye(2*hN)-dt*fullrmmat)
+impitmatevls = np.linalg.eigvals(impitmat)
+print('imp-itmats-evls:', impitmatevls)
+
+sim_dcpld = False
+sim_xplct = False
+
+if sim_dcpld:
+    xk = np.ones((ak_mat.shape[0], 1))
+    hxk = 0*xk
+    for kkk in range(Nts):
+        uk = obs_ck @ hxk
+        xk = xk + dt*(ak_mat @ xk + bk_mat @ uk)
+        yk = ck_mat @ xk
+        hxk = hxk + dt*(obs_ak @ hxk + obs_bk @ yk)
+    print('decoupled:', np.linalg.norm(hxk), np.linalg.norm(xk))
+
+if sim_xplct:
+    xk = np.ones((ak_mat.shape[0], 1))
+    hxk = 0*xk
+    hxkxk = np.copy(np.vstack([hxk, xk]))
+    for kkk in range(Nts):
+        hxkxk = hxkxk + dt*fullrmmat@hxkxk
+    print('coupled explicit:', np.linalg.norm(hxkxk[:hN]),
+          np.linalg.norm(hxkxk[hN:]))
+
+xk = np.ones((ak_mat.shape[0], 1))
+hxk = 0*xk
+hxkxk = np.copy(np.vstack([hxk, xk]))
+sollist = [np.copy(hxkxk.flatten())]
+for kkk in range(Nts):
+    hxkxk = impitmat @ hxkxk
+    sollist.append(hxkxk.flatten().copy())
+print('coupled implicit:', np.linalg.norm(hxkxk[:hN]),
+      np.linalg.norm(hxkxk[hN:]))
+plt.figure()
+plt.plot(np.linspace(0, tE, Nts+1), sollist)
+plt.show()

@@ -14,11 +14,11 @@ MSHLVL=1
 
 INIPERTURB=0.0
 TRUNCAT=.01
-FBTYPE=-1  # no feedback
 FBTYPE=2  # full state feedback
 FBTYPE=1  # lqg-bt feedback
 # FBTYPE=1  # lqg-bt feedback
 PYMESS=1
+FBTYPE=-1  # no feedback
 FBTYPE=4  # hinf-bt feedback
 NUMPICARDS=20
 

@@ -37,3 +37,19 @@
  * overall (reduced) closed loop is stable
  * still `hinf` explodes in no time
  * gonna check `pymess-LQG` next
+
+## 2020-12-04 20:45:42+01:00
+
+ * gonna check `pymess-LQG` next
+ * used the ZDG formula -- same problem 
+ * problem seems to be an error in the velocity in the start
+   * in `heunpred` already an error of `1e-7` (should not happen)
+
+## 2020-12-05 11:51:09+01:00
+
+ * the initial velocity "error" is OK -- (if no input perturbation then it is of
+   size `1e-13`)
+ * problem is the stiff and oscillatory closed loop system 
+   * see `cylinderwake_re20_rom_control.py` for example sims
+ * solutions -- a controller with stricter spectral condition
+ * implicit scheme for the controller
