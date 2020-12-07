@@ -346,7 +346,9 @@ def lqgbt(Re=1e2,
 
         if closed_loop == 'red_output_fb':
             import sadptprj_riclyap_adi.bal_trunc_utils as btu
-            tl, tr, _ = btu.\
+            # print('|zfo|: ', np.linalg.norm(zwo))
+            # print('|zfc|: ', np.linalg.norm(zwc))
+            tl, tr, svs = btu.\
                 compute_lrbt_transfos(zfc=zwc, zfo=zwo, mmat=mmat,
                                       trunck={'threshh': trunc_lqgbtcv})
 
@@ -410,10 +412,17 @@ def lqgbt(Re=1e2,
         shortclstr = 'hinfrofb' if hinf else 'rofb'
 
         ak_mat, bk_mat, ck_mat, xok, xck = nru.\
-            get_prj_model(mmat=mmat, fmat=f_mat_gramians, jmat=jmat,
+            get_prj_model(mmat=mmat, fmat=f_mat_gramians, jmat=None,
                           zwo=zwo, zwc=zwc,
                           tl=tl, tr=tr,
                           bmat=b_mat, cmat=c_mat_reg)
+
+        # print('|M|: ', np.linalg.norm(mmat.data))
+        # print('|A|: ', np.linalg.norm(f_mat_gramians.data))
+        # print('|B|: ', np.linalg.norm(b_mat.data))
+        # print('|C|: ', np.linalg.norm(c_mat_reg.data))
+        # print('|tl|: ', np.linalg.norm(tl))
+        # print('|tr|: ', np.linalg.norm(tr))
         print('Controller has dimension: {0}'.format(ak_mat.shape[0]))
 
         if hinf:
@@ -424,25 +433,52 @@ def lqgbt(Re=1e2,
             #                                   bk_mat.dot(bk_mat.T),
             #                                   np.eye(ck_mat.shape[0]))
             # xok = rsxok
+            # from scipy.linalg import solve_continuous_are
+            # scfc = np.sqrt(1-1/hinfgamma**2)
+            # rcxck = solve_continuous_are(ak_mat, scfc*bk_mat,
+            #                              ck_mat.T@ck_mat,
+            #                              np.eye(bk_mat.shape[1]))
+            # rcxok = solve_continuous_are(ak_mat.T, scfc*ck_mat.T,
+            #                              bk_mat@bk_mat.T,
+            #                              np.eye(ck_mat.shape[0]))
+            # xok, xck = rcxok, rcxck
+            # print('recomputed the reduced gramians')
             # print('xok: ', np.diag(xok))
             # print('xck: ', np.diag(xck))
-            zk = np.linalg.inv(np.eye(xck.shape[0])
-                               - 1./hinfgamma**2*xok.dot(xck))
+            # zk = np.linalg.inv(np.eye(xck.shape[0])-1./hinfgamma**2*xok@xck)
             zkdi = np.diag(1./(1 - 1./hinfgamma**2*np.diag(xok)*np.diag(xck)))
-            # print('zk: ', np.diag(zk))
-            print(np.linalg.norm(zk-zkdi))
+            # # print('zk: ', np.diag(zk))
+            # print(np.linalg.norm(zk-zkdi))
             zk = zkdi
-            amatk = (ak_mat
-                     - (1. - 1./hinfgamma**2)*np.dot(np.dot(xok, ck_mat.T),
-                                                     ck_mat)
-                     - np.dot(bk_mat, np.dot(bk_mat.T, xck).dot(zk)))
-            obs_ck = -np.dot(bk_mat.T.dot(xck), zk)
-            obs_bk = xok @ ck_mat.T
-            fullrmmat = np.vstack([np.hstack([amatk, obs_bk@ck_mat]),
+            # print(np.linalg.norm(zk-zkdi))
+            print('set off diagonal entries of `Zinf` to zero')
+
+            # ## ZDG p. 412 formula
+            obs_ak = (ak_mat - ((1. - 1./hinfgamma**2)*bk_mat) @ (bk_mat.T@xck)
+                      - (zk @ (xok@ck_mat.T)) @ ck_mat)
+            obs_bk = zk @ (xok@ck_mat.T)
+            obs_ck = -bk_mat.T @ xck
+            # print('DEBUG: obs_bk = 0')
+            # evls = np.linalg.eigvals(obs_ak)
+            # print('`Ak-cl`-evls:', evls)
+
+            # ## Mustafa/Glover formula (16)
+            # amatk = (ak_mat
+            #          - (1. - 1./hinfgamma**2)*np.dot(np.dot(xok, ck_mat.T),
+            #                                          ck_mat)
+            #          - np.dot(bk_mat, np.dot(bk_mat.T, xck).dot(zk)))
+            # obs_ck = -(bk_mat.T@xck) @ zk
+            # obs_bk = xok @ ck_mat.T
+            fullrmmat = np.vstack([np.hstack([obs_ak, obs_bk@ck_mat]),
                                    np.hstack([bk_mat@obs_ck, ak_mat])])
             evls = np.linalg.eigvals(fullrmmat)
-            print(np.linalg.norm(obs_ck), np.linalg.norm(obs_bk))
-            print(evls)
+            # print(np.linalg.norm(obs_ck), np.linalg.norm(obs_bk))
+            mxevidx = np.argmax(np.abs(np.real(evls)))
+            mnevidx = np.argmin(np.abs(np.real(evls)))
+            print('red-lin-CL-mat:\n max |EV|: {0},\n min |EV|: {1}'.
+                  format(evls[mxevidx], evls[mnevidx]))
+            print(' exp-Euler s-radius: {0}'.
+                  format(np.max(np.abs(1-tE/Nts*evls))))
 
         else:
             print('lqg-feedback!!')
@@ -456,8 +492,8 @@ def lqgbt(Re=1e2,
             #                                       ck_mat.T.dot(ck_mat),
             #                                       np.eye(bk_mat.T.shape[0]))
             #     xok, xck = rsxok, rsxck
-            amatk = (ak_mat - np.dot(np.dot(xok, ck_mat.T), ck_mat) -
-                     np.dot(bk_mat, np.dot(bk_mat.T, xck)))
+            obs_ak = (ak_mat - np.dot(np.dot(xok, ck_mat.T), ck_mat) -
+                      np.dot(bk_mat, np.dot(bk_mat.T, xck)))
             obs_ck = -bk_mat.T.dot(xck)
             obs_bk = np.dot(xok, ck_mat.T)
 
@@ -466,7 +502,7 @@ def lqgbt(Re=1e2,
         def obsdrft(t):
             return -hbystar
 
-        linobsrvdct = dict(ha=amatk, hc=obs_ck, hb=obs_bk,
+        linobsrvdct = dict(ha=obs_ak, hc=obs_ck, hb=obs_bk,
                            drift=obsdrft, inihx=np.zeros((obs_bk.shape[0], 1)))
         soldict.update(dynamic_feedback=True, dyn_fb_dict=linobsrvdct)
         soldict.update(dict(closed_loop=True))
