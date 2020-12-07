@@ -13,8 +13,8 @@ paraoutput = True
 paraoutput = False
 
 ddir = '/scratch/tbd/dnsdata/'
-pymess = True
 pymess = False
+pymess = True
 # relist = [None, 3e1, 4e1, 6e1]
 relist = [None, 30., 35., 40., 45., 50.]  # , 55.]
 # relist = [None, 15., 20., 25., 30., 35., 40., 45., 50., 55., 60.]
@@ -46,10 +46,10 @@ ttf_npcrdstps = 6
 
 # closed loop def
 closed_loop = 'full_state_fb'
-closed_loop = 'hinf_red_output_fb'
 closed_loop = False
 closed_loop = None
 closed_loop = 'red_output_fb'
+closed_loop = 'hinf_red_output_fb'
 # what inival
 whichinival = 'sstokes'  # steady state Stokes solution
 whichinival, tpp = 'sstokes++', .5  # a developed state starting from sstokes

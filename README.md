@@ -9,13 +9,19 @@ Documentation goes [here](http://lqgbt-for-flow-stabilization.readthedocs.org/en
 
 Dependencies:
 
-* numpy (1.13.1) and scipy (1.1.0)
-* dolfin (2018.1.0)
+* `numpy` (1.13.1) and `scipy` (1.1.0)
+* `dolfin` (tested with 2019.2.0 and 2018.1.0)
 
-and my home-brew modules that are available via github.
+and my home-brew modules that are available via pip 
 
-* dolfin_navier_scipy
-* sadptprj_riclyap_adi
-* distr_control_fenics
+```bash
+pip install dolfin_navier_scipy
+pip install sadptprj_riclyap_adi
+pip install distr_control_fenics 
+```
 
-The branch `deps-included` already contains my home-brew modules.
+and on github:
+
+* [dolfin_navier_scipy](https://github.com/highlando/dolfin_navier_scipy)
+* [sadptprj_riclyap_adi](https://github.com/highlando/sadptprj_riclyap_adi)
+* [distr_control_fenics](https://github.com/highlando/distr_control_fenics)
