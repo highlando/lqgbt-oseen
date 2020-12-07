@@ -37,3 +37,6 @@
  * overall (reduced) closed loop is stable
  * still `hinf` explodes in no time
  * gonna check `pymess-LQG` next
+## 2020-12-07 11:32:41+01:00
+
+ * branch `dbrotcyl` -- my LQG works really well (RE=50)
