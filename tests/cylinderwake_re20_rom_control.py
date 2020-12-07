@@ -156,7 +156,7 @@ evls = np.linalg.eigvals(fullrmmat)
 print('`cl`-evls:', evls)
 
 hN = ak_mat.shape[0]
-tE, Nts = 10., 10000
+tE, Nts = 20., 20000
 dt = tE/(Nts+1)
 
 expitmatevls = np.linalg.eigvals(np.eye(2*hN)+dt*fullrmmat)
@@ -167,7 +167,8 @@ impitmatevls = np.linalg.eigvals(impitmat)
 print('imp-itmats-evls:', impitmatevls)
 
 sim_dcpld = False
-sim_xplct = False
+sim_dcpld = True
+sim_xplct = True
 
 if sim_dcpld:
     xk = np.ones((ak_mat.shape[0], 1))

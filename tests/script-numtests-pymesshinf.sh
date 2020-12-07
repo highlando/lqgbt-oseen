@@ -1,8 +1,8 @@
 MYHOMEPATH=/home/heiland
-MYPYPATH=/home/heiland/software/gits/mypys
-export PYTHONPATH="$MYPYPATH/mat_lib_plots:$MYPYPATH/sadptprj_riclyap_adi"
-export PYTHONPATH="$PYTHONPATH:$MYPYPATH/dolfin_navier_scipy"
-export PYTHONPATH="$PYTHONPATH:$MYHOMEPATH/work/code/lqgbt-oseen"
+# MYPYPATH=/home/heiland/software/gits/mypys
+# export PYTHONPATH="$MYPYPATH/mat_lib_plots:$MYPYPATH/sadptprj_riclyap_adi"
+# export PYTHONPATH="$PYTHONPATH:$MYPYPATH/dolfin_navier_scipy"
+export PYTHONPATH="$MYHOMEPATH/work/code/lqgbt-oseen"
 
 RE=40
 NTS=20000
@@ -22,7 +22,7 @@ FBTYPE=-1  # no feedback
 FBTYPE=4  # hinf-bt feedback
 NUMPICARDS=20
 
-SCALETEST=.005
+SCALETEST=.5
 
 GRAMSPATH=/scratch/owncloud-gwdg/mpi-projects/18-hinf-lqgbt/results/
 HNFQR=_hinf.mat%outRegulator.Z%outFilter.Z%gam
