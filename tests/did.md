@@ -58,3 +58,10 @@
 
  * branch `dbrotcyl` -- my LQG works really well (RE=50)
 
+## 2020-12-07 21:24:08+01:00
+
+ * checked several integration methods for the linear closed loop system
+ * `heun-AB2` like working and a bit more stable (but less accurate) than 
+ * just `AB2`
+ * also OK `heun-AB2` in `x` and `implicit midpoint` in `hx`
+ * maybe check *spectral radius* of the schemes
