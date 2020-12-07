@@ -346,8 +346,8 @@ def lqgbt(Re=1e2,
 
         if closed_loop == 'red_output_fb':
             import sadptprj_riclyap_adi.bal_trunc_utils as btu
-            print('|zfo|: ', np.linalg.norm(zwo))
-            print('|zfc|: ', np.linalg.norm(zwc))
+            # print('|zfo|: ', np.linalg.norm(zwo))
+            # print('|zfc|: ', np.linalg.norm(zwc))
             tl, tr, svs = btu.\
                 compute_lrbt_transfos(zfc=zwc, zfo=zwo, mmat=mmat,
                                       trunck={'threshh': trunc_lqgbtcv})
@@ -417,12 +417,12 @@ def lqgbt(Re=1e2,
                           tl=tl, tr=tr,
                           bmat=b_mat, cmat=c_mat_reg)
 
-        print('|M|: ', np.linalg.norm(mmat.data))
-        print('|A|: ', np.linalg.norm(f_mat_gramians.data))
-        print('|B|: ', np.linalg.norm(b_mat.data))
-        print('|C|: ', np.linalg.norm(c_mat_reg.data))
-        print('|tl|: ', np.linalg.norm(tl))
-        print('|tr|: ', np.linalg.norm(tr))
+        # print('|M|: ', np.linalg.norm(mmat.data))
+        # print('|A|: ', np.linalg.norm(f_mat_gramians.data))
+        # print('|B|: ', np.linalg.norm(b_mat.data))
+        # print('|C|: ', np.linalg.norm(c_mat_reg.data))
+        # print('|tl|: ', np.linalg.norm(tl))
+        # print('|tr|: ', np.linalg.norm(tr))
         print('Controller has dimension: {0}'.format(ak_mat.shape[0]))
 
         if hinf:
