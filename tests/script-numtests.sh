@@ -13,8 +13,8 @@ FBTYPE=-1  # no feedback
 FBTYPE=1  # lqg-bt feedback
 # FBTYPE=1  # lqg-bt feedback
 NUMPICARDS=20
-SCALETEST=1.5
-NTS=15000
+SCALETEST=0.005
+NTS=12000
 
 GRAMSPATH=/scratch/tbd/dnsdata/
 GRAMSSPEC=cylinderwake_Re${RE}.0_gamma1.0_NV41718_Bbcc_C31_palpha1e-05__
