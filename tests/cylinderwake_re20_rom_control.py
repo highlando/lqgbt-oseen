@@ -8,10 +8,14 @@ import lqgbt_oseen.nse_riccont_utils as nru
 
 from scipy.linalg import solve_continuous_are
 from scipy.integrate import solve_ivp
+import scipy.sparse as sps
+from scipy.sparse.linalg import factorized
+
+import integrate_lticl_utils as ilu
 
 
 def checkit(truncat=0.01, usercgrams=False, Re=60, tE=10.,
-            Nts=5000, hinfcformula='ZDG'):
+            Nts=5000, hinfcformula='ZDG', cpldscheme='trpz'):
     # %% Setup problem data.
     print('Setup problem data.')
     print('-------------------')
@@ -24,6 +28,10 @@ def checkit(truncat=0.01, usercgrams=False, Re=60, tE=10.,
     amat = matdict['amat']
     cmat = matdict['cmat']
     bmat = matdict['bmat']
+    jmat = matdict['jmat']
+
+    NP, NV = jmat.shape
+    NU, NY = bmat.shape[1], cmat.shape[0]
 
     # %% Load Riccati results.
     print('Load Riccati results.')
@@ -58,18 +66,34 @@ def checkit(truncat=0.01, usercgrams=False, Re=60, tE=10.,
     print('Compute ROM.')
     print('------------')
 
-    # print('|zfo|: ', np.linalg.norm(zwo))
-    # print('|zfc|: ', np.linalg.norm(zwc))
-
     tl, tr, svs = btu.\
         compute_lrbt_transfos(zfc=zwc, zfo=zwo, mmat=mmat,
                               trunck={'threshh': truncat})
-    # print('|tl|: ', np.linalg.norm(tl))
-    # print('|tr|: ', np.linalg.norm(tr))
-    # cntrlsz = tl.shape[1]
+    cdim = tl.shape[1]
+    print('Dimension of the controller: ', cdim)
+    beta = np.sqrt(1-1/gam**2)
+    trnctsvs = svs[cdim:].flatten()
+    epsilon = 2 * (trnctsvs / np.sqrt(1+beta**2*trnctsvs**2)).sum()
+    print('stable if `<0`: ', epsilon*beta-1/gam)
+
     # plt.figure(1)
     # plt.semilogy(svs[:cntrlsz], 'x')
     # plt.show(block=False)
+    # import pdb
+    # pdb.set_trace()
+
+    def get_fom_trpz_step(M=None, A=None, dt=None, J=None):
+        NP, NV = J.shape
+        sysm1 = sps.hstack([M-.5*dt*A, J.T], format='csr')
+        sysm2 = sps.hstack([J, sps.csr_matrix((NP, NP))], format='csr')
+        sadptmat = sps.vstack([sysm1, sysm2], format='csr')
+        alu = factorized(sadptmat)
+
+        def fom_trpz_step(rhsv=None):
+            vpvec = alu(np.r_[rhsv.flatten(), np.zeros((NP, ))])
+            return vpvec[:NV].reshape((NV, 1))
+
+        return fom_trpz_step
 
     ak_mat, bk_mat, ck_mat, xok, xck = nru.\
         get_prj_model(mmat=mmat, fmat=amat, jmat=None,
@@ -93,8 +117,6 @@ def checkit(truncat=0.01, usercgrams=False, Re=60, tE=10.,
     rcxokres = ak_mat.dot(rcxok) + rcxok.dot(ak_mat.T) - \
         (1-1/gam)*(1+1/gam)*rcxok.dot(ck_mat.T).dot(ck_mat.dot(rcxok)) + \
         bk_mat.dot(bk_mat.T)
-    # print(np.linalg.norm(riccres))
-    # print(np.linalg.norm(ricores))
     print('rc-o-ric-res|', np.linalg.norm(rcxokres))
 
     rcxck = solve_continuous_are(ak_mat, scfc*bk_mat, ck_mat.T.dot(ck_mat),
@@ -265,7 +287,8 @@ def checkit(truncat=0.01, usercgrams=False, Re=60, tE=10.,
         print('coupled explicit:', np.linalg.norm(hxkxk[:hN]),
               np.linalg.norm(hxkxk[hN:]))
 
-    xk = np.ones((ak_mat.shape[0], 1))
+    # xk = np.ones((ak_mat.shape[0], 1))
+    xk = np.random.randn(ak_mat.shape[0], 1)
     hxk = 0*xk
     hxkxk = np.copy(np.vstack([hxk, xk]))
     # sollist = [np.copy(hxkxk.flatten()[0])]
@@ -277,6 +300,46 @@ def checkit(truncat=0.01, usercgrams=False, Re=60, tE=10.,
     print('coupled implicit:', np.linalg.norm(hxkxk[:hN]),
           np.linalg.norm(hxkxk[hN:]))
     plt.plot(np.linspace(0, tE, Nts+1), sollist, label='coupled implicit')
+
+    intgrtrdict = dict(xz=xk.copy(), hxz=hxk.copy(),
+                       sys_a=ak_mat, sys_b=bk_mat, sys_c=ck_mat, sys_m=None,
+                       obs_a=obs_ak, obs_b=obs_bk, obs_c=obs_ck, obs_m=None,
+                       tE=tE, Nts=Nts, retylist=True, dense=True)
+
+    plt.legend()
+
+    ylist_ie = ilu.cpld_implicit_solver(**intgrtrdict, scheme='IE')
+    plt.figure(33)
+    plt.plot(trange, ylist_ie, label='ilu cpld rom IE')
+    plt.legend()
+    plt.figure(333)
+    ylist_ie = ilu.cpld_implicit_solver(**intgrtrdict, scheme='trpz')
+    plt.plot(trange, ylist_ie, label='ilu cpld rom trpz')
+    plt.legend()
+    return
+    bigamat = sps.vstack([sps.hstack([amat, jmat.T]),
+                          sps.hstack([jmat, sps.csr_matrix((NP, NP))])],
+                         format='csr')
+    bigmmat = sps.block_diag([mmat, sps.csr_matrix((NP, NP))])
+    bigbmat = sps.vstack([bmat, sps.csr_matrix((NP, NU))])
+    bigcmat = sps.hstack([cmat, sps.csr_matrix((NY, NP))])
+
+    spsintgrtrdict = dict(xz=np.vstack([tr@xk.copy(), np.zeros((NP, 1))]),
+                          hxz=hxk.copy(),
+                          sys_a=bigamat, sys_b=bigbmat,
+                          sys_c=bigcmat, sys_m=bigmmat,
+                          obs_a=sps.csr_matrix(obs_ak),
+                          obs_b=sps.csr_matrix(obs_bk),
+                          obs_c=sps.csr_matrix(obs_ck),
+                          obs_m=None,
+                          tE=tE, Nts=Nts, retylist=True, dense=False)
+    ylist_ie = ilu.cpld_implicit_solver(**spsintgrtrdict, scheme=cpldscheme)
+    plt.figure(34)
+    plt.plot(trange, ylist_ie, label='ilu cpld fom ie')
+    plt.legend()
+    plt.show()
+
+    return
 
     xk = np.ones((ak_mat.shape[0], 1))
     hxk = 0*xk
@@ -290,10 +353,60 @@ def checkit(truncat=0.01, usercgrams=False, Re=60, tE=10.,
     # plt.figure()
     plt.plot(trange, bdfsol['y'][hN, :], label='odeint')
 
+    fom_dcpld_mplct_scnd = True
+    if fom_dcpld_mplct_scnd:
+        fomtrpzstp = get_fom_trpz_step(A=amat, M=mmat, J=jmat, dt=dt)
+        xk = np.ones((amat.shape[0], 1))
+        sollist = [xk[0]]
+        hxk = np.zeros((hN, 1))
+        uk = obs_ck @ hxk
+        yk = cmat @ xk
+
+        # prediction
+        pxkk = fomtrpzstp(mmat*xk + .5*dt*amat@xk + dt*bmat@uk)
+        pykk = cmat @ pxkk
+        phxkk = hxk + dt*(obs_ak@hxk + obs_bk@yk)
+
+        # correction
+        hxkk = hxk + dt/2*(obs_ak@(hxk+phxkk)+obs_bk@(pykk+yk))
+        ukk = obs_ck@hxkk
+        xkk = xk + dt/2*(amat@(xk+pxkk) + bmat@(ukk+uk))
+        xkk = fomtrpzstp(mmat*xk + .5*dt*amat@xk + .5*dt*bmat@(uk+ukk))
+        ykk = cmat@xkk
+        sollist.append(np.linalg.norm(xkk))
+
+        obsitmat = np.linalg.inv(np.eye(hN)-dt/2*obs_ak)
+        for kkk in range(1, Nts):
+            # xkkk = fomtrpzstp(mmat@xkk+.5*dt*(amat@xkk + bmat@(3*ukk-uk)))
+            xkkk = fomtrpzstp(mmat@xkk+.5*dt*(amat@xkk + bmat@(ukk+uk)))
+            # xkkk = xkk+dt/2*(ak_mat@(3*xkk-xk) + bk_mat@(3*ukk-uk))
+            # hxkk = obsitmat @ (hxk+dt/2*(obs_ak@hxk + obs_bk@(ykk+yk)))
+            # hxkkk = obsitmat @ (hxkk+dt/2*(obs_ak@hxkk + obs_bk@(3*ykk-yk)))
+            # hxkkk = hxkk+dt/2*(obs_ak@(3*hxkk-hxk) + obs_bk@(3*ykk-yk))
+            xk = xkk
+            xkk = xkkk
+            yk, ykk = cmat@xk, cmat@xkk
+            hxkkk = obsitmat @ (hxkk+dt/2*(obs_ak@hxkk + obs_bk@(ykk+yk)))
+            hxk = hxkk
+            hxkk = hxkkk
+            uk, ukk = obs_ck@hxk, obs_ck@hxkk
+            # sollist.append(np.copy(xkk.flatten()[0]))
+            # sollist.append(xkk[0])
+            sollist.append(np.linalg.norm(xkk))
+        print('fom decoupled implicit 2nd:',
+              np.linalg.norm(hxkk), np.linalg.norm(xkk))
+        plt.plot(np.linspace(0, tE, Nts+1), sollist,
+                 label='fom dcpld mplct 2nd')
+
 
 if __name__ == '__main__':
-    checkit(truncat=0.01, usercgrams=True, Re=60, tE=10., Nts=2500,
-            hinfcformula='ZDG')
+    btE, bNts = 1., 400
+    scaletest = .8
+    # checkit(truncat=0.01, usercgrams=True, Re=60, tE=1., Nts=250,
+    #         hinfcformula='ZDG')
+    checkit(truncat=0.00001, usercgrams=True, Re=60, tE=scaletest*btE,
+            Nts=np.int(np.ceil(scaletest*bNts)),
+            hinfcformula='ZDG', cpldscheme='trpz')
     # checkit(truncat=0.01, usercgrams=True, Re=60, tE=10., Nts=4500,
     #         hinfcformula='ZDG')
     plt.legend()
