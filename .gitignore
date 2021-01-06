@@ -5,6 +5,7 @@ docs/_build
 external-data/
 tests/cachedata/
 tests/lapacktests/
+tests/mh-data
 logs
 log*
 *.xml
