@@ -9,12 +9,13 @@ import lqgbt_oseen.nse_riccont_utils as nru
 from scipy.linalg import solve_continuous_are
 from scipy.integrate import solve_ivp
 import scipy.sparse as sps
-from scipy.sparse.linalg import factorized
 
 import integrate_lticl_utils as ilu
 
+verbose = False
 
-def checkit(truncat=0.01, usercgrams=False, Re=60, tE=10.,
+
+def checkit(truncat=0.0001, usercgrams=False, Re=60, tE=10.,
             Nts=5000, hinfcformula='ZDG', cpldscheme='trpz'):
     # %% Setup problem data.
     print('Setup problem data.')
@@ -82,19 +83,6 @@ def checkit(truncat=0.01, usercgrams=False, Re=60, tE=10.,
     # import pdb
     # pdb.set_trace()
 
-    def get_fom_trpz_step(M=None, A=None, dt=None, J=None):
-        NP, NV = J.shape
-        sysm1 = sps.hstack([M-.5*dt*A, J.T], format='csr')
-        sysm2 = sps.hstack([J, sps.csr_matrix((NP, NP))], format='csr')
-        sadptmat = sps.vstack([sysm1, sysm2], format='csr')
-        alu = factorized(sadptmat)
-
-        def fom_trpz_step(rhsv=None):
-            vpvec = alu(np.r_[rhsv.flatten(), np.zeros((NP, ))])
-            return vpvec[:NV].reshape((NV, 1))
-
-        return fom_trpz_step
-
     ak_mat, bk_mat, ck_mat, xok, xck = nru.\
         get_prj_model(mmat=mmat, fmat=amat, jmat=None,
                       zwo=zwo, zwc=zwc,
@@ -147,8 +135,9 @@ def checkit(truncat=0.01, usercgrams=False, Re=60, tE=10.,
     fullevls = np.linalg.eigvals(fullrmmat)
     mxevidx = np.argmax(np.abs(np.real(fullevls)))
     mnevidx = np.argmin(np.abs(np.real(fullevls)))
-    print('\nred-lin-CL-mat:\n max |EV|: {0},\n min |EV|: {1}'.
-          format(fullevls[mxevidx], fullevls[mnevidx]))
+    if verbose:
+        print('\nred-lin-CL-mat:\n max |EV|: {0},\n min |EV|: {1}'.
+              format(fullevls[mxevidx], fullevls[mnevidx]))
     print(' * exp-Euler s-radius: {0}'.
           format(np.max(np.abs(1-tE/Nts*fullevls))))
 
@@ -163,15 +152,11 @@ def checkit(truncat=0.01, usercgrams=False, Re=60, tE=10.,
     impitmatevls = np.linalg.eigvals(impitmat)
     print(' * imp-Euler s-radius: {0}'.format(np.max(np.abs(impitmatevls))))
 
-    # expitmatevls = np.linalg.eigvals(np.eye(2*hN)+dt*fullrmmat)
-    # print('exp-itmats-evls:', expitmatevls)
-
     imptrprulevls = 1/(1-.5*dt*fullevls)*(1+.5*dt*fullevls)
     print(' * imp-trprul s-radius: {0}'.format(np.max(np.abs(imptrprulevls))))
 
-    dcpld_xplct = True
-    # dcpld_mxplct = True
-    sim_xplct = True
+    dcpld_xplct = False
+    sim_xplct = False
 
     if dcpld_xplct:
         xk = np.ones((ak_mat.shape[0], 1))
@@ -183,19 +168,20 @@ def checkit(truncat=0.01, usercgrams=False, Re=60, tE=10.,
             hxk = hxk + dt*(obs_ak @ hxk + obs_bk @ yk)
         print('decoupled explicit:', np.linalg.norm(hxk), np.linalg.norm(xk))
 
-    # if dcpld_mxplct:
-    #     xk = np.ones((ak_mat.shape[0], 1))
-    #     hxk = 0*xk
-    #     obsakpmo = np.linalg.inv(np.eye(hN)-dt*obs_ak)
+    dcpld_mxplct = True
+    if dcpld_mxplct:
+        xk = np.ones((ak_mat.shape[0], 1))
+        hxk = 0*xk
+        obsakpmo = np.linalg.inv(np.eye(hN)-dt*obs_ak)
 
-    #     for kkk in range(Nts):
-    #         uk = obs_ck @ hxk
-    #         xk = xk + dt*ak_mat @ xk + dt * bk_mat @ uk
-    #         yk = ck_mat @ xk
-    #         hxk = obsakpmo @ (hxk + dt*obs_bk @ yk)
-    #     print('decoupled imex:', np.linalg.norm(hxk), np.linalg.norm(xk))
+        for kkk in range(Nts):
+            uk = obs_ck @ hxk
+            xk = xk + dt*ak_mat @ xk + dt * bk_mat @ uk
+            yk = ck_mat @ xk
+            hxk = obsakpmo @ (hxk + dt*obs_bk @ yk)
+        print('decoupled imex:', np.linalg.norm(hxk), np.linalg.norm(xk))
 
-    dcpld_xplct_scnd = True
+    dcpld_xplct_scnd = False
     if dcpld_xplct_scnd:
         xk = np.ones((ak_mat.shape[0], 1))
         sollist = [xk[0]]
@@ -237,7 +223,7 @@ def checkit(truncat=0.01, usercgrams=False, Re=60, tE=10.,
         plt.figure(22)
         plt.plot(np.linspace(0, tE, Nts+1), sollist, label='dcupld xplct 2nd')
 
-    dcpld_mplct_scnd = True
+    dcpld_mplct_scnd = False
     if dcpld_mplct_scnd:
         xk = np.ones((ak_mat.shape[0], 1))
         sollist = [xk[0]]
@@ -292,14 +278,17 @@ def checkit(truncat=0.01, usercgrams=False, Re=60, tE=10.,
     hxk = 0*xk
     hxkxk = np.copy(np.vstack([hxk, xk]))
     # sollist = [np.copy(hxkxk.flatten()[0])]
-    sollist = [hxkxk[hN]]
+    # sollist = [hxkxk[hN]]
+    sollist = [hxkxk.flatten()]
     for kkk in range(Nts):
         hxkxk = impitmat @ hxkxk
         # sollist.append(hxkxk.flatten()[0].copy())
-        sollist.append(hxkxk[hN])
+        # sollist.append(hxkxk[hN])
+        sollist.append(hxkxk.flatten())
     print('coupled implicit:', np.linalg.norm(hxkxk[:hN]),
           np.linalg.norm(hxkxk[hN:]))
-    plt.plot(np.linspace(0, tE, Nts+1), sollist, label='coupled implicit')
+    plt.figure(22)
+    plt.plot(np.linspace(0, tE, Nts+1), sollist)  # , label='coupled implicit')
 
     intgrtrdict = dict(xz=xk.copy(), hxz=hxk.copy(),
                        sys_a=ak_mat, sys_b=bk_mat, sys_c=ck_mat, sys_m=None,
@@ -315,6 +304,10 @@ def checkit(truncat=0.01, usercgrams=False, Re=60, tE=10.,
     plt.figure(333)
     ylist_ie = ilu.cpld_implicit_solver(**intgrtrdict, scheme='trpz')
     plt.plot(trange, ylist_ie, label='ilu cpld rom trpz')
+    plt.legend()
+    plt.figure(3333)
+    ylist_ie = ilu.cpld_implicit_solver(**intgrtrdict, scheme='BDF2')
+    plt.plot(trange, ylist_ie, label='ilu cpld rom bdf2')
     plt.legend()
     return
     bigamat = sps.vstack([sps.hstack([amat, jmat.T]),
@@ -355,7 +348,7 @@ def checkit(truncat=0.01, usercgrams=False, Re=60, tE=10.,
 
     fom_dcpld_mplct_scnd = True
     if fom_dcpld_mplct_scnd:
-        fomtrpzstp = get_fom_trpz_step(A=amat, M=mmat, J=jmat, dt=dt)
+        fomtrpzstp = ilu.get_fom_trpz_step(A=amat, M=mmat, J=jmat, dt=dt)
         xk = np.ones((amat.shape[0], 1))
         sollist = [xk[0]]
         hxk = np.zeros((hN, 1))
@@ -400,11 +393,11 @@ def checkit(truncat=0.01, usercgrams=False, Re=60, tE=10.,
 
 
 if __name__ == '__main__':
-    btE, bNts = 1., 400
-    scaletest = .8
+    btE, bNts = 1., 8000
+    scaletest = 8.
     # checkit(truncat=0.01, usercgrams=True, Re=60, tE=1., Nts=250,
     #         hinfcformula='ZDG')
-    checkit(truncat=0.00001, usercgrams=True, Re=60, tE=scaletest*btE,
+    checkit(truncat=0.001, usercgrams=True, Re=60, tE=scaletest*btE,
             Nts=np.int(np.ceil(scaletest*bNts)),
             hinfcformula='ZDG', cpldscheme='trpz')
     # checkit(truncat=0.01, usercgrams=True, Re=60, tE=10., Nts=4500,

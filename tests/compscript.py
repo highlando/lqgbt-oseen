@@ -47,9 +47,9 @@ ttf_npcrdstps = 6
 # closed loop def
 closed_loop = 'full_state_fb'
 closed_loop = False
-closed_loop = None
 closed_loop = 'red_output_fb'
 closed_loop = 'hinf_red_output_fb'
+closed_loop = None
 # what inival
 whichinival = 'sstokes'  # steady state Stokes solution
 whichinival, tpp = 'sstokes++', .5  # a developed state starting from sstokes
@@ -60,7 +60,7 @@ tpp is tpp if whichinival == 'sstokes++' or whichinival == 'snse+d++' else None
 addinputd = True  # whether to add disturbances through the input
 duampltd = 1e-6
 
-scaletest = 1.  # for 1. we simulate till 12.
+scaletest = 50.  # for 1. we simulate till 12.
 baset0, basetE, baseNts = 0.0, 12.0, 12*2**8
 dudict = dict(addinputd=addinputd, ta=0., tb=1., ampltd=duampltd,
               uvec=np.array([1, 1]).reshape((2, 1)))

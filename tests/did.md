@@ -1,6 +1,5 @@
 
-## 2020-04-18 22:17:54+02:00
-
+## 2020-04-18 22:17:54+02:00 
  * RE=35 and no FB gives nice wiggles
 
 ## 2020-04-19 07:59:19+02:00
@@ -65,3 +64,7 @@
  * just `AB2`
  * also OK `heun-AB2` in `x` and `implicit midpoint` in `hx`
  * maybe check *spectral radius* of the schemes
+
+## 2021-01-05 20:08:30+01:00
+
+ * started with implementing the implicit treatment in `dns.solve_nse`
