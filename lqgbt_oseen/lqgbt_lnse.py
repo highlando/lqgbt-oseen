@@ -250,6 +250,9 @@ def lqgbt(Re=1e2,
             vp_ss_nse = (np.load(cachedsss),
                          None)
             print('loaded sssol from: ', cachedsss)
+            if initre == Re:
+                v_init = vp_ss_nse[0]
+                raise IOError()
         except IOError:
             print("couldn't load sssol from: ", cachedsss)
             initssfemp, initssstokesmatsc, initssrhsd = \
@@ -277,6 +280,7 @@ def lqgbt(Re=1e2,
         v_init = vp_ss_nse[0]
 
     v_ss_nse = vp_ss_nse[0]
+    p_ss_nse = vp_ss_nse[1]
     dbcinds, dbcvals = femp['dbcinds'], femp['dbcvals']
     (convc_mat, rhs_con,
      rhsv_conbc) = snu.get_v_conv_conts(vvec=v_ss_nse, invinds=invinds,
@@ -311,6 +315,24 @@ def lqgbt(Re=1e2,
     else:
         f_mat_gramians = f_mat
         shortfailstr = ''
+
+    cntres = jmat @ v_ss_nse[invinds] - rhsd['fp']
+    print('cnt res: {0}', np.linalg.norm(cntres))
+    momres = f_mat@v_ss_nse[invinds] + jmat.T@p_ss_nse + \
+        rhsd['fv']+rhs_con+rhsv_conbc
+    print('mom res: {0}', np.linalg.norm(momres))
+
+    savematdict = dict(mmat=mmat, amat=f_mat, jmat=jmat,
+                       bmat=b_mat, cmat=c_mat_reg,
+                       p_ss_nse=p_ss_nse,
+                       v_ss_nse=v_ss_nse[invinds], fp=rhsd['fp'],
+                       fv=rhsd['fv']+rhs_con+rhsv_conbc)
+
+    from scipy.io import savemat
+    testdtstr = 'testdata/oseen_sys_' + shortname + \
+        '{0}{1}_'.format(Re, gamma) + shortcontsetupstr + '.mat'
+    savemat(testdtstr, savematdict, do_compression=True)
+    raise UserWarning('saved data to ' + testdtstr)
 
 #
 # ### Compute or get the Gramians

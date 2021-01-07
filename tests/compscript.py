@@ -6,6 +6,8 @@ import datetime
 
 problem = 'dbrotcyl'
 meshlevel = 2
+problem = 'cylinderwake'
+meshlevel = 1
 
 plotit = False
 plotit = True
@@ -16,8 +18,8 @@ ddir = '/scratch/tbd/dnsdata/'
 pymess = False
 pymess = True
 # relist = [None, 3e1, 4e1, 6e1]
-relist = [None, 30., 35., 40., 45., 50.]  # , 55.]
-# relist = [None, 15., 20., 25., 30., 35., 40., 45., 50., 55., 60.]
+# relist = [None, 30., 35., 40., 45., 50.]  # , 55.]
+relist = [None, 15., 20., 25., 30., 35., 40., 45., 50., 55., 60.]
 # relist = [40., 40., 60.]
 max_re_only = False
 max_re_only = True  # consider only the last Re for the simu
