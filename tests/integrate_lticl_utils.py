@@ -6,11 +6,18 @@ from scipy.sparse.linalg import factorized
 def cpld_implicit_solver(xz=None, hxz=None,
                          sys_a=None, sys_b=None, sys_c=None, sys_m=None,
                          obs_a=None, obs_b=None, obs_c=None, obs_m=None,
+                         sys_rhs=None, obs_rhs=None,
                          tE=None, Nts=None,
                          retylist=True, dense=False, scheme='IE'):
 
     N, hN = sys_a.shape[0], obs_a.shape[0]
     dt = tE/(Nts+1)
+    if sys_rhs is None:
+        sys_rhs = np.zeros((N, 1))
+    if obs_rhs is None:
+        obs_rhs = np.zeros((hN, 1))
+    dttfsrhs = dt*np.vstack([sys_rhs, obs_rhs])
+
     if dense:
         if sys_m is None:
             sys_m = np.eye(N)
@@ -27,21 +34,21 @@ def cpld_implicit_solver(xz=None, hxz=None,
             sysmati = np.linalg.inv(cpldmmat - dt*cpldamat)
 
             def incrementplease(xk, xp=None, fp=None, fkk=None):
-                rhs = cpldmmat@xk
+                rhs = cpldmmat@xk + dttfsrhs
                 return sysmati@rhs
 
         elif scheme == 'trpz':
             sysmati = np.linalg.inv(cpldmmat - .5*dt*cpldamat)
 
             def incrementplease(xk, xp=None, fp=None, fkk=None):
-                rhs = cpldmmat@xk + .5*dt*cpldamat@xk
+                rhs = cpldmmat@xk + .5*dt*cpldamat@xk + dttfsrhs
                 return sysmati@rhs
 
         elif scheme == 'BDF2':
             sysmati = np.linalg.inv(cpldmmat - 2/3*dt*cpldamat)
 
             def incrementplease(xc, xp=None, fc=None, fn=None, fp=None):
-                rhs = 4/3*cpldmmat@xc - 1/3*cpldmmat@xp
+                rhs = 4/3*cpldmmat@xc - 1/3*cpldmmat@xp + dttfsrhs
                 return sysmati@rhs
 
     else:
@@ -62,21 +69,21 @@ def cpld_implicit_solver(xz=None, hxz=None,
             sysmati = sps.linalg.factorized(cpldmmat - dt*cpldamat)
 
             def incrementplease(xk, xp=None, fp=None, fkk=None):
-                rhs = cpldmmat@xk
+                rhs = cpldmmat@xk + dttfsrhs
                 return sysmati(rhs.flatten()).reshape((N+hN, 1))
 
         elif scheme == 'trpz':
             sysmati = sps.linalg.factorized(cpldmmat - .5*dt*cpldamat)
 
             def incrementplease(xk, xp=None, fp=None, fkk=None):
-                rhs = cpldmmat@xk + .5*dt*cpldamat@xk
+                rhs = cpldmmat@xk + .5*dt*cpldamat@xk + dttfsrhs
                 return sysmati(rhs.flatten()).reshape((N+hN, 1))
 
         elif scheme == 'BDF2':
             sysmati = sps.linalg.factorized(cpldmmat - 2/3*dt*cpldamat)
 
             def incrementplease(xc, xp=None, fc=None, fn=None, fp=None):
-                rhs = 4/3*cpldmmat@xc - 1/3*cpldmmat@xp
+                rhs = 4/3*cpldmmat@xc - 1/3*cpldmmat@xp + dttfsrhs
                 return sysmati(rhs.flatten()).reshape((N+hN, 1))
 
     xc = np.vstack([xz, hxz])
@@ -105,14 +112,16 @@ def cpld_implicit_solver(xz=None, hxz=None,
 
 
 def linsys_heun_upd(xc, amat=None, mmat=None, ffunc=None, dense=True,
-                    dt=None, IE=True):
+                    dt=None, IE=True, dttfsrhs=None):
+    if dttfsrhs is None:
+        dttfsrhs = 0
     if IE:
         if dense:
-            xpp = np.linalg.solve(mmat-dt*amat, xc)
+            xpp = np.linalg.solve(mmat-dt*amat, xc+dttfsrhs)
         else:
             pass
     else:
-        xpp = xc + dt*amat@xc
+        xpp = xc + dt*amat@xc + dttfsrhs
     xn = xc + .5*dt*amat@(xc+xpp)
 
     return xn

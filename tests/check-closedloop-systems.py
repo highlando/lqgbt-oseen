@@ -45,6 +45,9 @@ def checkit(truncat=0.0001, usercgrams=False, Re=60, tE=10.,
     fv = matdict['fv']
     fp = matdict['fp']
 
+    vinf = 0*vinf
+    print('TODO: hack')
+
     NV = amat.shape[0]
     dt = tE/(Nts+1)
     trange = np.linspace(0, tE, Nts+1)
@@ -54,32 +57,69 @@ def checkit(truncat=0.0001, usercgrams=False, Re=60, tE=10.,
     momres = amat@vinf + jmat.T@pinf + fv
     print('mom res: {0}', np.linalg.norm(momres))
 
-    def obsdrft(t):
-        return 0.  # -hbystar
-
     NY, NU = cmat.shape[0], bmat.shape[1]
     hN = 5
-    linobsrvdct = dict(ha=np.zeros((hN, hN)), hc=np.zeros((NU, hN)),
-                       hb=np.zeros((hN, NY)), drift=obsdrft,
-                       inihx=np.zeros((hN, 1)))
 
-    sndict = dict(A=-amat, M=mmat, J=jmat,
-                  b_mat=bmat, cv_mat=cmat,
-                  iniv=vinf, invinds=np.arange(NV),
-                  stokes_flow=True, time_int_scheme='cnab',
-                  fv=fv, fp=fp,
-                  t0=0., tE=tE, Nts=Nts,
-                  # closed_loop=True, dynamic_feedback=True,
-                  return_y_list=True,
-                  treat_nonl_explicit=True)
+    def obsdrft(t):
+        return np.zeros((hN, 1))  # -hbystar
 
-    ylist = solve_nse(**sndict)
-    ylist = [yl.flatten() for yl in ylist]
-    plt.figure(55)
-    plt.plot(trange, ylist, label='dns.solve_nse')
+    dnssimu = False
+    dnssimu = True
+    dnsschm = 'cnab'
+    dnsschm = 'sbdf2'
+    if dnssimu:
+        linobsrvdct = dict(ha=np.zeros((hN, hN)), hc=np.zeros((NU, hN)),
+                           hb=np.zeros((hN, NY)), drift=obsdrft,
+                           inihx=np.zeros((hN, 1)))
+
+        sndict = dict(A=-amat, M=mmat, J=jmat,
+                      b_mat=bmat, cv_mat=cmat,
+                      iniv=vinf, invinds=np.arange(NV),
+                      stokes_flow=True, time_int_scheme=dnsschm,
+                      fv=fv, fp=fp,
+                      t0=0., tE=tE, Nts=Nts,
+                      closed_loop=True, dynamic_feedback=True,
+                      dyn_fb_dict=linobsrvdct, dyn_fb_disc='linear_implicit',
+                      return_y_list=True,
+                      treat_nonl_explicit=True)
+
+        ylist = solve_nse(**sndict)
+        ylist = [yl.flatten() for yl in ylist]
+        plt.figure(55)
+        plt.plot(trange, ylist, label='dns.solve_nse: ' + dnsschm)
+        plt.legend()
 
     NP, NV = jmat.shape
     NU, NY = bmat.shape[1], cmat.shape[0]
+    mockhN = 10
+
+    fom_simu = True
+    if fom_simu:
+        bigamat = sps.vstack([sps.hstack([amat, jmat.T]),
+                              sps.hstack([jmat, sps.csr_matrix((NP, NP))])],
+                             format='csr')
+        bigmmat = sps.block_diag([mmat, sps.csr_matrix((NP, NP))])
+        bigbmat = sps.vstack([bmat, sps.csr_matrix((NP, NU))])
+        bigcmat = sps.hstack([cmat, sps.csr_matrix((NY, NP))])
+
+        spsintgrtrdict = dict(xz=np.vstack([vinf, np.zeros((NP, 1))]),
+                              hxz=np.zeros((mockhN, 1)),
+                              sys_a=bigamat, sys_b=bigbmat,
+                              sys_c=bigcmat, sys_m=bigmmat,
+                              sys_rhs=np.vstack([fv, -fp]),
+                              obs_a=sps.csr_matrix((mockhN, mockhN)),
+                              obs_b=sps.csr_matrix((mockhN, NY)),
+                              obs_c=sps.csr_matrix((NU, mockhN)),
+                              obs_m=None,
+                              tE=tE, Nts=Nts, retylist=True, dense=False)
+        ylist_ie = ilu.cpld_implicit_solver(**spsintgrtrdict,
+                                            scheme=cpldscheme)
+        plt.figure(34)
+        plt.plot(trange, ylist_ie, label='ILU mock cntrllr FOM ' + cpldscheme)
+        plt.legend()
+        plt.show()
+
+    return
 
     # %% Load Riccati results.
     print('Load Riccati results.')
@@ -317,7 +357,7 @@ def checkit(truncat=0.0001, usercgrams=False, Re=60, tE=10.,
     print('int_ode:', np.linalg.norm(intodey[:hN, -1]),
           np.linalg.norm(intodey[hN:, -1]))
 
-    # plt.figure()
+    # plt.figure(
     plt.plot(trange, bdfsol['y'][hN, :], label='odeint')
 
     fom_dcpld_mplct_scnd = True
@@ -367,8 +407,8 @@ def checkit(truncat=0.0001, usercgrams=False, Re=60, tE=10.,
 
 
 if __name__ == '__main__':
-    btE, bNts = 1., 80000
-    scaletest = .01
+    btE, bNts = .1, 80000
+    scaletest = .001
     # checkit(truncat=0.01, usercgrams=True, Re=60, tE=1., Nts=250,
     #         hinfcformula='ZDG')
     checkit(truncat=0.01, usercgrams=True, Re=60, tE=scaletest*btE,
@@ -376,5 +416,4 @@ if __name__ == '__main__':
             hinfcformula='ZDG', cpldscheme='trpz')
     # checkit(truncat=0.01, usercgrams=True, Re=60, tE=10., Nts=4500,
     #         hinfcformula='ZDG')
-    plt.legend()
     plt.show()
