@@ -1,12 +1,13 @@
 MYHOMEPATH=/home/heiland
-MYPYPATH=/home/heiland/software/gits/mypys
+MYPYPATH=/home/heiland/software/mypys
 # export PYTHONPATH="$MYPYPATH/mat_lib_plots:$MYPYPATH/sadptprj_riclyap_adi"
 export PYTHONPATH="$MYHOMEPATH/work/code/lqgbt-oseen"
 export PYTHONPATH="$PYTHONPATH:$MYPYPATH/dolfin_navier_scipy"
 echo $PYTHONPATH
 
 RE=60
-NTS=100000
+# NTS=160000
+NTS=20000
 PROBLEM=cylinderwake
 MSHLVL=1
 
@@ -14,7 +15,7 @@ MSHLVL=1
 # NTS=20000
 
 INIPERTURB=0.0
-TRUNCAT=.01
+TRUNCAT=.001
 FBTYPE=2  # full state feedback
 FBTYPE=1  # lqg-bt feedback
 # FBTYPE=1  # lqg-bt feedback
@@ -23,7 +24,7 @@ FBTYPE=-1  # no feedback
 FBTYPE=4  # hinf-bt feedback
 NUMPICARDS=20
 
-SCALETEST=.8
+SCALETEST=1.
 
 GRAMSPATH=/scratch/owncloud-gwdg/mpi-projects/18-hinf-lqgbt/results/
 HNFQR=_hinf.mat%outRegulator.Z%outFilter.Z%gam

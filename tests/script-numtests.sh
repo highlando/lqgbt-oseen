@@ -1,7 +1,8 @@
 MYHOMEPATH=/home/heiland
-MYPYPATH=/home/heiland/software/gits/mypys
-export PYTHONPATH="$MYPYPATH/mat_lib_plots"  # :$MYPYPATH/dolfin_navier_scipy"
+MYPYPATH=/home/heiland/software/mypys
+export PYTHONPATH="$MYPYPATH/mat_lib_plots:$MYPYPATH/dolfin_navier_scipy"
 export PYTHONPATH="$PYTHONPATH:$MYHOMEPATH/work/code/lqgbt-oseen"
+echo $PYTHONPATH
 # export PYTHONPATH="$PYTHONPATH:$MYPYPATH/sadptprj_riclyap_adi"
 
 RE=60
@@ -9,11 +10,11 @@ INIPERTURB=0.0
 TRUNCAT=0.001
 FBTYPE=4  # hinf-bt feedback
 FBTYPE=2  # full state feedback
-FBTYPE=1  # lqg-bt feedback
 FBTYPE=-1  # no feedback
 # FBTYPE=1  # lqg-bt feedback
+FBTYPE=1  # lqg-bt feedback
 NUMPICARDS=20
-SCALETEST=1.5
+SCALETEST=0.15
 NTS=20000
 MSHLVL=1
 PROBLEM=cylinderwake

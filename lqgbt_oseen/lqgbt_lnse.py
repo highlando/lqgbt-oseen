@@ -80,6 +80,7 @@ def lqgbt(Re=1e2,
           nwtn_adi_dict=None,
           pymess_dict=None,
           whichinival='sstate',
+          verbose=True,
           dudict=dict(addinputd=False),
           tpp=5.,  # time to add on Stokes inival for `sstokes++`
           comp_freqresp=False, comp_stepresp='nonlinear',
@@ -316,23 +317,26 @@ def lqgbt(Re=1e2,
         f_mat_gramians = f_mat
         shortfailstr = ''
 
-    cntres = jmat @ v_ss_nse[invinds] - rhsd['fp']
-    print('cnt res: {0}', np.linalg.norm(cntres))
-    momres = f_mat@v_ss_nse[invinds] + jmat.T@p_ss_nse + \
-        rhsd['fv']+rhs_con+rhsv_conbc
-    print('mom res: {0}', np.linalg.norm(momres))
+    if verbose:
+        cntres = jmat @ v_ss_nse[invinds] - rhsd['fp']
+        print('cnt res: {0}', np.linalg.norm(cntres))
+        momres = f_mat@v_ss_nse[invinds] + jmat.T@p_ss_nse + \
+            rhsd['fv']+rhs_con+rhsv_conbc
+        print('mom res: {0}', np.linalg.norm(momres))
 
-    savematdict = dict(mmat=mmat, amat=f_mat, jmat=jmat,
-                       bmat=b_mat, cmat=c_mat_reg,
-                       p_ss_nse=p_ss_nse,
-                       v_ss_nse=v_ss_nse[invinds], fp=rhsd['fp'],
-                       fv=rhsd['fv']+rhs_con+rhsv_conbc)
+    testsavemats = False
+    if testsavemats:
+        savematdict = dict(mmat=mmat, amat=f_mat, jmat=jmat,
+                           bmat=b_mat, cmat=c_mat_reg,
+                           p_ss_nse=p_ss_nse,
+                           v_ss_nse=v_ss_nse[invinds], fp=rhsd['fp'],
+                           fv=rhsd['fv']+rhs_con+rhsv_conbc)
 
-    from scipy.io import savemat
-    testdtstr = 'testdata/oseen_sys_' + shortname + \
-        '{0}{1}_'.format(Re, gamma) + shortcontsetupstr + '.mat'
-    savemat(testdtstr, savematdict, do_compression=True)
-    raise UserWarning('saved data to ' + testdtstr)
+        from scipy.io import savemat
+        testdtstr = 'testdata/oseen_sys_' + shortname + \
+            '{0}{1}_'.format(Re, gamma) + shortcontsetupstr + '.mat'
+        savemat(testdtstr, savematdict, do_compression=True)
+        raise UserWarning('saved data to ' + testdtstr)
 
 #
 # ### Compute or get the Gramians
@@ -526,7 +530,8 @@ def lqgbt(Re=1e2,
 
         linobsrvdct = dict(ha=obs_ak, hc=obs_ck, hb=obs_bk,
                            drift=obsdrft, inihx=np.zeros((obs_bk.shape[0], 1)))
-        soldict.update(dynamic_feedback=True, dyn_fb_dict=linobsrvdct)
+        soldict.update(dynamic_feedback=True, dyn_fb_dict=linobsrvdct,
+                       dyn_fb_disc='linear_implicit')
         soldict.update(dict(closed_loop=True))
     else:
         shortclstr = '_'
@@ -544,7 +549,8 @@ def lqgbt(Re=1e2,
                    clearprvdata=True,
                    fvtd=fvtd,
                    cv_mat=c_mat,  # needed for the output feedback
-                   treat_nonl_explct=True,
+                   treat_nonl_explicit=True,
+                   time_int_scheme='sbdf2',
                    b_mat=b_mat,
                    return_y_list=True,
                    return_dictofvelstrs=False)
