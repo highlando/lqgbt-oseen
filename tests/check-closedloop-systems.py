@@ -86,13 +86,14 @@ def checkit(truncat=0.0001, usercgrams=False, Re=60, tE=10.,
         ylist = solve_nse(**sndict)
         ylist = [yl.flatten() for yl in ylist]
         plt.figure(55)
-        plt.plot(trange, ylist, label='dns.solve_nse: ' + dnsschm)
+        plt.plot(trange, ylist, label='open loop dns.solve_nse: ' + dnsschm)
         plt.legend()
 
     NP, NV = jmat.shape
     NU, NY = bmat.shape[1], cmat.shape[0]
     mockhN = 10
 
+    fom_simu = False
     fom_simu = True
     if fom_simu:
         bigamat = sps.vstack([sps.hstack([amat, jmat.T]),
@@ -115,11 +116,10 @@ def checkit(truncat=0.0001, usercgrams=False, Re=60, tE=10.,
         ylist_ie = ilu.cpld_implicit_solver(**spsintgrtrdict,
                                             scheme=cpldscheme)
         plt.figure(34)
-        plt.plot(trange, ylist_ie, label='ILU mock cntrllr FOM ' + cpldscheme)
+        plt.plot(trange, ylist_ie, label='open loop ILU FOM ' + cpldscheme)
         plt.legend()
-        plt.show()
 
-    return
+    # return
 
     # %% Load Riccati results.
     print('Load Riccati results.')
@@ -175,27 +175,26 @@ def checkit(truncat=0.0001, usercgrams=False, Re=60, tE=10.,
                       zwo=zwo, zwc=zwc,
                       tl=tl, tr=tr,
                       bmat=bmat, cmat=cmat)
-    fvk = tl.T @ fv
-    inivk = tl.T @ (mmat @ vinf)
-    prinivk = tl.T @ (mmat @ (tr @ (tl.T @ (mmat @ vinf))))
+    rom_simu = False
+    if rom_simu:
+        fvk = tl.T @ fv
+        inivk = tl.T @ (mmat @ vinf)
+        prinivk = tl.T @ (mmat @ (tr @ (tl.T @ (mmat @ vinf))))
 
-    pev = vinf - tr @ inivk
-    nrmpev = np.sqrt(pev.T @ mmat @ pev) / np.sqrt(vinf.T @ mmat @ vinf)
-    pey = np.linalg.norm(cmat@vinf - ck_mat @ inivk)
-    print('relnorm projection error in v: {0}'.format(nrmpev))
-    print('projection error in y: {0}'.format(pey))
-    print('projection?: {0}'.format(np.linalg.norm(prinivk-inivk)))
+        pev = vinf - tr @ inivk
+        nrmpev = np.sqrt(pev.T @ mmat @ pev) / np.sqrt(vinf.T @ mmat @ vinf)
+        pey = np.linalg.norm(cmat@vinf - ck_mat @ inivk)
+        print('relnorm projection error in v: {0}'.format(nrmpev))
+        print('projection error in y: {0}'.format(pey))
+        print('projection?: {0}'.format(np.linalg.norm(prinivk-inivk)))
 
-    def fwdsimrhs(vvec, t):
-        return (ak_mat@vvec).flatten() + fvk.flatten()
+        def fwdsimrhs(vvec, t):
+            return (ak_mat@vvec).flatten() + fvk.flatten()
 
-    fwdsol = odeint(fwdsimrhs, inivk.flatten(), trange)
-    yodeintt = fwdsol@ck_mat.T
-    plt.figure(555)
-    plt.plot(trange, yodeintt, label='rom odeint')
-    return
-    # import ipdb
-    # ipdb.set_trace()
+        fwdsol = odeint(fwdsimrhs, inivk.flatten(), trange)
+        yodeintt = fwdsol@ck_mat.T
+        plt.figure(555)
+        plt.plot(trange, yodeintt, label='rom odeint')
 
     riccres = ak_mat.T.dot(xck) + xck.dot(ak_mat) - \
         (1-1/gam**2)*xck.dot(bk_mat).dot(bk_mat.T.dot(xck)) +\
@@ -254,6 +253,7 @@ def checkit(truncat=0.0001, usercgrams=False, Re=60, tE=10.,
         return fullrmmat@y
 
     hN = ak_mat.shape[0]
+    hxini = np.zeros((hN, 1))
 
     impitmat = np.linalg.inv(np.eye(2*hN)-dt*fullrmmat)
     impitmatevls = np.linalg.eigvals(impitmat)
@@ -262,44 +262,49 @@ def checkit(truncat=0.0001, usercgrams=False, Re=60, tE=10.,
     imptrprulevls = 1/(1-.5*dt*fullevls)*(1+.5*dt*fullevls)
     print(' * imp-trprul s-radius: {0}'.format(np.max(np.abs(imptrprulevls))))
 
-    # xk = np.ones((ak_mat.shape[0], 1))
-    xk = np.random.randn(ak_mat.shape[0], 1)
-    hxk = 0*xk
-    hxkxk = np.copy(np.vstack([hxk, xk]))
-    # sollist = [np.copy(hxkxk.flatten()[0])]
-    # sollist = [hxkxk[hN]]
-    sollist = [hxkxk.flatten()]
-    for kkk in range(Nts):
-        hxkxk = impitmat @ hxkxk
-        # sollist.append(hxkxk.flatten()[0].copy())
-        # sollist.append(hxkxk[hN])
-        sollist.append(hxkxk.flatten())
-    print('coupled implicit:', np.linalg.norm(hxkxk[:hN]),
-          np.linalg.norm(hxkxk[hN:]))
-    plt.figure(22)
-    plt.plot(np.linspace(0, tE, Nts+1), sollist)  # , label='coupled implicit')
+    # # xk = np.ones((ak_mat.shape[0], 1))
+    # xk = np.random.randn(ak_mat.shape[0], 1)
+    # hxk = 0*xk
+    # hxkxk = np.copy(np.vstack([hxk, xk]))
+    # # sollist = [np.copy(hxkxk.flatten()[0])]
+    # # sollist = [hxkxk[hN]]
+    # sollist = [hxkxk.flatten()]
+    # for kkk in range(Nts):
+    #     hxkxk = impitmat @ hxkxk
+    #     # sollist.append(hxkxk.flatten()[0].copy())
+    #     # sollist.append(hxkxk[hN])
+    #     sollist.append(hxkxk.flatten())
+    # print('coupled implicit:', np.linalg.norm(hxkxk[:hN]),
+    #       np.linalg.norm(hxkxk[hN:]))
+    # plt.figure(22)
+    # plt.plot(np.linspace(0, tE, Nts+1), sollist, label='coupled implicit')
 
-    intgrtrdict = dict(xz=xk.copy(), hxz=hxk.copy(),
-                       sys_a=ak_mat, sys_b=bk_mat, sys_c=ck_mat, sys_m=None,
-                       obs_a=obs_ak, obs_b=obs_bk, obs_c=obs_ck, obs_m=None,
-                       tE=tE, Nts=Nts, retylist=True, dense=True)
+    # intgrtrdict = dict(xz=xk.copy(), hxz=hxk.copy(),
+    #                    sys_a=ak_mat, sys_b=bk_mat, sys_c=ck_mat, sys_m=None,
+    #                    obs_a=obs_ak, obs_b=obs_bk, obs_c=obs_ck, obs_m=None,
+    #                    tE=tE, Nts=Nts, retylist=True, dense=True)
+    # plt.legend()
 
-    plt.legend()
-
-    ylist_ie = ilu.cpld_implicit_solver(**intgrtrdict, scheme='IE')
-    plt.figure(33)
-    plt.plot(trange, ylist_ie, label='ilu cpld rom IE')
-    plt.legend()
+    # ylist_ie = ilu.cpld_implicit_solver(**intgrtrdict, scheme='IE')
+    # plt.figure(33)
+    # plt.plot(trange, ylist_ie, label='ilu cpld rom IE')
+    # plt.legend()
     # plt.figure(333)
     # ylist_ie = ilu.cpld_implicit_solver(**intgrtrdict, scheme='trpz')
     # plt.plot(trange, ylist_ie, label='ilu cpld rom trpz')
     # plt.legend()
-    plt.figure(3333)
-    ylist_ie = ilu.cpld_implicit_solver(**intgrtrdict, scheme='BDF2')
-    plt.plot(trange, ylist_ie, label='ilu cpld rom bdf2')
-    plt.legend()
+    # plt.figure(3333)
+    # ylist_ie = ilu.cpld_implicit_solver(**intgrtrdict, scheme='BDF2')
+    # plt.plot(trange, ylist_ie, label='ilu cpld rom bdf2')
+    # plt.legend()
+
+    hbystar = obs_bk.dot(cmat.dot(vinf))
+
+    def obsdrft(t):
+        return -hbystar
 
     fom_simu = False
+    fom_simu = True
     if fom_simu:
         bigamat = sps.vstack([sps.hstack([amat, jmat.T]),
                               sps.hstack([jmat, sps.csr_matrix((NP, NP))])],
@@ -308,43 +313,48 @@ def checkit(truncat=0.0001, usercgrams=False, Re=60, tE=10.,
         bigbmat = sps.vstack([bmat, sps.csr_matrix((NP, NU))])
         bigcmat = sps.hstack([cmat, sps.csr_matrix((NY, NP))])
 
-        spsintgrtrdict = dict(xz=np.vstack([tr@xk.copy(), np.zeros((NP, 1))]),
-                              hxz=hxk.copy(),
+        spsintgrtrdict = dict(xz=np.vstack([vinf, np.zeros((NP, 1))]),
+                              hxz=hxini,
                               sys_a=bigamat, sys_b=bigbmat,
                               sys_c=bigcmat, sys_m=bigmmat,
+                              sys_rhs=np.vstack([fv, -fp]),
+                              obs_rhs=-hbystar,
                               obs_a=sps.csr_matrix(obs_ak),
                               obs_b=sps.csr_matrix(obs_bk),
                               obs_c=sps.csr_matrix(obs_ck),
+
                               obs_m=None,
                               tE=tE, Nts=Nts, retylist=True, dense=False)
         ylist_ie = ilu.cpld_implicit_solver(**spsintgrtrdict,
                                             scheme=cpldscheme)
-        plt.figure(34)
-        plt.plot(trange, ylist_ie, label='ilu cpld fom ie')
+        plt.figure(134)
+        plt.plot(trange, ylist_ie, label='closed loop ilu fom: ' + cpldscheme)
         plt.legend()
-        plt.show()
 
-    # hbystar = obs_bk.dot(c_mat.dot(v_ss_nse[invinds]))
-    def obsdrft(t):
-        return 0.  # -hbystar
+    cl_fom_dns_simu = False
+    cl_fom_dns_simu = True
+    if cl_fom_dns_simu:
+        linobsrvdct = dict(ha=obs_ak, hc=obs_ck, hb=obs_bk,
+                           drift=obsdrft, inihx=np.zeros((obs_bk.shape[0], 1)))
+        NV = amat.shape[0]
 
-    linobsrvdct = dict(ha=obs_ak, hc=obs_ck, hb=obs_bk,
-                       drift=obsdrft, inihx=np.zeros((obs_bk.shape[0], 1)))
-    NV = amat.shape[0]
-    sndict = dict(A=amat, M=mmat, J=jmat,
-                  b_mat=bmat, cv_mat=cmat,
-                  iniv=1e-5*np.ones((NV, 1)), invinds=np.arange(NV),
-                  stokes_flow=True, time_int_scheme='cnab',
-                  t0=0., tE=tE, Nts=Nts,
-                  closed_loop=True, dynamic_feedback=True,
-                  return_y_list=True,
-                  treat_nonl_explicit=True,
-                  dyn_fb_dict=linobsrvdct)
+        sndict = dict(A=-amat, M=mmat, J=jmat,
+                      b_mat=bmat, cv_mat=cmat,
+                      iniv=vinf, invinds=np.arange(NV),
+                      stokes_flow=True, time_int_scheme=dnsschm,
+                      fv=fv, fp=fp,
+                      t0=0., tE=tE, Nts=Nts,
+                      closed_loop=True, dynamic_feedback=True,
+                      dyn_fb_dict=linobsrvdct, dyn_fb_disc='linear_implicit',
+                      return_y_list=True,
+                      treat_nonl_explicit=True)
 
-    ylist = solve_nse(**sndict)
-    ylist = [yl.flatten() for yl in ylist]
-    plt.figure(55)
-    plt.plot(trange, ylist, label='dns.solve_nse')
+        ylist = solve_nse(**sndict)
+        ylist = [yl.flatten() for yl in ylist]
+        plt.figure(155)
+        plt.plot(trange, ylist,
+                 label='closed loop dns.solve_nse with: ' + dnsschm)
+        plt.legend()
 
     return
 
@@ -361,6 +371,7 @@ def checkit(truncat=0.0001, usercgrams=False, Re=60, tE=10.,
     plt.plot(trange, bdfsol['y'][hN, :], label='odeint')
 
     fom_dcpld_mplct_scnd = True
+    fom_dcpld_mplct_scnd = False
     if fom_dcpld_mplct_scnd:
         fomtrpzstp = ilu.get_fom_trpz_step(A=amat, M=mmat, J=jmat, dt=dt)
         xk = np.ones((amat.shape[0], 1))
@@ -407,13 +418,13 @@ def checkit(truncat=0.0001, usercgrams=False, Re=60, tE=10.,
 
 
 if __name__ == '__main__':
-    btE, bNts = .1, 80000
-    scaletest = .001
+    btE, bNts = 1., 500
+    scaletest = 10.
     # checkit(truncat=0.01, usercgrams=True, Re=60, tE=1., Nts=250,
     #         hinfcformula='ZDG')
-    checkit(truncat=0.01, usercgrams=True, Re=60, tE=scaletest*btE,
+    checkit(truncat=0.0001, usercgrams=True, Re=60, tE=scaletest*btE,
             Nts=np.int(np.ceil(scaletest*bNts)),
-            hinfcformula='ZDG', cpldscheme='trpz')
+            hinfcformula='ZDG', cpldscheme='IE')
     # checkit(truncat=0.01, usercgrams=True, Re=60, tE=10., Nts=4500,
     #         hinfcformula='ZDG')
     plt.show()
