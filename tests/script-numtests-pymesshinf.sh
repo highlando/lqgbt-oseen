@@ -7,7 +7,7 @@ echo $PYTHONPATH
 
 RE=60
 # NTS=160000
-NTS=20000
+NTS=16000
 PROBLEM=cylinderwake
 MSHLVL=1
 
@@ -15,14 +15,14 @@ MSHLVL=1
 # NTS=20000
 
 INIPERTURB=0.0
-TRUNCAT=.001
+TRUNCAT=.0005
 FBTYPE=2  # full state feedback
 FBTYPE=1  # lqg-bt feedback
 # FBTYPE=1  # lqg-bt feedback
 PYMESS=1
 FBTYPE=-1  # no feedback
 FBTYPE=4  # hinf-bt feedback
-NUMPICARDS=20
+NUMPICARDS=10
 
 SCALETEST=1.
 
@@ -41,5 +41,5 @@ python3 compscript.py \
     --closed_loop=${FBTYPE} --pymess \
     --scaletest=${SCALETEST} --truncat=${TRUNCAT} \
     --strtogramfacs=${GRAMSFILE} \
-    --Nts=${NTS}
-    # --ttf --ttf_npcrdstps=${NUMPICARDS}
+    --Nts=${NTS} \
+    --ttf --ttf_npcrdstps=${NUMPICARDS}

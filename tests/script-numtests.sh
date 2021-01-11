@@ -13,9 +13,9 @@ FBTYPE=2  # full state feedback
 FBTYPE=-1  # no feedback
 # FBTYPE=1  # lqg-bt feedback
 FBTYPE=1  # lqg-bt feedback
-NUMPICARDS=20
-SCALETEST=0.15
-NTS=20000
+NUMPICARDS=10
+SCALETEST=1.
+NTS=16000
 MSHLVL=1
 PROBLEM=cylinderwake
 
@@ -33,5 +33,5 @@ python3 compscript.py --problem=${PROBLEM} --RE=${RE} \
     --closed_loop=${FBTYPE} \
     --scaletest=${SCALETEST} --truncat=${TRUNCAT} \
     --strtogramfacs=${GRAMSFILE} \
-    --Nts=${NTS}
-# --ttf --ttf_npcrdstps=${NUMPICARDS}
+    --Nts=${NTS} \
+    --ttf --ttf_npcrdstps=${NUMPICARDS}

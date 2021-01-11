@@ -246,16 +246,16 @@ def lqgbt(Re=1e2,
             initre = Re
         else:
             print('Initialising the steadystate solution with Re=', initre)
-        cachedsss = 'cachedata/' + Path(get_fdstr(initre)).name + '_sssol.npy'
+        cachssvs = 'cachedata/' + Path(get_fdstr(initre)).name + '_ssvsol.npy'
+        cachssps = 'cachedata/' + Path(get_fdstr(initre)).name + '_sspsol.npy'
         try:
-            vp_ss_nse = (np.load(cachedsss),
-                         None)
-            print('loaded sssol from: ', cachedsss)
-            if initre == Re:
-                v_init = vp_ss_nse[0]
-                raise IOError()
+            vp_ss_nse = (np.load(cachssvs), np.load(cachssps))
+            print('loaded sssol from: ', cachssvs)
+            # if initre == Re:
+            #     v_init = vp_ss_nse[0]
+            #     raise IOError()
         except IOError:
-            print("couldn't load sssol from: ", cachedsss)
+            print("couldn't load sssol from: ", cachssvs)
             initssfemp, initssstokesmatsc, initssrhsd = \
                 dnsps.get_sysmats(problem='gen_bccont', Re=initre,
                                   bccontrol=True, scheme='TH', mergerhs=True,
@@ -274,8 +274,9 @@ def lqgbt(Re=1e2,
                                       vel_start_nwtn=v_init,
                                       vel_nwtn_tol=4e-13,
                                       clearprvdata=debug, **initsssoldict)
-            np.save(cachedsss, vp_ss_nse[0])
-            print('saved sssol to: ', cachedsss)
+            np.save(cachssvs, vp_ss_nse[0])
+            np.save(cachssps, vp_ss_nse[1])
+            print('saved sssol to: ', cachssvs)
         if initre == Re:
             break
         v_init = vp_ss_nse[0]

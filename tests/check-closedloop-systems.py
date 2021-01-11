@@ -422,7 +422,7 @@ if __name__ == '__main__':
     scaletest = 10.
     # checkit(truncat=0.01, usercgrams=True, Re=60, tE=1., Nts=250,
     #         hinfcformula='ZDG')
-    checkit(truncat=0.0001, usercgrams=True, Re=60, tE=scaletest*btE,
+    checkit(truncat=0.0005, usercgrams=True, Re=60, tE=scaletest*btE,
             Nts=np.int(np.ceil(scaletest*bNts)),
             hinfcformula='ZDG', cpldscheme='IE')
     # checkit(truncat=0.01, usercgrams=True, Re=60, tE=10., Nts=4500,
