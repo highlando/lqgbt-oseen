@@ -5,6 +5,7 @@ from scipy.integrate import odeint
 import sadptprj_riclyap_adi.bal_trunc_utils as btu
 import sadptprj_riclyap_adi.lin_alg_utils as lau
 import matplotlib.pyplot as plt
+from dolfin_navier_scipy.stokes_navier_utils import solve_nse
 import lqgbt_oseen.nse_riccont_utils as nru
 
 from scipy.linalg import solve_continuous_are
@@ -12,7 +13,7 @@ from scipy.integrate import solve_ivp
 import scipy.sparse as sps
 
 import integrate_lticl_utils as ilu
-from dolfin_navier_scipy.stokes_navier_utils import solve_nse
+from linsys_check_utils import hinf_rom_stable
 
 verbose = False
 
@@ -63,8 +64,8 @@ def checkit(truncat=0.0001, usercgrams=False, Re=60, tE=10.,
     def obsdrft(t):
         return np.zeros((hN, 1))  # -hbystar
 
-    dnssimu = False
     dnssimu = True
+    dnssimu = False
     dnsschm = 'cnab'
     dnsschm = 'sbdf2'
     if dnssimu:
@@ -93,8 +94,8 @@ def checkit(truncat=0.0001, usercgrams=False, Re=60, tE=10.,
     NU, NY = bmat.shape[1], cmat.shape[0]
     mockhN = 10
 
-    fom_simu = False
     fom_simu = True
+    fom_simu = False
     if fom_simu:
         bigamat = sps.vstack([sps.hstack([amat, jmat.T]),
                               sps.hstack([jmat, sps.csr_matrix((NP, NP))])],
@@ -163,6 +164,11 @@ def checkit(truncat=0.0001, usercgrams=False, Re=60, tE=10.,
     trnctsvs = svs[cdim:].flatten()
     epsilon = 2 * (trnctsvs / np.sqrt(1+beta**2*trnctsvs**2)).sum()
     print('stable if `<0`: ', epsilon*beta-1/gam)
+
+    optromdim, optithreshh, optitl, optitr \
+        = hinf_rom_stable(zwc=zwc, zwo=zwo, gamma=gam, mmat=mmat)
+
+    return
 
     # plt.figure(1)
     # plt.semilogy(svs[:cntrlsz], 'x')

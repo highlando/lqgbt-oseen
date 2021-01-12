@@ -15,7 +15,7 @@ MSHLVL=1
 # NTS=20000
 
 INIPERTURB=0.0
-TRUNCAT=.0005
+TRUNCAT=.0002
 FBTYPE=2  # full state feedback
 FBTYPE=1  # lqg-bt feedback
 # FBTYPE=1  # lqg-bt feedback
