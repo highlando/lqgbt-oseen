@@ -6,16 +6,17 @@ export PYTHONPATH="$PYTHONPATH:$MYPYPATH/dolfin_navier_scipy"
 echo $PYTHONPATH
 
 RE=60
-# NTS=160000
-NTS=16000
+NTS=160000
 PROBLEM=cylinderwake
 MSHLVL=1
+SHRTLF=resultsoverview.md
 
 # RE=60
 # NTS=20000
 
 INIPERTURB=0.0
 TRUNCAT=.00015
+TRUNCAT=.15
 FBTYPE=2  # full state feedback
 FBTYPE=1  # lqg-bt feedback
 # FBTYPE=1  # lqg-bt feedback
@@ -42,4 +43,5 @@ python3 compscript.py \
     --scaletest=${SCALETEST} --truncat=${TRUNCAT} \
     --strtogramfacs=${GRAMSFILE} \
     --Nts=${NTS} \
-    --ttf --ttf_npcrdstps=${NUMPICARDS}
+    --ttf --ttf_npcrdstps=${NUMPICARDS} \
+    --shortlogfile=${SHRTLF}

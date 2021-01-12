@@ -645,20 +645,21 @@ def lqgbt(Re=1e2,
         #                                 invinds=invinds,
         #                                 c_mat=sc_mat, load_data=dou.load_npa)
 
-    dou.save_output_json(dict(tmesh=trange.tolist(), outsig=yscomplist),
-                         fstring=(ystr))
-
-    if plotit and ffflag == 0:
-        dou.plot_outp_sig(tmesh=trange, outsig=yscomplist)
-
     flggdtrng = trange
     if ffflag == 1:
         flggdtrng = flggdtrng[:len(yscomplist)]
         print('Blowup: `trange` truncated')
 
+    dou.save_output_json(dict(tmesh=flggdtrng.tolist(), outsig=yscomplist),
+                         fstring=(ystr))
+
+    if plotit:
+        dou.plot_outp_sig(tmesh=flggdtrng, outsig=yscomplist)
+
     ymys = dou.meas_output_diff(tmesh=flggdtrng, ylist=yscomplist,
                                 ystar=c_mat.dot(v_ss_nse[femp['invinds']]))
     print('|y-y*|: {0}'.format(ymys))
+    return ffflag, ymys, ystr
 
 
 if __name__ == '__main__':

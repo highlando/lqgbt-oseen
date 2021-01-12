@@ -9,8 +9,8 @@ meshlevel = 2
 problem = 'cylinderwake'
 meshlevel = 1
 
-plotit = False
 plotit = True
+plotit = False
 paraoutput = True
 paraoutput = False
 
@@ -96,6 +96,8 @@ parser.add_argument("--closed_loop", type=int, choices=[-1, 0, 1, 2, 4],
 parser.add_argument("--problem", type=str,
                     choices=['cylinderwake', 'dbrotcyl'],
                     help="which setup to consider", default=problem)
+parser.add_argument("--shortlogfile", type=str, default='',
+                    help="name of a file where short information is store")
 args = parser.parse_args()
 print(args)
 
@@ -188,26 +190,40 @@ logstr = 'logs/log_cyldim{0}NU{1}C{2[0]}{2[1]}gamma{3}'.\
 print(('{0}'*10 + '\n log started at {1} \n' + '{0}'*10).
       format('X', str(datetime.datetime.now())))
 
+simudict = dict(meshparams=dict(strtomeshfile=meshfile,
+                                strtophysicalregions=physregs,
+                                strtobcsobs=geodata),
+                problemname=args.problem, shortname=shortname,
+                NU=NU, Cgrid=Cgrid,
+                trunc_lqgbtcv=args.truncat,
+                t0=t0, tE=tE, Nts=Nts,
+                nwtn_adi_dict=nwtn_adi_dict,
+                paraoutput=paraoutput, multiproc=False,
+                pymess=args.pymess,
+                bccontrol=bccontrol, gamma=gamma,
+                plotit=plotit,
+                ddir=ddir,
+                whichinival=whichinival, tpp=tpp,
+                dudict=dudict,
+                hinf=hinf,
+                strtogramfacs=args.strtogramfacs,
+                trytofail=trytofail, ttf_npcrdstps=args.ttf_npcrdstps,
+                closed_loop=closed_loop,
+                perturbpara=perturbpara)
+
 for cre in range(1, len(relist)):
-    lqgbt_lnse.lqgbt(meshparams=dict(strtomeshfile=meshfile,
-                                     strtophysicalregions=physregs,
-                                     strtobcsobs=geodata),
-                     problemname=args.problem, shortname=shortname,
-                     use_ric_ini=relist[cre-1],
-                     NU=NU, Cgrid=Cgrid,
-                     Re=relist[cre],
-                     trunc_lqgbtcv=args.truncat,
-                     t0=t0, tE=tE, Nts=Nts,
-                     nwtn_adi_dict=nwtn_adi_dict,
-                     paraoutput=paraoutput, multiproc=False,
-                     pymess=args.pymess,
-                     bccontrol=bccontrol, gamma=gamma,
-                     plotit=plotit,
-                     ddir=ddir,
-                     whichinival=whichinival, tpp=tpp,
-                     dudict=dudict,
-                     hinf=hinf,
-                     strtogramfacs=args.strtogramfacs,
-                     trytofail=trytofail, ttf_npcrdstps=args.ttf_npcrdstps,
-                     closed_loop=closed_loop,
-                     perturbpara=perturbpara)
+    simudict.update(dict(use_ric_ini=relist[cre-1], Re=relist[cre]))
+    if closed_loop is not None:
+        ffflag, ymys, ystr = lqgbt_lnse.lqgbt(**simudict)
+        if not args.shortlogfile == '':
+            with open(args.shortlogfile, 'a') as slfl:
+                slfl.write(infostring)
+                slfl.write('\n****** RESULT---> ******\n')
+                if ffflag == 1:
+                    slfl.write('failed: ' + ystr)
+                else:
+                    slfl.write('|dy|: {0}: '.format(ymys) + ystr)
+                slfl.write('\n****** <---RESULT ******\n\n')
+                slfl.write(infostring)
+    else:
+        lqgbt_lnse.lqgbt(**simudict)
