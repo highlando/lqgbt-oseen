@@ -15,14 +15,14 @@ MSHLVL=1
 # NTS=20000
 
 INIPERTURB=0.0
-TRUNCAT=.0002
+TRUNCAT=.00015
 FBTYPE=2  # full state feedback
 FBTYPE=1  # lqg-bt feedback
 # FBTYPE=1  # lqg-bt feedback
 PYMESS=1
 FBTYPE=-1  # no feedback
 FBTYPE=4  # hinf-bt feedback
-NUMPICARDS=10
+NUMPICARDS=15
 
 SCALETEST=1.
 

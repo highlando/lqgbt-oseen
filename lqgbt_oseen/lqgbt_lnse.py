@@ -630,14 +630,15 @@ def lqgbt(Re=1e2,
     ystr = shortstring + simuxtrstr + timediscstr + inputdstr
 
     try:
-        raise IOError()
         yscomplist = dou.load_json_dicts(ystr)['outsig']
         print('loaded the outputs from: ' + shortstring)
+        ffflag = 0
 
     except IOError:
-        soldict.update(data_prfx=shortstring + simuxtrstr)
+        soldict.update(data_prfx=shortstring + simuxtrstr,
+                       check_ff=True)
         # dictofvelstrs = snu.solve_nse(**soldict)
-        yscomplist = snu.solve_nse(**soldict)
+        yscomplist, ffflag = snu.solve_nse(**soldict)
         yscomplist = [ykk.flatten().tolist() for ykk in yscomplist]
 
         # yscomplist = cou.extract_output(strdict=dictofvelstrs, tmesh=trange,
@@ -647,10 +648,15 @@ def lqgbt(Re=1e2,
     dou.save_output_json(dict(tmesh=trange.tolist(), outsig=yscomplist),
                          fstring=(ystr))
 
-    if plotit:
+    if plotit and ffflag == 0:
         dou.plot_outp_sig(tmesh=trange, outsig=yscomplist)
 
-    ymys = dou.meas_output_diff(tmesh=trange, ylist=yscomplist,
+    flggdtrng = trange
+    if ffflag == 1:
+        flggdtrng = flggdtrng[:len(yscomplist)]
+        print('Blowup: `trange` truncated')
+
+    ymys = dou.meas_output_diff(tmesh=flggdtrng, ylist=yscomplist,
                                 ystar=c_mat.dot(v_ss_nse[femp['invinds']]))
     print('|y-y*|: {0}'.format(ymys))
 
