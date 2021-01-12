@@ -7,12 +7,12 @@ import datetime
 problem = 'dbrotcyl'
 meshlevel = 2
 
-plotit = False
 plotit = True
+plotit = False
 paraoutput = True
 paraoutput = False
 
-ddir = '/scratch/tbd/dnsdata/'
+ddir = 'dnsdata/'
 pymess = True
 pymess = False
 # relist = [None, 3e1, 4e1, 6e1]
