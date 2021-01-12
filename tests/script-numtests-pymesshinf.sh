@@ -33,8 +33,6 @@ LQGQR=_lqg.mat%Z_LQG_regulator%Z_LQG_filter
 GRAMSFILE=${GRAMSPATH}cylinderwake_re${RE}${LQGQR}
 GRAMSFILE=${GRAMSPATH}cylinderwake_re${RE}${HNFQR}
 
-# LOGFILE=logs/N${CYLDIM}re${RE}fbt${FBTYPE}pm${PYMESS}nps${NUMPICARDS}trnc${TRUNCAT}sspd${INIPERTURB}st${SCALETEST}
-
 python3 compscript.py \
     --problem=${PROBLEM} --mesh=${MSHLVL} \
     --iniperturb=${INIPERTURB} --RE=${RE} \
