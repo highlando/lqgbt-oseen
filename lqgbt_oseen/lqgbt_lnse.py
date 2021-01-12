@@ -80,6 +80,7 @@ def lqgbt(Re=1e2,
           nwtn_adi_dict=None,
           pymess_dict=None,
           whichinival='sstate',
+          verbose=True,
           dudict=dict(addinputd=False),
           tpp=5.,  # time to add on Stokes inival for `sstokes++`
           comp_freqresp=False, comp_stepresp='nonlinear',
@@ -245,13 +246,16 @@ def lqgbt(Re=1e2,
             initre = Re
         else:
             print('Initialising the steadystate solution with Re=', initre)
-        cachedsss = 'cachedata/' + Path(get_fdstr(initre)).name + '_sssol.npy'
+        cachssvs = 'cachedata/' + Path(get_fdstr(initre)).name + '_ssvsol.npy'
+        cachssps = 'cachedata/' + Path(get_fdstr(initre)).name + '_sspsol.npy'
         try:
-            vp_ss_nse = (np.load(cachedsss),
-                         None)
-            print('loaded sssol from: ', cachedsss)
+            vp_ss_nse = (np.load(cachssvs), np.load(cachssps))
+            print('loaded sssol from: ', cachssvs)
+            # if initre == Re:
+            #     v_init = vp_ss_nse[0]
+            #     raise IOError()
         except IOError:
-            print("couldn't load sssol from: ", cachedsss)
+            print("couldn't load sssol from: ", cachssvs)
             initssfemp, initssstokesmatsc, initssrhsd = \
                 dnsps.get_sysmats(problem='gen_bccont', Re=initre,
                                   bccontrol=True, scheme='TH', mergerhs=True,
@@ -270,13 +274,15 @@ def lqgbt(Re=1e2,
                                       vel_start_nwtn=v_init,
                                       vel_nwtn_tol=4e-13,
                                       clearprvdata=debug, **initsssoldict)
-            np.save(cachedsss, vp_ss_nse[0])
-            print('saved sssol to: ', cachedsss)
+            np.save(cachssvs, vp_ss_nse[0])
+            np.save(cachssps, vp_ss_nse[1])
+            print('saved sssol to: ', cachssvs)
         if initre == Re:
             break
         v_init = vp_ss_nse[0]
 
     v_ss_nse = vp_ss_nse[0]
+    p_ss_nse = vp_ss_nse[1]
     dbcinds, dbcvals = femp['dbcinds'], femp['dbcvals']
     (convc_mat, rhs_con,
      rhsv_conbc) = snu.get_v_conv_conts(vvec=v_ss_nse, invinds=invinds,
@@ -312,6 +318,27 @@ def lqgbt(Re=1e2,
         f_mat_gramians = f_mat
         shortfailstr = ''
 
+    if verbose:
+        cntres = jmat @ v_ss_nse[invinds] - rhsd['fp']
+        print('cnt res: {0}', np.linalg.norm(cntres))
+        momres = f_mat@v_ss_nse[invinds] + jmat.T@p_ss_nse + \
+            rhsd['fv']+rhs_con+rhsv_conbc
+        print('mom res: {0}', np.linalg.norm(momres))
+
+    testsavemats = False
+    if testsavemats:
+        savematdict = dict(mmat=mmat, amat=f_mat, jmat=jmat,
+                           bmat=b_mat, cmat=c_mat_reg,
+                           p_ss_nse=p_ss_nse,
+                           v_ss_nse=v_ss_nse[invinds], fp=rhsd['fp'],
+                           fv=rhsd['fv']+rhs_con+rhsv_conbc)
+
+        from scipy.io import savemat
+        testdtstr = 'testdata/oseen_sys_' + shortname + \
+            '{0}{1}_'.format(Re, gamma) + shortcontsetupstr + '.mat'
+        savemat(testdtstr, savematdict, do_compression=True)
+        raise UserWarning('saved data to ' + testdtstr)
+
 #
 # ### Compute or get the Gramians
 #
@@ -346,7 +373,9 @@ def lqgbt(Re=1e2,
 
         if closed_loop == 'red_output_fb':
             import sadptprj_riclyap_adi.bal_trunc_utils as btu
-            tl, tr, _ = btu.\
+            # print('|zfo|: ', np.linalg.norm(zwo))
+            # print('|zfc|: ', np.linalg.norm(zwc))
+            tl, tr, svs = btu.\
                 compute_lrbt_transfos(zfc=zwc, zfo=zwo, mmat=mmat,
                                       trunck={'threshh': trunc_lqgbtcv})
 
@@ -410,10 +439,17 @@ def lqgbt(Re=1e2,
         shortclstr = 'hinfrofb' if hinf else 'rofb'
 
         ak_mat, bk_mat, ck_mat, xok, xck = nru.\
-            get_prj_model(mmat=mmat, fmat=f_mat_gramians, jmat=jmat,
+            get_prj_model(mmat=mmat, fmat=f_mat_gramians, jmat=None,
                           zwo=zwo, zwc=zwc,
                           tl=tl, tr=tr,
                           bmat=b_mat, cmat=c_mat_reg)
+
+        # print('|M|: ', np.linalg.norm(mmat.data))
+        # print('|A|: ', np.linalg.norm(f_mat_gramians.data))
+        # print('|B|: ', np.linalg.norm(b_mat.data))
+        # print('|C|: ', np.linalg.norm(c_mat_reg.data))
+        # print('|tl|: ', np.linalg.norm(tl))
+        # print('|tr|: ', np.linalg.norm(tr))
         print('Controller has dimension: {0}'.format(ak_mat.shape[0]))
 
         if hinf:
@@ -424,25 +460,52 @@ def lqgbt(Re=1e2,
             #                                   bk_mat.dot(bk_mat.T),
             #                                   np.eye(ck_mat.shape[0]))
             # xok = rsxok
+            # from scipy.linalg import solve_continuous_are
+            # scfc = np.sqrt(1-1/hinfgamma**2)
+            # rcxck = solve_continuous_are(ak_mat, scfc*bk_mat,
+            #                              ck_mat.T@ck_mat,
+            #                              np.eye(bk_mat.shape[1]))
+            # rcxok = solve_continuous_are(ak_mat.T, scfc*ck_mat.T,
+            #                              bk_mat@bk_mat.T,
+            #                              np.eye(ck_mat.shape[0]))
+            # xok, xck = rcxok, rcxck
+            # print('recomputed the reduced gramians')
             # print('xok: ', np.diag(xok))
             # print('xck: ', np.diag(xck))
-            zk = np.linalg.inv(np.eye(xck.shape[0])
-                               - 1./hinfgamma**2*xok.dot(xck))
+            # zk = np.linalg.inv(np.eye(xck.shape[0])-1./hinfgamma**2*xok@xck)
             zkdi = np.diag(1./(1 - 1./hinfgamma**2*np.diag(xok)*np.diag(xck)))
-            # print('zk: ', np.diag(zk))
-            print(np.linalg.norm(zk-zkdi))
+            # # print('zk: ', np.diag(zk))
+            # print(np.linalg.norm(zk-zkdi))
             zk = zkdi
-            amatk = (ak_mat
-                     - (1. - 1./hinfgamma**2)*np.dot(np.dot(xok, ck_mat.T),
-                                                     ck_mat)
-                     - np.dot(bk_mat, np.dot(bk_mat.T, xck).dot(zk)))
-            obs_ck = -np.dot(bk_mat.T.dot(xck), zk)
-            obs_bk = xok @ ck_mat.T
-            fullrmmat = np.vstack([np.hstack([amatk, obs_bk@ck_mat]),
+            # print(np.linalg.norm(zk-zkdi))
+            print('set off diagonal entries of `Zinf` to zero')
+
+            # ## ZDG p. 412 formula
+            obs_ak = (ak_mat - ((1. - 1./hinfgamma**2)*bk_mat) @ (bk_mat.T@xck)
+                      - (zk @ (xok@ck_mat.T)) @ ck_mat)
+            obs_bk = zk @ (xok@ck_mat.T)
+            obs_ck = -bk_mat.T @ xck
+            # print('DEBUG: obs_bk = 0')
+            # evls = np.linalg.eigvals(obs_ak)
+            # print('`Ak-cl`-evls:', evls)
+
+            # ## Mustafa/Glover formula (16)
+            # amatk = (ak_mat
+            #          - (1. - 1./hinfgamma**2)*np.dot(np.dot(xok, ck_mat.T),
+            #                                          ck_mat)
+            #          - np.dot(bk_mat, np.dot(bk_mat.T, xck).dot(zk)))
+            # obs_ck = -(bk_mat.T@xck) @ zk
+            # obs_bk = xok @ ck_mat.T
+            fullrmmat = np.vstack([np.hstack([obs_ak, obs_bk@ck_mat]),
                                    np.hstack([bk_mat@obs_ck, ak_mat])])
             evls = np.linalg.eigvals(fullrmmat)
-            print(np.linalg.norm(obs_ck), np.linalg.norm(obs_bk))
-            print(evls)
+            # print(np.linalg.norm(obs_ck), np.linalg.norm(obs_bk))
+            mxevidx = np.argmax(np.abs(np.real(evls)))
+            mnevidx = np.argmin(np.abs(np.real(evls)))
+            print('red-lin-CL-mat:\n max |EV|: {0},\n min |EV|: {1}'.
+                  format(evls[mxevidx], evls[mnevidx]))
+            print(' exp-Euler s-radius: {0}'.
+                  format(np.max(np.abs(1-tE/Nts*evls))))
 
         else:
             print('lqg-feedback!!')
@@ -456,8 +519,8 @@ def lqgbt(Re=1e2,
             #                                       ck_mat.T.dot(ck_mat),
             #                                       np.eye(bk_mat.T.shape[0]))
             #     xok, xck = rsxok, rsxck
-            amatk = (ak_mat - np.dot(np.dot(xok, ck_mat.T), ck_mat) -
-                     np.dot(bk_mat, np.dot(bk_mat.T, xck)))
+            obs_ak = (ak_mat - np.dot(np.dot(xok, ck_mat.T), ck_mat) -
+                      np.dot(bk_mat, np.dot(bk_mat.T, xck)))
             obs_ck = -bk_mat.T.dot(xck)
             obs_bk = np.dot(xok, ck_mat.T)
 
@@ -466,9 +529,10 @@ def lqgbt(Re=1e2,
         def obsdrft(t):
             return -hbystar
 
-        linobsrvdct = dict(ha=amatk, hc=obs_ck, hb=obs_bk,
+        linobsrvdct = dict(ha=obs_ak, hc=obs_ck, hb=obs_bk,
                            drift=obsdrft, inihx=np.zeros((obs_bk.shape[0], 1)))
-        soldict.update(dynamic_feedback=True, dyn_fb_dict=linobsrvdct)
+        soldict.update(dynamic_feedback=True, dyn_fb_dict=linobsrvdct,
+                       dyn_fb_disc='linear_implicit')
         soldict.update(dict(closed_loop=True))
     else:
         shortclstr = '_'
@@ -486,7 +550,8 @@ def lqgbt(Re=1e2,
                    clearprvdata=True,
                    fvtd=fvtd,
                    cv_mat=c_mat,  # needed for the output feedback
-                   treat_nonl_explct=True,
+                   treat_nonl_explicit=True,
+                   time_int_scheme='sbdf2',
                    b_mat=b_mat,
                    return_y_list=True,
                    return_dictofvelstrs=False)
@@ -565,14 +630,15 @@ def lqgbt(Re=1e2,
     ystr = shortstring + simuxtrstr + timediscstr + inputdstr
 
     try:
-        raise IOError()
         yscomplist = dou.load_json_dicts(ystr)['outsig']
         print('loaded the outputs from: ' + shortstring)
+        ffflag = 0
 
     except IOError:
-        soldict.update(data_prfx=shortstring + simuxtrstr)
+        soldict.update(data_prfx=shortstring + simuxtrstr,
+                       check_ff=True)
         # dictofvelstrs = snu.solve_nse(**soldict)
-        yscomplist = snu.solve_nse(**soldict)
+        yscomplist, ffflag = snu.solve_nse(**soldict)
         yscomplist = [ykk.flatten().tolist() for ykk in yscomplist]
 
         # yscomplist = cou.extract_output(strdict=dictofvelstrs, tmesh=trange,
@@ -582,10 +648,15 @@ def lqgbt(Re=1e2,
     dou.save_output_json(dict(tmesh=trange.tolist(), outsig=yscomplist),
                          fstring=(ystr))
 
-    if plotit:
+    if plotit and ffflag == 0:
         dou.plot_outp_sig(tmesh=trange, outsig=yscomplist)
 
-    ymys = dou.meas_output_diff(tmesh=trange, ylist=yscomplist,
+    flggdtrng = trange
+    if ffflag == 1:
+        flggdtrng = flggdtrng[:len(yscomplist)]
+        print('Blowup: `trange` truncated')
+
+    ymys = dou.meas_output_diff(tmesh=flggdtrng, ylist=yscomplist,
                                 ystar=c_mat.dot(v_ss_nse[femp['invinds']]))
     print('|y-y*|: {0}'.format(ymys))
 

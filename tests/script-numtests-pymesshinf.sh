@@ -1,11 +1,13 @@
 MYHOMEPATH=/home/heiland
-MYPYPATH=/home/heiland/software/gits/mypys
-export PYTHONPATH="$MYPYPATH/mat_lib_plots:$MYPYPATH/dolfin_navier_scipy"
-export PYTHONPATH="$PYTHONPATH:$MYHOMEPATH/work/code/lqgbt-oseen"
-export PYTHONPATH="$PYTHONPATH:$MYPYPATH/sadptprj_riclyap_adi"
+MYPYPATH=/home/heiland/software/mypys
+# export PYTHONPATH="$MYPYPATH/mat_lib_plots:$MYPYPATH/sadptprj_riclyap_adi"
+export PYTHONPATH="$MYHOMEPATH/work/code/lqgbt-oseen"
+export PYTHONPATH="$PYTHONPATH:$MYPYPATH/dolfin_navier_scipy"
+echo $PYTHONPATH
 
 RE=60
-NTS=20000
+# NTS=160000
+NTS=16000
 PROBLEM=cylinderwake
 MSHLVL=1
 
@@ -13,16 +15,16 @@ MSHLVL=1
 # NTS=20000
 
 INIPERTURB=0.0
-TRUNCAT=1.
-FBTYPE=-1  # no feedback
+TRUNCAT=.00015
 FBTYPE=2  # full state feedback
 FBTYPE=1  # lqg-bt feedback
 # FBTYPE=1  # lqg-bt feedback
 PYMESS=1
+FBTYPE=-1  # no feedback
 FBTYPE=4  # hinf-bt feedback
-NUMPICARDS=20
+NUMPICARDS=15
 
-SCALETEST=.005
+SCALETEST=1.
 
 GRAMSPATH=/scratch/owncloud-gwdg/mpi-projects/18-hinf-lqgbt/results/
 HNFQR=_hinf.mat%outRegulator.Z%outFilter.Z%gam
@@ -32,7 +34,6 @@ GRAMSFILE=${GRAMSPATH}cylinderwake_re${RE}${LQGQR}
 GRAMSFILE=${GRAMSPATH}cylinderwake_re${RE}${HNFQR}
 
 # LOGFILE=logs/N${CYLDIM}re${RE}fbt${FBTYPE}pm${PYMESS}nps${NUMPICARDS}trnc${TRUNCAT}sspd${INIPERTURB}st${SCALETEST}
-# echo tail -f $LOGFILE
 
 python3 compscript.py \
     --problem=${PROBLEM} --mesh=${MSHLVL} \
@@ -40,5 +41,5 @@ python3 compscript.py \
     --closed_loop=${FBTYPE} --pymess \
     --scaletest=${SCALETEST} --truncat=${TRUNCAT} \
     --strtogramfacs=${GRAMSFILE} \
-    --Nts=${NTS}
-    # --ttf --ttf_npcrdstps=${NUMPICARDS}
+    --Nts=${NTS} \
+    --ttf --ttf_npcrdstps=${NUMPICARDS}
