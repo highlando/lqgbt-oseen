@@ -17,6 +17,8 @@ import distributed_control_fenics.cont_obs_utils as cou
 import lqgbt_oseen.nse_riccont_utils as nru
 import lqgbt_oseen.cntrl_simu_helpers as csh
 
+import sadptprj_riclyap_adi.bal_trunc_utils as btu
+
 debug = False
 
 checktheres = True  # whether to check the Riccati Residuals
@@ -372,7 +374,6 @@ def lqgbt(Re=1e2,
         zwc, zwo, hinfgamma = nru.get_ric_facs(**comploadricfacsdct)
 
         if closed_loop == 'red_output_fb':
-            import sadptprj_riclyap_adi.bal_trunc_utils as btu
             # print('|zfo|: ', np.linalg.norm(zwo))
             # print('|zfc|: ', np.linalg.norm(zwc))
             tl, tr, svs = btu.\
