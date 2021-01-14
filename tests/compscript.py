@@ -4,10 +4,10 @@ import argparse
 from lqgbt_oseen import lqgbt_lnse
 import datetime
 
-problem = 'dbrotcyl'
-meshlevel = 2
 problem = 'cylinderwake'
 meshlevel = 1
+problem = 'dbrotcyl'
+meshlevel = 2
 
 plotit = True
 plotit = False
@@ -15,14 +15,14 @@ paraoutput = True
 paraoutput = False
 
 ddir = '/scratch/tbd/dnsdata/'
-pymess = False
 pymess = True
+pymess = False
 # relist = [None, 3e1, 4e1, 6e1]
 # relist = [None, 30., 35., 40., 45., 50.]  # , 55.]
 relist = [None, 15., 20., 25., 30., 35., 40., 45., 50., 55., 60.]
 # relist = [40., 40., 60.]
-max_re_only = False
 max_re_only = True  # consider only the last Re for the simu
+max_re_only = False
 
 # the input regularization parameter
 gamma = 1e-0  # e5
@@ -48,10 +48,10 @@ ttf_npcrdstps = 6
 
 # closed loop def
 closed_loop = 'full_state_fb'
-closed_loop = False
 closed_loop = 'red_output_fb'
-closed_loop = None
 closed_loop = 'hinf_red_output_fb'
+closed_loop = None
+closed_loop = False
 # what inival
 whichinival = 'sstokes'  # steady state Stokes solution
 whichinival, tpp = 'sstokes++', .5  # a developed state starting from sstokes
@@ -198,7 +198,7 @@ simudict = dict(meshparams=dict(strtomeshfile=meshfile,
                 trunc_lqgbtcv=args.truncat,
                 t0=t0, tE=tE, Nts=Nts,
                 nwtn_adi_dict=nwtn_adi_dict,
-                paraoutput=paraoutput, multiproc=False,
+                paraoutput=paraoutput, multiproc=True,
                 pymess=args.pymess,
                 bccontrol=bccontrol, gamma=gamma,
                 plotit=plotit,
@@ -213,7 +213,9 @@ simudict = dict(meshparams=dict(strtomeshfile=meshfile,
 
 for cre in range(1, len(relist)):
     simudict.update(dict(use_ric_ini=relist[cre-1], Re=relist[cre]))
-    if closed_loop is not None:
+    if not closed_loop:
+        lqgbt_lnse.lqgbt(**simudict)
+    else:
         ffflag, ymys, ystr = lqgbt_lnse.lqgbt(**simudict)
         if not args.shortlogfile == '':
             with open(args.shortlogfile, 'a') as slfl:
@@ -225,5 +227,3 @@ for cre in range(1, len(relist)):
                     slfl.write('|dy|: {0}: '.format(ymys) + ystr)
                 slfl.write('\n****** <---RESULT ******\n\n')
                 slfl.write(infostring)
-    else:
-        lqgbt_lnse.lqgbt(**simudict)
