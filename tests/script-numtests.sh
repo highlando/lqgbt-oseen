@@ -1,6 +1,6 @@
 MYHOMEPATH=/home/heiland
-MYPYPATH=/home/heiland/software/mypys
-export PYTHONPATH="$MYPYPATH/mat_lib_plots:$MYPYPATH/dolfin_navier_scipy"
+# MYPYPATH=/home/heiland/software/mypys
+# export PYTHONPATH="$MYPYPATH/mat_lib_plots:$MYPYPATH/dolfin_navier_scipy"
 export PYTHONPATH="$PYTHONPATH:$MYHOMEPATH/work/code/lqgbt-oseen"
 echo $PYTHONPATH
 # export PYTHONPATH="$PYTHONPATH:$MYPYPATH/sadptprj_riclyap_adi"
