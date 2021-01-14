@@ -19,8 +19,8 @@ pymess = True
 pymess = False
 # relist = [None, 3e1, 4e1, 6e1]
 # relist = [None, 30., 35., 40., 45., 50.]  # , 55.]
-relist = [None, 15., 20., 25., 30., 35., 40., 45., 50., 55., 60.]
-# relist = [40., 40., 60.]
+# relist = [None, 15., 20., 25., 30., 35., 40., 45., 50., 55., 60.]
+relist = [50., 55., 60.]
 max_re_only = True  # consider only the last Re for the simu
 max_re_only = False
 
@@ -198,7 +198,7 @@ simudict = dict(meshparams=dict(strtomeshfile=meshfile,
                 trunc_lqgbtcv=args.truncat,
                 t0=t0, tE=tE, Nts=Nts,
                 nwtn_adi_dict=nwtn_adi_dict,
-                paraoutput=paraoutput, multiproc=True,
+                paraoutput=paraoutput, multiproc=False,
                 pymess=args.pymess,
                 bccontrol=bccontrol, gamma=gamma,
                 plotit=plotit,
