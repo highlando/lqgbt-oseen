@@ -34,4 +34,4 @@ python3 compscript.py --problem=${PROBLEM} --RE=${RE} \
     --scaletest=${SCALETEST} --truncat=${TRUNCAT} \
     --strtogramfacs=${GRAMSFILE} \
     --Nts=${NTS} \
-    --ttf --ttf_npcrdstps=${NUMPICARDS}
+    --ttf_ssit --ttf_value=${NUMPICARDS}

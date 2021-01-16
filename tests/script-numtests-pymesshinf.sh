@@ -43,5 +43,5 @@ python3 compscript.py \
     --scaletest=${SCALETEST} --truncat=${TRUNCAT} \
     --strtogramfacs=${GRAMSFILE} \
     --Nts=${NTS} \
-    --ttf --ttf_npcrdstps=${NUMPICARDS} \
+    --ttf_ssit --ttf_value=${NUMPICARDS} \
     --shortlogfile=${SHRTLF}
