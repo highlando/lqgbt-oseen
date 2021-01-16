@@ -44,7 +44,8 @@ perturbpara = 0*1e-5
 # whether we use a perturbed system
 trytofail = True
 trytofail = False
-ttf_npcrdstps = 6
+ttf_npcrdstps = None
+ttf_reperturb = None
 
 # closed loop def
 closed_loop = 'full_state_fb'
@@ -71,10 +72,17 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--RE", type=float, help="Reynoldsnumber")
 parser.add_argument("--RE_ini", type=float, help="Re for initialization")
 parser.add_argument("--pymess", help="Use pymess", action='store_true')
-parser.add_argument("--ttf", help="trytofail", action='store_true')
-parser.add_argument("--ttf_npcrdstps", type=int,
-                    help="Whether/when to break the Picard/Newton iteration",
-                    choices=range(40), default=ttf_npcrdstps)
+parser.add_argument("--ttf_ssit", action='store_true',
+                    help=("Perturb the system by approximating the steady" +
+                          "state by a truncated Picard iteration"))
+parser.add_argument("--ttf_ptre", action='store_true',
+                    help=("Perturb the system by taking the steady" +
+                          "state of a perturbed Reynoldsnumber iteration"))
+parser.add_argument("--ttf_value", type=int,
+                    help=("Parameter for the system perturbation\n" +
+                          "if `ttf_ptre` - perturbation in per mille\n" +
+                          "if `ttf_itss` - number of Picard steps"),
+                    default=None)
 parser.add_argument("--tE", type=float,
                     help="final time of the simulation", default=basetE)
 parser.add_argument("--Nts", type=float,
@@ -101,8 +109,16 @@ parser.add_argument("--shortlogfile", type=str, default='',
 args = parser.parse_args()
 print(args)
 
-if args.ttf:
+if args.ttf_ptre and args.ttf_ssit:
+    raise UserWarning('choose either `ptre` or `ssit` for perturbation')
+
+if not args.ttf_ptre and not args.ttf_ssit:
+    trytofail = False
+else:
     trytofail = True
+    ttf_npcrdstps = args.ttf_value if args.ttf_ssit else None
+    ttf_reperturb = args.ttf_value if args.ttf_ptre else None
+
 if args.RE is not None:
     relist = [args.RE_ini, args.RE]
 closedloopdct = {-1: None, 0: False, 1: 'red_output_fb',
@@ -150,7 +166,8 @@ infostring = ('Problem        = {0}'.format(problem) +
               '\ntrunc at       = {0}'.format(args.truncat) +
               '\nini_perturb    = {0}'.format(perturbpara) +
               '\nsys_perturb    = {0}'.format(trytofail) +
-              '\nttf_npcrdstps  = {0}'.format(args.ttf_npcrdstps) +
+              '\nttf_npcrdstps  = {0}'.format(ttf_npcrdstps) +
+              '\nttf_re_pertrb  = {0}'.format(ttf_reperturb) +
               '\nt0, tE, Nts    = {0}, {1}, {2}'.format(t0, tE, Nts) +
               '\nu_d: ta, tb, A = ' +
               '{0}, {1}, {2}\n'.format(dudict['ta'], dudict['tb'],
@@ -207,7 +224,8 @@ simudict = dict(meshparams=dict(strtomeshfile=meshfile,
                 dudict=dudict,
                 hinf=hinf,
                 strtogramfacs=args.strtogramfacs,
-                trytofail=trytofail, ttf_npcrdstps=args.ttf_npcrdstps,
+                trytofail=trytofail, ttf_npcrdstps=ttf_npcrdstps,
+                ttf_re_perturbation=ttf_reperturb,
                 closed_loop=closed_loop,
                 perturbpara=perturbpara)
 

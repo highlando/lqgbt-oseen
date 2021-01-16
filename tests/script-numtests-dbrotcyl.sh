@@ -15,17 +15,17 @@ SHRTLF=resultsoverview-dbrotcyl.md
 # NTS=20000
 
 INIPERTURB=0.0
-TRUNCAT=.00015
-TRUNCAT=.15
+# TRUNCAT=.00015
+TRUNCAT=.125
 FBTYPE=2  # full state feedback
 FBTYPE=1  # lqg-bt feedback
 # FBTYPE=1  # lqg-bt feedback
 PYMESS=1
 FBTYPE=-1  # no feedback
 FBTYPE=4  # hinf-bt feedback
-NUMPICARDS=15
+REPERTURB=-15
 
-SCALETEST=15.
+SCALETEST=25.
 
 GRAMSPATH=/scratch/owncloud-gwdg/mpi-projects/18-hinf-lqgbt/results/
 HNFQR=_hinf.mat%outRegulator.Z%outFilter.Z%gam
@@ -43,5 +43,5 @@ python3 compscript.py \
     --scaletest=${SCALETEST} --truncat=${TRUNCAT} \
     --strtogramfacs=${GRAMSFILE} \
     --Nts=${NTS} \
-    --ttf --ttf_npcrdstps=${NUMPICARDS} \
+    --ttf_ptre --ttf_value=${REPERTURB} \
     --shortlogfile=${SHRTLF}
