@@ -17,6 +17,8 @@ import distributed_control_fenics.cont_obs_utils as cou
 import lqgbt_oseen.nse_riccont_utils as nru
 import lqgbt_oseen.cntrl_simu_helpers as csh
 
+import sadptprj_riclyap_adi.bal_trunc_utils as btu
+
 debug = False
 
 checktheres = True  # whether to check the Riccati Residuals
@@ -87,7 +89,10 @@ def lqgbt(Re=1e2,
           closed_loop=False, multiproc=False,
           perturbpara=1e-3,
           strtogramfacs=None,
-          trytofail=False, ttf_npcrdstps=3):
+          trytofail=False,
+          ttf_re_perturbation=None,
+          ttf_npcrdstps=None):
+
     """Main routine for LQGBT
 
     Parameters
@@ -298,22 +303,46 @@ def lqgbt(Re=1e2,
     # MAF -- need to change the convc_mat, i.e. we need another v_ss_nse
     # MAF -- need to change the f_mat, i.e. we need another convc_mat
     if trytofail:
-        v_ss_nse_MAF = snu.\
-            solve_steadystate_nse(vel_pcrd_stps=ttf_npcrdstps, vel_nwtn_stps=0,
-                                  vel_pcrd_tol=1e-15,
-                                  vel_start_nwtn=v_init,
-                                  clearprvdata=True, **soldict)
+        if ttf_npcrdstps is not None:
+            fdstr = fdstr + '_MAF_ttfnpcrds{0}'.format(ttf_npcrdstps)
+            shortfailstr = 'mfpi{0}'.format(ttf_npcrdstps)
+            v_ss_nse_MAF = snu.\
+                solve_steadystate_nse(vel_pcrd_stps=ttf_npcrdstps,
+                                      vel_nwtn_stps=0,
+                                      vel_pcrd_tol=1e-15,
+                                      vel_start_nwtn=v_init,
+                                      clearprvdata=True, **soldict)
+        elif ttf_re_perturbation is not None:
+            fdstr = fdstr + '_MAF_perturbre{0}'.format(ttf_re_perturbation)
+            shortfailstr = 'mfpr{0}'.format(ttf_re_perturbation)
+            cRe = (1 + ttf_re_perturbation/1000)*Re
+            print('perturbed RE: {0:.4f}'.format(cRe))
+            cfemp, cstksmtsc, crhsd = \
+                dnsps.get_sysmats(problem='gen_bccont', Re=cRe,
+                                  bccontrol=True,
+                                  scheme='TH', mergerhs=True,
+                                  meshparams=meshparams)
+            csoldict = {}
+            cstksmtsc['A'] = cstksmtsc['A'] + 1./palpha*cstksmtsc['Arob']
+            csoldict.update(cstksmtsc)  # containing A, J, JT
+            csoldict.update(cfemp)  # adding V, Q, invinds, dbcinds, dbcvals
+            csoldict.update(crhsd)  # adding V, Q, invinds, dbcinds, dbcvals
+            v_ss_nse_MAF = snu.\
+                solve_steadystate_nse(vel_pcrd_stps=10, vel_nwtn_stps=10,
+                                      vel_nwtn_tol=5e-13,
+                                      vel_start_nwtn=v_init,
+                                      clearprvdata=True, **csoldict)
+
         diffv = (v_ss_nse - v_ss_nse_MAF)[invinds]
         convc_mat_MAF, _, _ = \
             snu.get_v_conv_conts(vvec=v_ss_nse_MAF, invinds=invinds,
-                                 V=femp['V'], dbcinds=dbcinds, dbcvals=dbcvals)
+                                 V=femp['V'], dbcinds=dbcinds,
+                                 dbcvals=dbcvals)
         nrmvsqrd = np.dot(v_ss_nse[invinds].T, mmat*v_ss_nse[invinds])
         relnormdiffv = np.sqrt(np.dot(diffv.T, mmat*diffv)/nrmvsqrd)
-        print('relative difference to linearization: {0}'.
+        print('relative difference in linearization point: {0}'.
               format(relnormdiffv))
         f_mat_gramians = -stokesmatsc['A'] - convc_mat_MAF
-        fdstr = fdstr + '_MAF_ttfnpcrds{0}'.format(ttf_npcrdstps)
-        shortfailstr = 'maf{0}'.format(ttf_npcrdstps)
     else:
         f_mat_gramians = f_mat
         shortfailstr = ''
@@ -372,7 +401,6 @@ def lqgbt(Re=1e2,
         zwc, zwo, hinfgamma = nru.get_ric_facs(**comploadricfacsdct)
 
         if closed_loop == 'red_output_fb':
-            import sadptprj_riclyap_adi.bal_trunc_utils as btu
             # print('|zfo|: ', np.linalg.norm(zwo))
             # print('|zfc|: ', np.linalg.norm(zwc))
             tl, tr, svs = btu.\
