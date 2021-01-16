@@ -89,7 +89,10 @@ def lqgbt(Re=1e2,
           closed_loop=False, multiproc=False,
           perturbpara=1e-3,
           strtogramfacs=None,
-          trytofail=False, ttf_npcrdstps=3):
+          trytofail=False,
+          ttf_re_perturbation=None,
+          ttf_npcrdstps=None):
+
     """Main routine for LQGBT
 
     Parameters
@@ -300,15 +303,32 @@ def lqgbt(Re=1e2,
     # MAF -- need to change the convc_mat, i.e. we need another v_ss_nse
     # MAF -- need to change the f_mat, i.e. we need another convc_mat
     if trytofail:
-        v_ss_nse_MAF = snu.\
-            solve_steadystate_nse(vel_pcrd_stps=ttf_npcrdstps, vel_nwtn_stps=0,
-                                  vel_pcrd_tol=1e-15,
-                                  vel_start_nwtn=v_init,
-                                  clearprvdata=True, **soldict)
+        if ttf_npcrdstps is not None:
+            v_ss_nse_MAF = snu.\
+                solve_steadystate_nse(vel_pcrd_stps=ttf_npcrdstps,
+                                      vel_nwtn_stps=0,
+                                      vel_pcrd_tol=1e-15,
+                                      vel_start_nwtn=v_init,
+                                      clearprvdata=True, **soldict)
+        elif ttf_re_perturbation is not None:
+            cRe = (1 + cptf/1000)*Re
+            print('perturbed RE: {0:.4f}'.format(cRe))
+            cfemp, cstokesmatsc, crhsd = \
+                dnsps.get_sysmats(problem='gen_bccont', Re=cRe,
+                                  bccontrol=True,
+                                  scheme='TH', mergerhs=True,
+                                  meshparams=meshparams)
+            csoldict = {}
+            cstokesmatsc['A'] = cstokesmatsc['A'] + 1./palpha*cstokesmatsc['Arob']
+            csoldict.update(cstokesmatsc)  # containing A, J, JT
+            csoldict.update(cfemp)  # adding V, Q, invinds, dbcinds, dbcvals
+            csoldict.update(crhsd)  # adding V, Q, invinds, dbcinds, dbcvals
+
         diffv = (v_ss_nse - v_ss_nse_MAF)[invinds]
         convc_mat_MAF, _, _ = \
             snu.get_v_conv_conts(vvec=v_ss_nse_MAF, invinds=invinds,
-                                 V=femp['V'], dbcinds=dbcinds, dbcvals=dbcvals)
+                                 V=femp['V'], dbcinds=dbcinds,
+                                 dbcvals=dbcvals)
         nrmvsqrd = np.dot(v_ss_nse[invinds].T, mmat*v_ss_nse[invinds])
         relnormdiffv = np.sqrt(np.dot(diffv.T, mmat*diffv)/nrmvsqrd)
         print('relative difference to linearization: {0}'.
