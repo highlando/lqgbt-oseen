@@ -584,7 +584,7 @@ def lqgbt(Re=1e2,
     #     simuxtrstr = 'SN{0}'.format(simuN)
     #     print('Controller with N={0}, Simulation w\ N={1}'.format(N, simuN))
     #     sfemp, sstokesmatsc, srhsd \
-    #         = dnsps.get_sysmats(problem=problemname, N=simuN, Re=Re,
+    #          = dnsps.get_sysmats(problem=problemname, N=simuN, Re=Re,
     #                             bccontrol=bccontrol, scheme='TH',
     #                             mergerhs=True)
     #     sinvinds, sNV = sfemp['invinds'], sstokesmatsc['A'].shape[0]

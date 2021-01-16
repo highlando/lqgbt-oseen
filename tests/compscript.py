@@ -14,7 +14,7 @@ plotit = False
 paraoutput = True
 paraoutput = False
 
-ddir = '/scratch/tbd/dnsdata/'
+ddir = 'dnsdata/'
 pymess = True
 pymess = False
 # relist = [None, 3e1, 4e1, 6e1]
@@ -74,7 +74,7 @@ parser.add_argument("--pymess", help="Use pymess", action='store_true')
 parser.add_argument("--ttf", help="trytofail", action='store_true')
 parser.add_argument("--ttf_npcrdstps", type=int,
                     help="Whether/when to break the Picard/Newton iteration",
-                    choices=range(40), default=ttf_npcrdstps)
+                    choices=range(100), default=ttf_npcrdstps)
 parser.add_argument("--tE", type=float,
                     help="final time of the simulation", default=basetE)
 parser.add_argument("--Nts", type=float,
