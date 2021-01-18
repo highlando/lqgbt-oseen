@@ -1,0 +1,31 @@
+\documentclass[a4paper,10pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[figtopcap]{subfigure}
+\usepackage[bookmarks=true]{hyperref}
+\usepackage{xcolor}
+\usepackage{amsmath, amssymb}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=newest}
+
+% \pgfplotsset{hide scale/.style={
+% /pgfplots/xtick scale label code/.code={},
+% /pgfplots/ytick scale label code/.code={}}}
+
+%opening
+\title{}
+\author{Jan Heiland}
+
+\begin{document}
+
+\begin{figure}
+  \newlength\figureheight
+  \newlength\figurewidth
+  \setlength\figureheight{8.5cm}
+  \setlength\figurewidth{2cm}
+  \input{cont-performances}
+\end{figure}
+
+\end{document}
+
