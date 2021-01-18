@@ -12,80 +12,15 @@
         \addplot[color=blue,
                  only marks,
                  mark=*,
-                 mark options={scale=2, fill=blue},
-                 text mark as node=true,
-		 nodes near coords, point meta=explicit symbolic,
-                 visualization depends on={value \thisrow{anchor}\as\myanchor},
-                 every node near coord/.append style={anchor=\myanchor}
-                 ] table[meta=label] {
-        x y label anchor
-        0.0330 0.08 {\footnotesize{$\hat K = 24$}} north
-        0.0268 0.26 {\footnotesize{$\hat K = 36$}} north
-        0.0138 0.75 {\footnotesize{$\hat K = 48$}} south
-        0.0070 7.41 {\footnotesize{$\hat K = 72$}} north
-        0.0066 51.2 {\footnotesize{$\hat K = 96$}} north
-        };
-        \addplot[color=blue,
-                 only marks,
-                 mark=*,
-                 mark options={scale=2, fill=blue},
-                 text mark as node=true,
-		 nodes near coords, point meta=explicit symbolic,
-                 visualization depends on={value \thisrow{anchor}\as\myanchor},
-                 every node near coord/.append style={anchor=\myanchor}
-                 ] table[meta=label] {
-        x y label anchor
-        
-        0.0110 0.70 {\footnotesize{$(16,8)$}} north
-        0.0101 0.98 {\footnotesize{$(15,10)$}} east
-        0.0137 0.53 {\footnotesize{$(12,10)$}} north
-        0.0138 0.75 {\footnotesize{$(12,12)$}} west
-        0.0214 0.52 {\footnotesize{$(10,12)$}} north
-        0.0215 0.82 {\footnotesize{$(10,15)$}} south
-        0.0323 0.56 {\footnotesize{$(8,16)$}} north
-        };
-        
+                 mark options={scale=2, fill=blue}
+                 ] table [y=trc, x=l] {../mh-data/cw60stbl.dat};
         \addplot[color=green, 
                  only marks, 
                  mark=*, 
-                 mark options={scale=2, fill=white},
-                 text mark as node=true,
-                 nodes near coords, point meta=explicit symbolic,
-                 visualization depends on={value \thisrow{anchor}\as\myanchor},
-                 every node near coord/.append style={anchor=\myanchor}
-                 ] table[meta=label] {
-	  x y label anchor 
-        0.0263 4.52 {\footnotesize{$\hat q = 10$}} north
-        0.0180 5.86 {\footnotesize{$\hat q = 12$}} north
-        0.0121 10.3 {\footnotesize{$\hat q = 15$}} north
-        0.0066 21.1 {\footnotesize{$\hat q = 18$}} west
-        0.0074 71.6 {\footnotesize{$\hat q = 21$}} west
-        0.0092 201 {\footnotesize{$\hat q = 25$}} north    
-        };
-        
-        \addplot[color= green, 
-                 only marks, 
-                 mark=*, 
-%                  text mark=\Large\heart, 
-                 mark options={scale=2, fill=white},
-                 text mark as node=true,
-                 nodes near coords, point meta=explicit symbolic,
-                 visualization depends on={value \thisrow{anchor}\as\myanchor},
-                 every node near coord/.append style={anchor=\myanchor}
-                 ] table[meta=label] {
-	  x y label anchor 
-        0.0159 7.29 {\footnotesize{$(13,18)$}} north
-        0.01 13.2 {\footnotesize{$(15,19)$}} west
-        0.0097 20 {\footnotesize{$(16,20)$}} west
-        0.0064 15.7 {\footnotesize{$(19,15)$}} west
-        0.0061 22.9 {\footnotesize{$(20,16)$}} south
-        0.0071 11.6 {\footnotesize{$(18,13)$}} east
-        };
-        
-              \legend{ \normalsize{$\hat K \in \{24, ..., 96\}$ },
-		       \normalsize{$(\hat q, \hat s) \in \{(16,8),...,(8,16)\}$},
-                       \normalsize{$\hat q = n_t \in \{10,...,25\}$},
-                       \normalsize{$(\hat q, n_t) \in \{(13,18), ..., (18,13)\}$}       
-               }
+                 mark options={scale=2, fill=white}
+                 ] table [y=trc, x=l] {../mh-data/cw60ntbl.dat};
+        %       \legend{ \normalsize{$\hat K \in \{24, ..., 96\}$ },
+        %                \normalsize{$(\hat q, n_t) \in \{(13,18), ..., (18,13)\}$}       
+        %        }
      \end{semilogyaxis}
 \end{tikzpicture}
