@@ -1,0 +1,42 @@
+\begin{tikzpicture} 
+    \begin{loglogaxis}[mark repeat= {1},
+                         width=12cm, height=10cm,
+                         cycle list name=color list,
+                         ylabel = {\texttt{tol}},
+                         log basis x=2,
+                         log basis y=2,
+                         xlabel = {$\ell$},
+                         xtick = {17, 24, 34, 48},
+                         xticklabels = {17, 24, 34, 48},
+                         ytick = {0.0064, 0.00166, 0.0016, 0.0004, 0.00021, 0.0001}, 
+                         yticklabels = {0.0064, 0.00166, , 0.0004, 0.00021, 0.0001}, 
+                         grid=major,
+                         title={Performance Regions -- Cylinder Wake},
+                         legend style = {legend cell align=left, legend pos = north east,
+                         font =\footnotesize},
+                         line width = 1pt,
+                         ]
+        \addplot[color=mpigreen,
+                 only marks,
+                 mark=otimes,
+                 mark options={scale=2, fill=mpigreen}
+                 ] table [y=trc, x=l] {../mh-data/cw60stbl.dat};
+        \addplot[color=mpigreen, 
+                 only marks, 
+                 mark=*, 
+                 mark options={scale=1, fill=white}
+                 ] table [y=trc, x=l] {../mh-data/cw60ntbl.dat};
+        %       \legend{ \normalsize{$\hat K \in \{24, ..., 96\}$ },
+        %                \normalsize{$(\hat q, n_t) \in \{(13,18), ..., (18,13)\}$}       
+        %        }
+               \draw[thick, dashed] 
+                 ({rel axis cs:0,0}|-{axis cs:0,0.00166}) --
+                 ({rel axis cs:1,0}|-{axis cs:0,0.00166})
+                 node[pos=0.2, below] {$\hat \epsilon(\hat \beta+\hat \gamma)<1$};
+               \draw[thick, dashed]
+                 ({rel axis cs:0,0}|-{axis cs:0,0.00021}) --
+                 ({rel axis cs:1,0}|-{axis cs:0,0.00021})
+                 node[pos=0.2, below] {$\epsilon(\beta+\gamma)<1$};
+       % \addplot[mark=none, black, domain=1:100, samples=2] {0.00021};
+             \end{loglogaxis}
+\end{tikzpicture}
