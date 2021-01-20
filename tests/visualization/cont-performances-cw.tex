@@ -29,14 +29,18 @@
         %       \legend{ \normalsize{$\hat K \in \{24, ..., 96\}$ },
         %                \normalsize{$(\hat q, n_t) \in \{(13,18), ..., (18,13)\}$}       
         %        }
-               \draw[thick, dashed] 
+               \draw[thick, dashed, mpiblue] 
                  ({rel axis cs:0,0}|-{axis cs:0,0.00166}) --
                  ({rel axis cs:1,0}|-{axis cs:0,0.00166})
                  node[pos=0.2, below] {$\hat \epsilon(\hat \beta+\hat \gamma)<1$};
-               \draw[thick, dashed]
+               \draw[thick, dashed, mpiblue]
                  ({rel axis cs:0,0}|-{axis cs:0,0.00021}) --
                  ({rel axis cs:1,0}|-{axis cs:0,0.00021})
                  node[pos=0.2, below] {$\epsilon(\beta+\gamma)<1$};
+               \draw[thick, dashed, mpiblue]
+                 ({axis cs:36,0}|-{rel axis cs:0,0}) --
+                 ({axis cs:36,0}|-{rel axis cs:0,1})
+               node[pos=0.8, right] {$\gamma\|\Delta_\ell\|_\infty < 1$};
        % \addplot[mark=none, black, domain=1:100, samples=2] {0.00021};
              \end{loglogaxis}
 \end{tikzpicture}
