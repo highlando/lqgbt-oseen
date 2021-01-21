@@ -30,6 +30,8 @@ def checkit(truncat=0.0001, usercgrams=False, Re=60, tE=10.,
             'cylinderwake_Re{0}.0'.format(Re) + \
             '_gamma1.0_NV41718_Bbcc_C31_palpha1e-05__mats'
 
+    fname = '/scratch/owncloud-gwdg/mpi-projects/18-hinf-lqgbt/data/dbrotcyl_Re60.0_gamma1.0_NV45528_Bbcc_C41_palpha1e-05__mats'
+
     dimdict = {'cw': {1: 4171831},
                'drc': {2: 4552841}}
     cdim = dimdict[problem][N]
@@ -164,6 +166,8 @@ def checkit(truncat=0.0001, usercgrams=False, Re=60, tE=10.,
     trnctsvs = svs[cdim:].flatten()
     epsilon = 2 * (trnctsvs / np.sqrt(1+beta**2*trnctsvs**2)).sum()
     print('stable if `<0`: ', epsilon*beta-1/gam)
+    import ipdb
+    ipdb.set_trace()
 
     optromdim, optithreshh, optitl, optitr \
         = hinf_rom_stable(zwc=zwc, zwo=zwo, gamma=gam, mmat=mmat)
