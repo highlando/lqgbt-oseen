@@ -1,0 +1,68 @@
+\begin{tikzpicture} 
+    \begin{loglogaxis}[mark repeat= {1},
+                         width=12cm, height=8cm,
+                         cycle list name=color list,
+                         ylabel = {\texttt{tol}},
+                         log basis x=2,
+                         log basis y=2,
+                         xlabel = {$\ell$},
+                         x dir = reverse,
+                         xtick = {192, 96, 48, 24, 12, 6},
+                         xticklabels = {-192, -96, -48, -24, -12, -6},
+                         ytick = {0.512, 0.128, 0.032, 0.008},
+                         yticklabels = {0.512, 0.128, 0.032, 0.008},
+                         grid=major,
+                         title={Performance Regions -- Cylinder Wake},
+                         legend style = {legend cell align=left, legend pos = north east,
+                         font =\footnotesize},
+                         line width = 1pt,
+                         ]
+        \addplot[color=mpired,
+                 only marks,
+                 mark=*,
+                 mark options={scale=3, fill=mpisand}
+                 ] table [y=trc, x=l] {../mh-data/db60sntbl.dat};
+        \addplot[color=mpired,
+                 only marks,
+                 mark=otimes,
+                 mark options={scale=3, fill=mpigreen}
+                 ] table [y=trc, x=l] {../mh-data/db60sstbl.dat};
+        % \addplot[color=mpired, 
+        %          only marks, 
+        %          mark=*, 
+        %          mark options={scale=2, fill=mpisand}
+        %          ] table [y=trc, x=l] {../mh-data/cw60sntbl.dat};
+        \addplot[color=mpiblue, 
+                 only marks, 
+                 mark=*,
+                 mark options={scale=3, fill=mpisand}
+                 ] table [y=trc, x=l] {../mh-data/db60nstbl.dat};
+        \addplot[color=mpiblue, 
+                 only marks, 
+                 mark=otimes,
+                 mark options={scale=3, fill=mpisand}
+                 ] table [y=trc, x=l] {../mh-data/db60nstbl.dat};
+        \addplot[color=mpiblue, 
+                 only marks, 
+                 mark=*, 
+                 mark options={scale=2, fill=mpisand}
+                 ] table [y=trc, x=l] {../mh-data/db60nntbl.dat};
+        %       \legend{ \normalsize{$\hat K \in \{24, ..., 96\}$ },
+        %                \normalsize{$(\hat q, n_t) \in \{(13,18), ..., (18,13)\}$}       
+        %        }
+               \draw[line width=3pt, dashed, mpired] 
+                 ({rel axis cs:0,0}|-{axis cs:0,0.155}) --
+                 ({rel axis cs:1,0}|-{axis cs:0,0.155})
+                 node[pos=0.2, fill=mpisand, below] {\large{$\hat \epsilon(\hat \beta+\hat
+                 \gamma)<1$}};
+               \draw[line width=3pt, dashed, mpired]
+                 ({rel axis cs:0,0}|-{axis cs:0,0.002}) --
+                 ({rel axis cs:1,0}|-{axis cs:0,0.002})
+                 node[pos=0.2, fill=mpisand, below] {\large{$\epsilon(\beta+\gamma)<1$}};
+               \draw[line width=3pt, dashed, mpired]
+                 ({axis cs:25,0}|-{rel axis cs:0,0}) --
+                 ({axis cs:25,0}|-{rel axis cs:0,1})
+                 node[pos=0.8, fill=mpisand, below] {\large{$\gamma\|\Delta_\ell\|_\infty < 1$}};
+       % \addplot[mark=none, black, domain=1:100, samples=2] {0.00021};
+             \end{loglogaxis}
+\end{tikzpicture}
