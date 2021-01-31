@@ -68,3 +68,9 @@
 ## 2021-01-05 20:08:30+01:00
 
  * started with implementing the implicit treatment in `dns.solve_nse`
+
+## 2021-01-31 20:24:56+01:00
+
+ * done with simus -- with the implicit treatment
+ * major cleanup of the repo
+ * branch `hinf-nse-paper` for code publication

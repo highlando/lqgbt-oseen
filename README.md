@@ -7,10 +7,16 @@ As an example we consider the stabilization of the cylinder wake at moderate Rey
 
 Documentation goes [here](http://lqgbt-for-flow-stabilization.readthedocs.org/en/latest/).
 
+Installation (including the dependencies, **not** including FEniCS:
+
+```sh
+pip install .
+```
+
 Dependencies:
 
-* `numpy` (1.13.1) and `scipy` (1.1.0)
-* `dolfin` (tested with 2019.2.0 and 2018.1.0)
+* `numpy` (tested with 1.13.1) and `scipy` (tested with 1.1.0)
+* `dolfin` (python interface to FEniCS, tested with 2019.2.0 and 2018.1.0)
 
 and my home-brew modules that are available via pip 
 
