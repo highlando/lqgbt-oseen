@@ -14,9 +14,9 @@ plotit = False
 paraoutput = True
 paraoutput = False
 
-ddir = '/scratch/tbd/dnsdata/'
-pymess = False
+ddir = 'dnsdata/'
 pymess = True
+pymess = False
 # relist = [None, 3e1, 4e1, 6e1]
 # relist = [None, 30., 35., 40., 45., 50.]  # , 55.]
 # relist = [None, 15., 20., 25., 30., 35., 40., 45., 50., 55., 60.]

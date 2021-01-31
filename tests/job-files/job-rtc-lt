@@ -1,0 +1,46 @@
+#!/bin/bash
+# Your job name.
+#SBATCH -J DBROTCYL-LT
+#
+#SBATCH --ntasks=2
+#
+# Output files. .out. is for standard output .err. is for the error output. 
+#SBATCH -o %x-%j.out # name of the stdout, using the job name (%x), the job number (%j) and the first node (%N)
+#
+# Maximum expected runtime.  ( 00 Days, 1 hour, 00 minutes, 00 seconds) 
+#SBATCH --time=02-00:00:00   
+#
+# Choose Partition (Queue) 
+#SBATCH --partition long 
+#
+# Mail Options 
+#SBATCH --mail-type=FAIL,BEGIN,END    # An email is sent on begin, end, and failure of the job 
+#SBATCH --mail-user=heiland@mpi-magdeburg.mpg.de   # E-Mail for notification
+#
+### END OF THE SLURM SPECIFIC PART ###
+
+# Setup Limit OpenMP 
+export OMP_NUM_THREADS=2
+
+# set up the environment (choose whats needed)
+# load the modules system 
+
+module load apps/fenics/2018.1
+
+export PYTHONPATH="$PYTHONPATH:/mechthild/home/heiland/lqgbt-oseen"
+cd ..
+
+PROBLEM='dbrotcyl'
+RE=50
+MESHLVL=2
+
+FBTYPE=-1  # no feedback
+
+SCALETEST=50
+NTS=1280
+
+python3 compscript.py --RE=${RE} \
+    --closed_loop=${FBTYPE} \
+    --problem=${PROBLEM} \
+    --scaletest=${SCALETEST} \
+    --Nts=${NTS} 

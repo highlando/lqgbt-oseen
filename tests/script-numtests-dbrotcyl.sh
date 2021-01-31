@@ -1,7 +1,7 @@
-MYHOMEPATH=/home/heiland
+MYHOMEPATH=/mechthild/home/heiland
 # MYPYPATH=/home/heiland/software/mypys
 # export PYTHONPATH="$MYPYPATH/mat_lib_plots:$MYPYPATH/sadptprj_riclyap_adi"
-export PYTHONPATH="$MYHOMEPATH/work/code/lqgbt-oseen"
+export PYTHONPATH="$MYHOMEPATH/lqgbt-oseen"
 # export PYTHONPATH="$PYTHONPATH:$MYPYPATH/dolfin_navier_scipy"
 echo $PYTHONPATH
 
@@ -27,7 +27,7 @@ REPERTURB=-15
 
 SCALETEST=25.
 
-GRAMSPATH=/scratch/owncloud-gwdg/mpi-projects/18-hinf-lqgbt/results/
+GRAMSPATH=grams/
 HNFQR=_hinf.mat%outRegulator.Z%outFilter.Z%gam
 LQGQR=_lqg.mat%Z_LQG_regulator%Z_LQG_filter
 
