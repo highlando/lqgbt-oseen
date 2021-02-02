@@ -13,11 +13,10 @@ NUMPICARDSL=(17 24 34 37 40 48)
 SCALETEST=2.5
 
 GRAMSPATH=testdata/
-HNFQR=_hinf.mat%outRegulator.Z%outFilter.Z%gam
-LQGQR=_lqg.mat%Z_LQG_regulator%Z_LQG_filter
 
-GRAMSFILE=${GRAMSPATH}cylinderwake_re${RE}${LQGQR}
+HNFQR=_hinf.mat%outRegulator.Z%outFilter.Z%gam
 GRAMSFILE=${GRAMSPATH}cylinderwake_re${RE}${HNFQR}
+
 SHRTLF=resultsoverview-2-1.md
 
 for NPCS in "${NUMPICARDSL[@]}"; do
