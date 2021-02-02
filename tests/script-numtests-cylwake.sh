@@ -8,9 +8,9 @@ MSHLVL=1
 FBTYPE=4  # hinf-bt feedback
 
 TRUNCATSL=(.0001 .0004 .0016 .0032 .0064)
-NUMPICARDSL=(1 17 24 34 37 40 48)
+NUMPICARDSL=(17 24 34 37 40 48)
 
-SCALETEST=.25
+SCALETEST=2.5
 
 GRAMSPATH=testdata/
 HNFQR=_hinf.mat%outRegulator.Z%outFilter.Z%gam
@@ -27,7 +27,7 @@ for NPCS in "${NUMPICARDSL[@]}"; do
             --closed_loop=${FBTYPE} \
             --scaletest=${SCALETEST} --truncat=${THRSH} \
             --strtogramfacs=${GRAMSFILE} \
-            --Nts=${NTS} --pymess \
+            --Nts=${NTS} \
             --ttf_ssit --ttf_value=${NPCS} \
             --shortlogfile=${SHRTLF}
     done
