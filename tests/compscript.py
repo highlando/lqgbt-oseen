@@ -14,7 +14,7 @@ plotit = False
 paraoutput = True
 paraoutput = False
 
-ddir = 'dnsdata/'
+ddir = 'simudata/'
 pymess = True
 pymess = False
 # relist = [None, 3e1, 4e1, 6e1]

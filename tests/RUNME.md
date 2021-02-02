@@ -27,9 +27,9 @@ pdflatex minilat.tex
 
 ## Data and Directories
 
- * `data` -- results of the simulations -- parameter `ddir` in `compscript.py`
- * `plots` -- paraview plots  -- parameter `prvdir` in `compscript.py`
- * `visualization` -- postprocessing happens here
+ * `simudata` -- results of the simulations -- parameter `ddir` in `compscript.py`
  * `cachedata` -- directory for data caching
  * `testdata` -- provides the raw data (the Gramians) for the simulation
+ * `plots` -- paraview plots  -- parameter `prvdir` in `compscript.py`
+ * `visualization` -- postprocessing happens here
  * `mesh` -- the meshes for the simulation
