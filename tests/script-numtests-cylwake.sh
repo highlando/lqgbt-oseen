@@ -1,38 +1,34 @@
+#!/bin/bash
+
 RE=60
-NTS=160000
+NTS=16000
 PROBLEM=cylinderwake
 MSHLVL=1
-SHRTLF=resultsoverview.md
 
-# RE=60
-# NTS=20000
-
-INIPERTURB=0.0
-TRUNCAT=.00015
-TRUNCAT=.15
-FBTYPE=2  # full state feedback
-FBTYPE=1  # lqg-bt feedback
-# FBTYPE=1  # lqg-bt feedback
-PYMESS=1
-FBTYPE=-1  # no feedback
 FBTYPE=4  # hinf-bt feedback
-NUMPICARDS=15
 
-SCALETEST=1.
+TRUNCATSL=(.0001 .0004 .0016 .0032 .0064)
+NUMPICARDSL=(1 17 24 34 37 40 48)
 
-GRAMSPATH=/scratch/owncloud-gwdg/mpi-projects/18-hinf-lqgbt/results/
+SCALETEST=.25
+
+GRAMSPATH=testdata/
 HNFQR=_hinf.mat%outRegulator.Z%outFilter.Z%gam
 LQGQR=_lqg.mat%Z_LQG_regulator%Z_LQG_filter
 
 GRAMSFILE=${GRAMSPATH}cylinderwake_re${RE}${LQGQR}
 GRAMSFILE=${GRAMSPATH}cylinderwake_re${RE}${HNFQR}
+SHRTLF=resultsoverview-2-1.md
 
-python3 compscript.py \
-    --problem=${PROBLEM} --mesh=${MSHLVL} \
-    --iniperturb=${INIPERTURB} --RE=${RE} \
-    --closed_loop=${FBTYPE} --pymess \
-    --scaletest=${SCALETEST} --truncat=${TRUNCAT} \
-    --strtogramfacs=${GRAMSFILE} \
-    --Nts=${NTS} \
-    --ttf_ssit --ttf_value=${NUMPICARDS} \
-    --shortlogfile=${SHRTLF}
+for NPCS in "${NUMPICARDSL[@]}"; do
+    for THRSH in "${TRUNCATSL[@]}"; do
+        python3 compscript.py \
+            --problem=${PROBLEM} --mesh=${MSHLVL} --RE=${RE} \
+            --closed_loop=${FBTYPE} \
+            --scaletest=${SCALETEST} --truncat=${THRSH} \
+            --strtogramfacs=${GRAMSFILE} \
+            --Nts=${NTS} --pymess \
+            --ttf_ssit --ttf_value=${NPCS} \
+            --shortlogfile=${SHRTLF}
+    done
+done
