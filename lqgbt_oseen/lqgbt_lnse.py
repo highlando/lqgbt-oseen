@@ -74,7 +74,7 @@ def lqgbt(Re=1e2,
           bccontrol=True, palpha=1e-5,
           npcrdstps=15,
           pymess=False,
-          paraoutput=True,
+          paraoutput=True, prvdir='plots/',
           plotit=True,
           ddir='data/',
           trunc_lqgbtcv=1e-6,
@@ -597,8 +597,8 @@ def lqgbt(Re=1e2,
         + 't0{0}tE{1}Nts{2}N{3}Re{4}'.format(t0, tE, Nts, NV, Re)
     if paraoutput:
         soldict.update(paraviewoutput=True,
-                       vfileprfx='results/vel_'+outstr,
-                       pfileprfx='results/p_'+outstr)
+                       vfileprfx=prvdir+'vel_'+outstr,
+                       pfileprfx=prvdir+'p_'+outstr)
 
     timediscstr = 't{0}{1:.4f}Nts{2}'.format(t0, tE, Nts)
     if dudict['addinputd']:
