@@ -35,7 +35,7 @@ def get_ric_facs(fmat=None, mmat=None, jmat=None,
         except ValueError:
             (fname, zwcaddrs, zwoaddrs) = strtogramfacs.split(sep='%')
             gammadrs = None
-        if pymess:
+        try:
             try:
                 lmd = {}
                 loadmat(fname, mdict=lmd)
@@ -45,20 +45,20 @@ def get_ric_facs(fmat=None, mmat=None, jmat=None,
             lmd = mat73.loadmat(fname)
             zwc, zwo, hinfgamma = lmd, lmd, lmd
             for isitthis in zwcaddrs.split(sep='.'):
-                zwc = zwc[isitthis]
+                zwc = zwc[isitthis]  # dig through the dict
             for isitthis in zwoaddrs.split(sep='.'):
-                zwo = zwo[isitthis]
+                zwo = zwo[isitthis]  # dig through the dict
             print('loaded the factors from: ', fname)
             if gammadrs is None:
                 hinfgamma = None
                 print('no gamma loaded')
             else:
                 for isitthis in gammadrs.split(sep='.'):
-                    hinfgamma = hinfgamma[isitthis]
+                    hinfgamma = hinfgamma[isitthis]  # dig through the dict
                 hinfgamma = np.atleast_1d(hinfgamma).flatten()[0]
                 print('gamma_opt = {0}'.format(hinfgamma))
             return zwc, zwo, hinfgamma
-        else:
+        except KeyError:
             hinfgamma = None
             zwc = np.load(fname+zwcaddrs)
             zwo = np.load(fname+zwoaddrs)
