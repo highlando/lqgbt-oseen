@@ -14,7 +14,8 @@ SCALETEST=2.5
 
 GRAMSPATH=testdata/
 
-HNFQR=_hinf.mat%outRegulator.Z%outFilter.Z%gam
+HNFQR=_hinf.mat%outRegulator.Z%outFilter.Z%gam  # if mat73 is installed
+HNFQR=_hinfv5.mat%outRegulator%outFilter%gam  # else
 GRAMSFILE=${GRAMSPATH}cylinderwake_re${RE}${HNFQR}
 
 SHRTLF=resultsoverview-2-1.md
