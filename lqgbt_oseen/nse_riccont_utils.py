@@ -1,7 +1,7 @@
 import numpy as np
 import numpy.linalg as npla
 import scipy.linalg as spla
-from scipy.io import loadmat
+from scipy.io import loadmat, savemat
 
 # import dolfin_navier_scipy.data_output_utils as dou
 
@@ -42,7 +42,7 @@ def get_ric_facs(fmat=None, mmat=None, jmat=None,
             except NotImplementedError:
                 import mat73
                 lmd = mat73.loadmat(fname)
-            lmd = mat73.loadmat(fname)
+                lmd = mat73.loadmat(fname)
             zwc, zwo, hinfgamma = lmd, lmd, lmd
             for isitthis in zwcaddrs.split(sep='.'):
                 zwc = zwc[isitthis]  # dig through the dict
@@ -100,7 +100,6 @@ def get_ric_facs(fmat=None, mmat=None, jmat=None,
             print('could not load: ' + hinfmatstr + '_output')
             hinfmatstr = 'external-data/oc-hinf-data/' + \
                 Path(fdstr).name + '__mats'
-            from scipy.io import savemat
             zinic = np.load(ric_ini_str + '__zwc.npy')
             zinio = np.load(ric_ini_str + '__zwo.npy')
             savematdict = dict(mmat=mmat, amat=fmat, jmat=jmat,
