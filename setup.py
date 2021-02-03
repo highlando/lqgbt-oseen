@@ -13,7 +13,7 @@ setup(name='lqgbt_oseen',
       author_email='jnhlnd@gmail.com',
       url="https://github.com/highlando/lqgbt-oseen",
       packages=['lqgbt_oseen'],  # same as name
-      install_requires=['numpy', 'scipy',
+      install_requires=['numpy==1.18.0', 'scipy',
                         'dolfin_navier_scipy',
                         'sadptprj_riclyap_adi',
                         'distributed_control_fenics'],
