@@ -1,8 +1,5 @@
 #!/bin/bash
 
-export OMP_NUM_THREADS=2
-export OPENBLAS_NUM_THREADS=2
-
 RE=60
 NTS=16000
 PROBLEM=cylinderwake

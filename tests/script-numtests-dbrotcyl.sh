@@ -1,8 +1,5 @@
 #!/bin/bash
 
-export OMP_NUM_THREADS=2
-export OPENBLAS_NUM_THREADS=2
-
 RE=60
 NTS=3072  # 12*2**8
 PROBLEM=dbrotcyl
@@ -14,8 +11,6 @@ FBTYPE=4  # hinf-bt feedback
 
 REPTSL=(-192 -135 -96 -48 -24 -12 -6)
 TRUNCATSL=(.512 .128 .064 .045 .032 .008)
-REPTSL=(-96 -48 -24)
-TRUNCATSL=(.064 .045 .032)
 
 SCALETEST=25.
 
