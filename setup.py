@@ -6,7 +6,7 @@ with open("README.md", 'r') as f:
 setup(name='lqgbt_oseen',
       version='2.0.0',
       description='LQGBT-controller for incompressible flows',
-      license="GPLv3",
+      license="MIT",
       long_description=long_description,
       long_description_content_type='text/markdown',
       author='Jan Heiland',
@@ -19,7 +19,7 @@ setup(name='lqgbt_oseen',
                         'distributed_control_fenics'],
       classifiers=[
           "Programming Language :: Python :: 3",
-          "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+          "License :: OSI Approved :: MIT",
           "Operating System :: OS Independent",
           ]
       # external packages as dependencies
