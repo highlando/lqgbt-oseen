@@ -11,6 +11,7 @@ log*
 *.xml
 *.vtu
 *.pvd
+*.mat
 todous.md
 
 # special
