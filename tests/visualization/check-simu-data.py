@@ -68,7 +68,7 @@ if args.dbrc:
     problem = 'dbrc'
 
 if problem == 'cw':
-    probstr = '../data/cw60.01.0_4171831-16hinfrofb'
+    probstr = '../simudata/cw60.01.0_4171831-16hinfrofb'
     afterstr = 't0.030.0000Nts40000ab0.01.0A1e-06'
     truncatsl = [0.0064, 0.0032, 0.0016, 0.0004, 0.0001]
     mafl = [17, 20, 24, 28, 34, 37, 40, 48]
@@ -83,7 +83,7 @@ if problem == 'cw':
         return 'pm{0}ssd0.0mfpi{1}'.format(trcstr, maf)
 
 elif problem == 'dbrc':
-    probstr = '../data/drc60.01.0_4552841-16hinfrofb'
+    probstr = '../simudata/drc60.01.0_4552841-16hinfrofb'
     afterstr = 't0.0300.0000Nts76800ab0.01.0A1e-06'
     truncatsl = [0.512, 0.128, 0.064, 0.045, 0.032, 0.008]
     # truncatsl = [0.128, 0.09, 0.064]
@@ -98,7 +98,7 @@ elif problem == 'dbrc':
     ellthrsh = 25
 
     def getsustr(trcstr, maf):
-        return 'pm{0}ssd0.0mfpr-{1}'.format(trcstr, maf)
+        return '{0}ssd0.0mfpr-{1}'.format(trcstr, maf)
 
 # bpm0.512ssd0.0mfpr-6t0.0300.0000Nts76800ab0.01.0A1e-06
 # mafl = [34]

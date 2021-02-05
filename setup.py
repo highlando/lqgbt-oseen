@@ -14,13 +14,12 @@ setup(name='lqgbt_oseen',
       url="https://github.com/highlando/lqgbt-oseen",
       packages=['lqgbt_oseen'],  # same as name
       install_requires=['numpy==1.18.0', 'scipy',
-                        'dolfin_navier_scipy',
-                        'sadptprj_riclyap_adi',
-                        'distributed_control_fenics'],
+                        'dolfin_navier_scipy==1.1.1',
+                        'sadptprj_riclyap_adi==1.0.3',
+                        'distributed_control_fenics==1.0.0'],
       classifiers=[
           "Programming Language :: Python :: 3",
           "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
           "Operating System :: OS Independent",
           ]
-      # external packages as dependencies
       )

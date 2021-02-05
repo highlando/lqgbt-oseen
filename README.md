@@ -7,7 +7,7 @@ As an example we consider the stabilization of the cylinder wake at moderate Rey
 
 Documentation goes [here](http://lqgbt-for-flow-stabilization.readthedocs.org/en/latest/).
 
-Installation (including the dependencies, **not** including FEniCS:
+Installation (including all dependencies, **except from** *FEniCS*, *mat73*):
 
 ```sh
 pip install .

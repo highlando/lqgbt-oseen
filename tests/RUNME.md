@@ -31,5 +31,15 @@ pdflatex minilat.tex
  * `cachedata` -- directory for data caching
  * `testdata` -- provides the raw data (the Gramians) for the simulation
  * `plots` -- paraview plots  -- parameter `prvdir` in `compscript.py`
- * `visualization` -- postprocessing happens here
+ * `visualization` -- post processing happens here
  * `mesh` -- the meshes for the simulation
+
+## Troubleshooting
+
+For *python3.5* an elder version of *NumPy* is needed. For that one may set 
+
+```python
+numpy==1.18.0,
+```
+
+in `../setup.py` before the installation.
