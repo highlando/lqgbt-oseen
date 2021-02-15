@@ -12,12 +12,14 @@ import dolfin_navier_scipy.problem_setups as dnsps
 import sadptprj_riclyap_adi.lin_alg_utils as lau
 # import sadptprj_riclyap_adi.proj_ric_utils as pru
 
-import distributed_control_fenics.cont_obs_utils as cou
+# import distributed_control_fenics.cont_obs_utils as cou
 
 import lqgbt_oseen.nse_riccont_utils as nru
 import lqgbt_oseen.cntrl_simu_helpers as csh
+import lqgbt_oseen.nse_iosys_utils as niu
 
 import sadptprj_riclyap_adi.bal_trunc_utils as btu
+
 
 debug = False
 
@@ -152,10 +154,9 @@ def lqgbt(Re=1e2,
           format(problemname, Re))
     print(' ### The control is weighted with Gamma={0}'.format(gamma))
 
-    femp, stokesmatsc, rhsd = \
-        dnsps.get_sysmats(problem='gen_bccont', Re=Re, bccontrol=True,
-                          scheme='TH', mergerhs=True,
-                          meshparams=meshparams)
+    femp, stokesmatsc, rhsd, b_mat, c_mat = \
+        niu.assmbl_nse_sys(Re=Re, scheme='TH', meshparams=meshparams,
+                           palpha=palpha, Cgrid=Cgrid)
 
     # casting some parameters
     invinds, NV = femp['invinds'], len(femp['invinds'])
@@ -169,12 +170,6 @@ def lqgbt(Re=1e2,
         format(NV, Cgrid, palpha, NU)
     shortcontsetupstr = '{0}{1[0]}{1[1]}{2}'.\
         format(NV, Cgrid, np.int(np.log2(palpha)))
-
-    if bccontrol:
-        stokesmatsc['A'] = stokesmatsc['A'] + 1./palpha*stokesmatsc['Arob']
-        b_mat = 1./palpha*stokesmatsc['Brob']
-        # u_masmat = sps.eye(b_mat.shape[1], format='csr')
-        print(' ### Robin-type boundary control palpha={0}'.format(palpha))
 
     if whichinival == 'sstokes++' or whichinival == 'snse+d++':
         inivstr = '_' + whichinival + '{0}'.format(tpp)
@@ -193,39 +188,6 @@ def lqgbt(Re=1e2,
     fdstr = get_fdstr(Re)
     # fdstr = fdstr + '_hinf' if hinf else fdstr
     fdstrini = get_fdstr(use_ric_ini) if use_ric_ini is not None else None
-
-#
-# ### CHAP: Prepare for control
-#
-
-    b_mat_reg = lau.app_prj_via_sadpnt(amat=stokesmatsc['M'],
-                                       jmat=stokesmatsc['J'],
-                                       rhsv=b_mat,
-                                       transposedprj=True)
-    Rmhalf = 1./np.sqrt(gamma)
-    b_mat = Rmhalf*b_mat_reg
-    # We scale the input matrix to acommodate for input weighting
-    # TODO: we should consider the u mass matrix here
-    # TODO: this regularization shouldn't be necessary
-
-    print('computing `c_mat`...')
-    mc_mat, y_masmat = cou.get_mout_opa(odcoo=femp['odcoo'],
-                                        V=femp['V'], mfgrid=Cgrid)
-    c_mat = lau.apply_massinv(y_masmat, mc_mat, output='sparse')
-    # restrict the operators to the inner nodes
-
-    mc_mat = mc_mat[:, invinds][:, :]
-    c_mat = c_mat[:, invinds][:, :]
-    c_mat_reg = lau.app_prj_via_sadpnt(amat=stokesmatsc['M'],
-                                       jmat=stokesmatsc['J'],
-                                       rhsv=c_mat.T,
-                                       transposedprj=True).T
-
-    # c_mat_reg = np.array(c_mat.todense())
-
-    # TODO: right choice of norms for y
-    #       and necessity of regularization here
-    #       by now, we go on number save
 
 #
 # setup the system for the correction
@@ -357,7 +319,7 @@ def lqgbt(Re=1e2,
     testsavemats = False
     if testsavemats:
         savematdict = dict(mmat=mmat, amat=f_mat, jmat=jmat,
-                           bmat=b_mat, cmat=c_mat_reg,
+                           bmat=b_mat, cmat=c_mat,
                            p_ss_nse=p_ss_nse,
                            v_ss_nse=v_ss_nse[invinds], fp=rhsd['fp'],
                            fv=rhsd['fv']+rhs_con+rhsv_conbc)
@@ -391,7 +353,7 @@ def lqgbt(Re=1e2,
         zwconly = (closed_loop == 'full_state_fb')
         comploadricfacsdct = dict(fdstr=fdstr, fmat=f_mat_gramians,
                                   mmat=mmat, jmat=jmat, bmat=b_mat,
-                                  cmat=c_mat_reg,
+                                  cmat=c_mat,
                                   ric_ini_str=fdstrini,
                                   nwtn_adi_dict=nwtn_adi_dict,
                                   zwconly=zwconly, hinf=hinf,
@@ -470,7 +432,7 @@ def lqgbt(Re=1e2,
             get_prj_model(mmat=mmat, fmat=f_mat_gramians, jmat=None,
                           zwo=zwo, zwc=zwc,
                           tl=tl, tr=tr,
-                          bmat=b_mat, cmat=c_mat_reg)
+                          bmat=b_mat, cmat=c_mat)
 
         # print('|M|: ', np.linalg.norm(mmat.data))
         # print('|A|: ', np.linalg.norm(f_mat_gramians.data))
