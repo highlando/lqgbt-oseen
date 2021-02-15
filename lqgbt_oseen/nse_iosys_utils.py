@@ -1,18 +1,67 @@
 import numpy as np
 
 import dolfin_navier_scipy.problem_setups as dnsps
+import dolfin_navier_scipy.stokes_navier_utils as snu
 
 import distributed_control_fenics.cont_obs_utils as cou
 
 import sadptprj_riclyap_adi.lin_alg_utils as lau
 
 
-def compute_nse_steadystate():
-    return
+def compute_nse_steadystate(M=None, A=None, J=None,
+                            bc_rhs=None, nom_rhs=None,
+                            Re=None, relist=None, vpcachestr=None,
+                            V=None, Q=None, bcinds=None, bcvals=None):
+
+    ''' compute the solution of the steadystate Navier-Stokes equations
+
+    by sequentially increasing the `Re` number to have good initial guesses
+    '''
+
+    v_init = None
+    for initre in relist:
+        if initre >= Re:
+            initre = Re
+        else:
+            print('Initialising the steadystate solution with Re=', initre)
+            rescl = initre/Re
+        try:
+            if vpcachestr is None:
+                raise IOError()
+            else:
+                cachssvs = vpcachestr + 'Re{0}_ssvsol.npy'.format(initre)
+                cachssps = vpcachestr + 'Re{0}_sspsol.npy'.format(initre)
+            vp_ss_nse = (np.load(cachssvs), np.load(cachssps))
+            print('loaded sssol from: ', cachssvs)
+        except IOError:
+            vp_ss_nse = snu.\
+                solve_steadystate_nse(M=M, A=rescl*A, J=J, V=V, Q=Q,
+                                      fv=rescl*bc_rhs['fv']+nom_rhs['fv'],
+                                      fp=bc_rhs['fp']+nom_rhs['fp'],
+                                      return_vp=True,
+                                      vel_start_nwtn=v_init,
+                                      vel_nwtn_tol=4e-13,
+                                      clearprvdata=True)
+            np.save(cachssvs, vp_ss_nse[0])
+            np.save(cachssps, vp_ss_nse[1])
+            print('saved sssol to: ', cachssvs)
+        if initre == Re:
+            break
+        v_init = vp_ss_nse[0]
+
+    return vp_ss_nse
 
 
-def assmbl_linrzd_nse():
-    return
+def assmbl_linrzd_convtrm(vvec=None, invinds=None,
+                          V=None, bcinds=None, bcvals=None):
+    ''' assemble the linearized convection term
+    '''
+
+    if vvec is not None:
+        (convc_mat, rhs_con,
+         rhsv_conbc) = snu.get_v_conv_conts(vvec=vvec, invinds=invinds, V=V,
+                                            dbcinds=bcinds, dbcvals=bcvals)
+    return convc_mat
 
 
 def assmbl_nse_sys(Re=None, scheme='TH', meshparams=None,

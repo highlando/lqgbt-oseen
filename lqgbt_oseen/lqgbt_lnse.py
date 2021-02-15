@@ -2,7 +2,7 @@
 import numpy as np
 # import scipy.linalg as spla
 
-from pathlib import Path
+# from pathlib import Path
 
 import dolfin_navier_scipy.data_output_utils as dou
 import dolfin_navier_scipy.stokes_navier_utils as snu
@@ -154,12 +154,22 @@ def lqgbt(Re=1e2,
           format(problemname, Re))
     print(' ### The control is weighted with Gamma={0}'.format(gamma))
 
-    femp, stokesmatsc, rhsd, b_mat, c_mat = \
+    femp, stokesmatsc, nom_rhs, stksbc_rhs, b_mat, c_mat = \
         niu.assmbl_nse_sys(Re=Re, scheme='TH', meshparams=meshparams,
                            palpha=palpha, Cgrid=Cgrid)
 
     # casting some parameters
     invinds, NV = femp['invinds'], len(femp['invinds'])
+    V, Q = femp['V'], femp['Q']
+    dbcinds, dbcvals = femp['dbcinds'], femp['dbcvals']
+    mmat, amat, jmat = stokesmatsc['M'], stokesmatsc['A'], stokesmatsc['J']
+
+    v_ss_nse, p_ss_nse = niu.\
+        compute_nse_steadystate(M=mmat, A=amat, J=jmat, Re=Re,
+                                nom_rhs=nom_rhs, stksbc_rhs=stksbc_rhs,
+                                relist=[40, 60, 80],
+                                V=V, Q=Q, bcinds=dbcinds, bcvals=dbcvals,
+                                )
 
 #
 # Prepare for control
@@ -189,78 +199,11 @@ def lqgbt(Re=1e2,
     # fdstr = fdstr + '_hinf' if hinf else fdstr
     fdstrini = get_fdstr(use_ric_ini) if use_ric_ini is not None else None
 
-#
-# setup the system for the correction
-#
-
-    # compute the uncontrolled steady state NSE solution for the linearization
-    soldict = {}
-    soldict.update(stokesmatsc)  # containing A, J, JT
-    soldict.update(femp)  # adding V, Q, invinds, dbcinds, dbcvals
-    # soldict.update(rhsd_vfrc)  # adding fvc, fpr
-    veldatastr = ddir + problemname + '_Re{0}'.format(Re)
-    if bccontrol:
-        veldatastr = veldatastr + '__bcc_palpha{0}'.format(palpha)
-
-    nu = femp['charlen']/Re
-    soldict.update(fv=rhsd['fv'], fp=rhsd['fp'],
-                   nu=nu, data_prfx=veldatastr)
-
-    v_init = None
-    initssres = [40, 60, 80]
-    for initre in initssres:
-        if initre >= Re:
-            initre = Re
-        else:
-            print('Initialising the steadystate solution with Re=', initre)
-        cachssvs = 'cachedata/' + Path(get_fdstr(initre)).name + '_ssvsol.npy'
-        cachssps = 'cachedata/' + Path(get_fdstr(initre)).name + '_sspsol.npy'
-        try:
-            vp_ss_nse = (np.load(cachssvs), np.load(cachssps))
-            print('loaded sssol from: ', cachssvs)
-            # if initre == Re:
-            #     v_init = vp_ss_nse[0]
-            #     raise IOError()
-        except IOError:
-            print("couldn't load sssol from: ", cachssvs)
-            initssfemp, initssstokesmatsc, initssrhsd = \
-                dnsps.get_sysmats(problem='gen_bccont', Re=initre,
-                                  bccontrol=True, scheme='TH', mergerhs=True,
-                                  meshparams=meshparams)
-            initssstokesmatsc['A'] = initssstokesmatsc['A'] \
-                + 1./palpha*initssstokesmatsc['Arob']
-            initsssoldict = {}
-            initsssoldict.update(initssstokesmatsc)
-            initsssoldict.update(initssfemp)
-            initssveldatastr = ddir + problemname + '_Re{0}'.format(initre)
-            initssnu = femp['charlen']/initre
-            initsssoldict.update(fv=initssrhsd['fv'], fp=initssrhsd['fp'],
-                                 nu=initssnu, data_prfx=initssveldatastr)
-            vp_ss_nse = snu.\
-                solve_steadystate_nse(vel_pcrd_stps=npcrdstps, return_vp=True,
-                                      vel_start_nwtn=v_init,
-                                      vel_nwtn_tol=4e-13,
-                                      clearprvdata=debug, **initsssoldict)
-            np.save(cachssvs, vp_ss_nse[0])
-            np.save(cachssps, vp_ss_nse[1])
-            print('saved sssol to: ', cachssvs)
-        if initre == Re:
-            break
-        v_init = vp_ss_nse[0]
-
-    v_ss_nse = vp_ss_nse[0]
-    p_ss_nse = vp_ss_nse[1]
-    dbcinds, dbcvals = femp['dbcinds'], femp['dbcvals']
-    (convc_mat, rhs_con,
-     rhsv_conbc) = snu.get_v_conv_conts(vvec=v_ss_nse, invinds=invinds,
-                                        dbcinds=dbcinds, dbcvals=dbcvals,
-                                        V=femp['V'])
-
+    convc_mat = niu.assmbl_linrzd_convtrm(vvec=v_ss_nse, invinds=invinds, V=V,
+                                          bcinds=dbcinds, bcvals=dbcvals)
+    # ## vvv Note the sign! vvv ##
     f_mat = - stokesmatsc['A'] - convc_mat
-    # the robin term `arob` has been added before
-    mmat = stokesmatsc['M']
-    # amat = stokesmatsc['A']
-    jmat = stokesmatsc['J']
+    # ## ^^^ Note the sign! ^^^ ##
 
     # MAF -- need to change the convc_mat, i.e. we need another v_ss_nse
     # MAF -- need to change the f_mat, i.e. we need another convc_mat
