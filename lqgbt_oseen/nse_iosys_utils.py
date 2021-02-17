@@ -9,7 +9,7 @@ import sadptprj_riclyap_adi.lin_alg_utils as lau
 
 
 def compute_nse_steadystate(M=None, A=None, J=None,
-                            bc_rhs=None, nom_rhs=None,
+                            stksbc_rhs=None, nom_rhs=None,
                             Re=None, relist=None, vpcachestr=None,
                             V=None, Q=None, bcinds=None, bcvals=None):
 
@@ -36,8 +36,8 @@ def compute_nse_steadystate(M=None, A=None, J=None,
         except IOError:
             vp_ss_nse = snu.\
                 solve_steadystate_nse(M=M, A=rescl*A, J=J, V=V, Q=Q,
-                                      fv=rescl*bc_rhs['fv']+nom_rhs['fv'],
-                                      fp=bc_rhs['fp']+nom_rhs['fp'],
+                                      fv=rescl*stksbc_rhs['fv']+nom_rhs['fv'],
+                                      fp=rescl*stksbc_rhs['fp']+nom_rhs['fp'],
                                       return_vp=True,
                                       vel_start_nwtn=v_init,
                                       vel_nwtn_tol=4e-13,
@@ -67,9 +67,9 @@ def assmbl_linrzd_convtrm(vvec=None, invinds=None,
 def assmbl_nse_sys(Re=None, scheme='TH', meshparams=None,
                    palpha=None, Cgrid=None, gamma=None):
 
-    femp, stokesmatsc, rhsd = \
+    femp, stokesmatsc, nom_rhs, stksbc_rhs = \
         dnsps.get_sysmats(problem='gen_bccont', Re=Re, bccontrol=True,
-                          scheme='TH', mergerhs=True,
+                          scheme='TH', mergerhs=False,
                           meshparams=meshparams)
     invinds = femp['invinds']
 
@@ -95,4 +95,4 @@ def assmbl_nse_sys(Re=None, scheme='TH', meshparams=None,
                                        rhsv=c_mat.T,
                                        transposedprj=True).T
 
-    return femp, stokesmatsc, rhsd, b_mat, c_mat_reg
+    return femp, stokesmatsc, nom_rhs, stksbc_rhs, b_mat, c_mat_reg

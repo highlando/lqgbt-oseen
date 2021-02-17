@@ -170,6 +170,8 @@ def lqgbt(Re=1e2,
                                 relist=[40, 60, 80],
                                 V=V, Q=Q, bcinds=dbcinds, bcvals=dbcvals,
                                 )
+    import ipdb
+    ipdb.set_trace()
 
 #
 # Prepare for control
