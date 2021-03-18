@@ -11,7 +11,8 @@ import sadptprj_riclyap_adi.lin_alg_utils as lau
 def compute_nse_steadystate(M=None, A=None, J=None,
                             stksbc_rhs=None, nom_rhs=None,
                             Re=None, relist=None, vpcachestr=None,
-                            V=None, Q=None, bcinds=None, bcvals=None):
+                            V=None, Q=None,
+                            invinds=None, bcinds=None, bcvals=None):
 
     ''' compute the solution of the steadystate Navier-Stokes equations
 
@@ -22,9 +23,10 @@ def compute_nse_steadystate(M=None, A=None, J=None,
     for initre in relist:
         if initre >= Re:
             initre = Re
+            rescl = 1.
         else:
             print('Initialising the steadystate solution with Re=', initre)
-            rescl = initre/Re
+            rescl = 1/(initre/Re)
         try:
             if vpcachestr is None:
                 raise IOError()
@@ -34,10 +36,14 @@ def compute_nse_steadystate(M=None, A=None, J=None,
             vp_ss_nse = (np.load(cachssvs), np.load(cachssps))
             print('loaded sssol from: ', cachssvs)
         except IOError:
+            # import ipdb
+            # ipdb.set_trace()
             vp_ss_nse = snu.\
                 solve_steadystate_nse(M=M, A=rescl*A, J=J, V=V, Q=Q,
                                       fv=rescl*stksbc_rhs['fv']+nom_rhs['fv'],
                                       fp=rescl*stksbc_rhs['fp']+nom_rhs['fp'],
+                                      invinds=invinds,
+                                      dbcinds=bcinds, dbcvals=bcvals,
                                       return_vp=True,
                                       vel_start_nwtn=v_init,
                                       vel_nwtn_tol=4e-13,

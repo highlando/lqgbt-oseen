@@ -5,6 +5,7 @@ export PYTHONPATH="$PYTHONPATH:$MYHOMEPATH/work/code/lqgbt-oseen"
 echo $PYTHONPATH
 # export PYTHONPATH="$PYTHONPATH:$MYPYPATH/sadptprj_riclyap_adi"
 
+RE=40
 RE=60
 INIPERTURB=0.0
 TRUNCAT=0.001

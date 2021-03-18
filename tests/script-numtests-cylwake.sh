@@ -1,8 +1,9 @@
 MYHOMEPATH=/home/heiland
 MYPYPATH=/home/heiland/software/mypys
 # export PYTHONPATH="$MYPYPATH/mat_lib_plots:$MYPYPATH/sadptprj_riclyap_adi"
-export PYTHONPATH="$MYHOMEPATH/work/code/lqgbt-oseen"
-export PYTHONPATH="$PYTHONPATH:$MYPYPATH/dolfin_navier_scipy"
+# export PYTHONPATH="$MYHOMEPATH/work/code/lqgbt-oseen"
+# export PYTHONPATH="$PYTHONPATH:$MYPYPATH/dolfin_navier_scipy"
+export PYTHONPATH=""
 echo $PYTHONPATH
 
 RE=60

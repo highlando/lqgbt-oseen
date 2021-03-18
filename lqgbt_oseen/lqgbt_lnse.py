@@ -158,6 +158,18 @@ def lqgbt(Re=1e2,
         niu.assmbl_nse_sys(Re=Re, scheme='TH', meshparams=meshparams,
                            palpha=palpha, Cgrid=Cgrid)
 
+    # ## TODO: debbing
+    # scldfemp, scldstokesmatsc, scldnom_rhs, scldstksbc_rhs, _, _ = \
+    #     niu.assmbl_nse_sys(Re=.66*Re, scheme='TH', meshparams=meshparams,
+    #                        palpha=palpha, Cgrid=Cgrid)
+    # amat = stokesmatsc['A']
+    # scldamat = scldstokesmatsc['A']
+    # print(1/(scldamat.data.sum()/amat.data.sum()))
+    # print((stksbc_rhs['fv']-.66*scldstksbc_rhs['fv']).sum())
+    # import ipdb
+    # ipdb.set_trace()
+    # ## TODO: debbing
+
     # casting some parameters
     invinds, NV = femp['invinds'], len(femp['invinds'])
     V, Q = femp['V'], femp['Q']
@@ -168,7 +180,9 @@ def lqgbt(Re=1e2,
         compute_nse_steadystate(M=mmat, A=amat, J=jmat, Re=Re,
                                 nom_rhs=nom_rhs, stksbc_rhs=stksbc_rhs,
                                 relist=[40, 60, 80],
-                                V=V, Q=Q, bcinds=dbcinds, bcvals=dbcvals,
+                                V=V, Q=Q,
+                                bcinds=dbcinds, bcvals=dbcvals,
+                                invinds=invinds,
                                 )
     import ipdb
     ipdb.set_trace()
