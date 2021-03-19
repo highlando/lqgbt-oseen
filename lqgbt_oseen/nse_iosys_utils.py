@@ -10,6 +10,7 @@ import sadptprj_riclyap_adi.lin_alg_utils as lau
 
 def compute_nse_steadystate(M=None, A=None, J=None,
                             stksbc_rhs=None, nom_rhs=None,
+                            arob=None, palpha=None,
                             Re=None, relist=None, vpcachestr=None,
                             V=None, Q=None,
                             invinds=None, bcinds=None, bcvals=None):
@@ -38,19 +39,25 @@ def compute_nse_steadystate(M=None, A=None, J=None,
         except IOError:
             # import ipdb
             # ipdb.set_trace()
+            if np.isclose(rescl, 1):
+                scldA = A
+            else:
+                scldA = rescl*A + 1/palpha*(1-rescl)*arob
             vp_ss_nse = snu.\
-                solve_steadystate_nse(M=M, A=rescl*A, J=J, V=V, Q=Q,
+                solve_steadystate_nse(M=M, A=scldA,
+                                      J=J, V=V, Q=Q,
                                       fv=rescl*stksbc_rhs['fv']+nom_rhs['fv'],
-                                      fp=rescl*stksbc_rhs['fp']+nom_rhs['fp'],
+                                      fp=stksbc_rhs['fp']+nom_rhs['fp'],
                                       invinds=invinds,
                                       dbcinds=bcinds, dbcvals=bcvals,
                                       return_vp=True,
                                       vel_start_nwtn=v_init,
                                       vel_nwtn_tol=4e-13,
                                       clearprvdata=True)
-            np.save(cachssvs, vp_ss_nse[0])
-            np.save(cachssps, vp_ss_nse[1])
-            print('saved sssol to: ', cachssvs)
+            if vpcachestr is not None:
+                np.save(cachssvs, vp_ss_nse[0])
+                np.save(cachssps, vp_ss_nse[1])
+                print('saved sssol to: ', cachssvs)
         if initre == Re:
             break
         v_init = vp_ss_nse[0]

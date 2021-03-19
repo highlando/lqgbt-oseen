@@ -159,16 +159,21 @@ def lqgbt(Re=1e2,
                            palpha=palpha, Cgrid=Cgrid)
 
     # ## TODO: debbing
-    # scldfemp, scldstokesmatsc, scldnom_rhs, scldstksbc_rhs, _, _ = \
-    #     niu.assmbl_nse_sys(Re=.66*Re, scheme='TH', meshparams=meshparams,
+    # initre = 40
+    # inifemp, inistokesmatsc, ininom_rhs, inistksbc_rhs, _, _ = \
+    #     niu.assmbl_nse_sys(Re=initre, scheme='TH', meshparams=meshparams,
     #                        palpha=palpha, Cgrid=Cgrid)
+    # rescl = 1/(initre/Re)
     # amat = stokesmatsc['A']
-    # scldamat = scldstokesmatsc['A']
-    # print(1/(scldamat.data.sum()/amat.data.sum()))
-    # print((stksbc_rhs['fv']-.66*scldstksbc_rhs['fv']).sum())
-    # import ipdb
-    # ipdb.set_trace()
-    # ## TODO: debbing
+    # inia = inistokesmatsc['A']
+    # arob = stokesmatsc['Arob']
+    # scldA = rescl*amat + 1/palpha*(1-rescl)*arob
+    # print(inia.data.sum()-scldA.data.sum())
+    # print((rescl*stksbc_rhs['fv']-inistksbc_rhs['fv']).sum())
+    # print((stksbc_rhs['fp']-inistksbc_rhs['fp']).sum())
+    # # import ipdb
+    # # ipdb.set_trace()
+    # # ## TODO: debbing
 
     # casting some parameters
     invinds, NV = femp['invinds'], len(femp['invinds'])
@@ -176,14 +181,48 @@ def lqgbt(Re=1e2,
     dbcinds, dbcvals = femp['dbcinds'], femp['dbcvals']
     mmat, amat, jmat = stokesmatsc['M'], stokesmatsc['A'], stokesmatsc['J']
 
+    # vp_ss_nse = snu.\
+    #     solve_steadystate_nse(M=mmat, A=inia, J=jmat, V=V, Q=Q,
+    #                           fv=inistksbc_rhs['fv']+ininom_rhs['fv'],
+    #                           fp=inistksbc_rhs['fp']+ininom_rhs['fp'],
+    #                           invinds=invinds,
+    #                           dbcinds=inifemp['dbcinds'],
+    #                           dbcvals=inifemp['dbcvals'],
+    #                           return_vp=True, vel_nwtn_tol=4e-13,
+    #                           clearprvdata=True)
+
+    # vp_ss_nse = snu.\
+    #     solve_steadystate_nse(M=mmat, A=scldA, J=jmat, V=V, Q=Q,
+    #                           fv=inistksbc_rhs['fv']+nom_rhs['fv'],
+    #                           fp=stksbc_rhs['fp']+nom_rhs['fp'],
+    #                           invinds=invinds,
+    #                           dbcinds=dbcinds, dbcvals=dbcvals,
+    #                           return_vp=True,
+    #                           vel_nwtn_tol=4e-13,
+    #                           clearprvdata=True)
+
+    # rscld_vp_ss_nse = snu.\
+    #     solve_steadystate_nse(M=mmat, A=scldA, J=jmat, V=V, Q=Q,
+    #                           fv=rescl*stksbc_rhs['fv']+nom_rhs['fv'],
+    #                           fp=stksbc_rhs['fp']+nom_rhs['fp'],
+    #                           invinds=invinds,
+    #                           dbcinds=dbcinds, dbcvals=dbcvals,
+    #                           return_vp=True,
+    #                           vel_nwtn_tol=4e-13,
+    #                           clearprvdata=True)
+
+    # print(np.linalg.norm(vp_ss_nse[0]-rscld_vp_ss_nse[0]))
+
     v_ss_nse, p_ss_nse = niu.\
         compute_nse_steadystate(M=mmat, A=amat, J=jmat, Re=Re,
+                                arob=stokesmatsc['Arob'], palpha=palpha,
                                 nom_rhs=nom_rhs, stksbc_rhs=stksbc_rhs,
                                 relist=[40, 60, 80],
                                 V=V, Q=Q,
                                 bcinds=dbcinds, bcvals=dbcvals,
                                 invinds=invinds,
                                 )
+
     import ipdb
     ipdb.set_trace()
 
