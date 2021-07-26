@@ -31,10 +31,6 @@ gamma = 1e-0  # e5
 bccontrol = True
 palpha = 1e-5  # parameter for the Robin penalization
 
-# ## TODO: remove this
-cyldim = 3
-simucyldim = 3  # the dim model used in the simulation
-
 # where to truncate the LQGBT characteristic values
 ctrunc = 1e-3  # , 1e-2, 1e-1, 1e-0]
 # dimension of in and output spaces
@@ -191,18 +187,6 @@ else:
                          verbose=True,
                          full_upd_norm_check=False,
                          check_lyap_res=False)
-
-logstr = 'logs/log_cyldim{0}NU{1}C{2[0]}{2[1]}gamma{3}'.\
-    format(cyldim, NU, Cgrid, gamma) +\
-    'closedloop{0}'.format(closed_loop) +\
-    't0{0}tE{1}Nts{2}'.format(t0, tE, Nts) +\
-    'Re{2}to{3}kappa{0}to{1}eps{4}'.format(ctrunc, ctrunc,
-                                           relist[0], relist[-1], perturbpara)
-
-# if logtofile:
-#     print('log goes ' + logstr)
-#     print('how about \ntail -f ' + logstr)
-#     sys.stdout = open(logstr, 'a', 0)
 
 print(('{0}'*10 + '\n log started at {1} \n' + '{0}'*10).
       format('X', str(datetime.datetime.now())))
