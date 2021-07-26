@@ -13,21 +13,12 @@ Installation (including all dependencies, **except from** *FEniCS*, *mat73*):
 pip install .
 ```
 
-Dependencies:
+To make *FEniCS* and *mat73* available to you, you may want to use a *docker container* as it can be generated with the `Dockerfile` in this repo.
+
+## Dependencies
 
 * `numpy` (tested with 1.13.1, 1.18.0, 1.19.4) and `scipy` (tested with 1.1.0, 1.5.2)
 * `dolfin` (python interface to FEniCS, tested with 2019.2.0 and 2018.1.0)
-
-and my home-brew modules that are available via pip 
-
-```bash
-pip install dolfin_navier_scipy
-pip install sadptprj_riclyap_adi
-pip install distr_control_fenics 
-```
-
-and on github:
-
-* [dolfin_navier_scipy](https://github.com/highlando/dolfin_navier_scipy)
-* [sadptprj_riclyap_adi](https://github.com/highlando/sadptprj_riclyap_adi)
-* [distr_control_fenics](https://github.com/highlando/distr_control_fenics)
+* [dolfin_navier_scipy](https://github.com/highlando/dolfin_navier_scipy) (tested with `pip install dolfin_navier_scipy==1.1.1`)
+* [sadptprj_riclyap_adi](https://github.com/highlando/sadptprj_riclyap_adi) (tested with `sadptprj_riclyap_adi==1.0.3`)
+* [distr_control_fenics](https://github.com/highlando/distr_control_fenics) (tested with `distributed_control_fenics==1.0.0`)
