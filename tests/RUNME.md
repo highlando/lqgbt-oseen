@@ -3,6 +3,14 @@ Performance Regions
 
 Code and instructions to reproduce the figures of the paper.
 
+
+**Optional**: Consider setting the number of threads to a decent number.
+
+```sh
+export OMP_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+```
+
 ## Run the Simulations
 
 ```sh
