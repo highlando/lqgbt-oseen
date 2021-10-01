@@ -80,7 +80,7 @@ if problem == 'cw':
     ellthrsh = 45
 
     def getsustr(trcstr, maf):
-        return 'pm{0}ssd0.0mfpi{1}'.format(trcstr, maf)
+        return '{0}ssd0.0mfpi{1}'.format(trcstr, maf)
 
 elif problem == 'dbrc':
     probstr = '../simudata/drc60.01.0_4552841-16hinfrofb'

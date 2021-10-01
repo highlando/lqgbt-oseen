@@ -5,13 +5,13 @@ Python module for application of (Hinf-)LQG-balanced truncation for low-order co
 
 As an example we consider the stabilization of the cylinder wake at moderate Reynoldsnumbers via boundary control and distributed observation.
 
-Documentation of the module that realizes the controllers goes [here](http://lqgbt-for-flow-stabilization.readthedocs.org/en/latest/) -- has not been updated recently.
+Documentation of the module that realizes the controllers goes [here](http://lqgbt-for-flow-stabilization.readthedocs.org/en/latest/) -- please note that the documentation is for a general case and has not been updated recently.
 
 To reproduce the results of our recent preprint
 
 > [Benner, Heiland, Werner: *Robust output-feedback stabilization for incompressible flows using low-dimensional H∞-controllers*](https://arxiv.org/abs/2103.01608)
 
-see the [`tests/RUNME.md`](tests/RUNME.md)
+and follow instructions of the [`tests/RUNME.md`](tests/RUNME.md)
 
 Installation (including all dependencies, **except from** *FEniCS*, *mat73*):
 
