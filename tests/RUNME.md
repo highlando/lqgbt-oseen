@@ -14,9 +14,9 @@ export OPENBLAS_NUM_THREADS=1
 ## Run the Simulations
 
 ```sh
-./script-numtests-cylwake-minimal.sh  # test runs for the cylinder wake (reduced setup)
-./script-numtests-cylwake.sh  # test runs for the cylinder wake
-./script-numtests-dbrotcyl.sh  # test runs for the double cylinder
+source script-numtests-cylwake-minimal.sh  # test runs for the cylinder wake (reduced setup)
+source script-numtests-cylwake.sh  # test runs for the cylinder wake
+source script-numtests-dbrotcyl.sh  # test runs for the double cylinder
 ```
 
 ## Check for Stability
